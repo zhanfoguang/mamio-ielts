@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { authMiddleware } from '../middleware/auth.js'
+import { checkUserQuota, userQueries } from '../db.js'
 
 const router = Router()
 
@@ -6,9 +8,7 @@ const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY
 const DEEPSEEK_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
 
 function parseJSON(text) {
-  // Try direct parse first
   try { return JSON.parse(text) } catch {}
-  // Try extracting JSON block from markdown fences or surrounding text
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/)
   if (match) {
     try { return JSON.parse(match[1].trim()) } catch {}
@@ -51,8 +51,25 @@ async function callDeepSeek(systemPrompt, userPrompt) {
   }
 }
 
+// Auth + quota middleware for all AI routes
+router.use(authMiddleware)
+
+function checkQuota(req, res, next) {
+  const quota = checkUserQuota(req.user.id)
+  if (!quota.allowed) {
+    return res.status(403).json({ error: quota.reason, quota })
+  }
+  req.quota = quota
+  next()
+}
+
+function incrementCalls(userId) {
+  const today = new Date().toISOString().split('T')[0]
+  userQueries.incrementCalls.run(today, userId)
+}
+
 // 口语评分
-router.post('/speaking', async (req, res) => {
+router.post('/speaking', checkQuota, async (req, res) => {
   try {
     const { question, userAnswer, part } = req.body
     if (!question || !userAnswer) {
@@ -81,7 +98,8 @@ router.post('/speaking', async (req, res) => {
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
-    res.json(parsed)
+    incrementCalls(req.user.id)
+    res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI speaking error:', err.message)
     res.status(500).json({ error: 'AI 评分失败，请稍后重试' })
@@ -89,7 +107,7 @@ router.post('/speaking', async (req, res) => {
 })
 
 // 写作批改
-router.post('/writing', async (req, res) => {
+router.post('/writing', checkQuota, async (req, res) => {
   try {
     const { task, essay, taskType } = req.body
     if (!task || !essay) {
@@ -119,7 +137,8 @@ router.post('/writing', async (req, res) => {
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
-    res.json(parsed)
+    incrementCalls(req.user.id)
+    res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI writing error:', err.message)
     res.status(500).json({ error: 'AI 批改失败，请稍后重试' })
@@ -127,7 +146,7 @@ router.post('/writing', async (req, res) => {
 })
 
 // 词汇生成
-router.post('/vocab', async (req, res) => {
+router.post('/vocab', checkQuota, async (req, res) => {
   try {
     const { topic, level } = req.body
     if (!topic) {
@@ -155,7 +174,8 @@ router.post('/vocab', async (req, res) => {
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
-    res.json(parsed)
+    incrementCalls(req.user.id)
+    res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI vocab error:', err.message)
     res.status(500).json({ error: '词汇生成失败，请稍后重试' })
@@ -163,7 +183,7 @@ router.post('/vocab', async (req, res) => {
 })
 
 // 听力理解题生成
-router.post('/listening', async (req, res) => {
+router.post('/listening', checkQuota, async (req, res) => {
   try {
     const { topic, section } = req.body
     if (!topic) {
@@ -193,7 +213,8 @@ router.post('/listening', async (req, res) => {
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
-    res.json(parsed)
+    incrementCalls(req.user.id)
+    res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI listening error:', err.message)
     res.status(500).json({ error: '听力材料生成失败，请稍后重试' })

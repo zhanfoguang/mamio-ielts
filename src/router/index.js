@@ -10,29 +10,39 @@ const router = createRouter({
       component: LandingPage
     },
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginPage.vue')
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('../views/DashboardPage.vue')
+      component: () => import('../views/DashboardPage.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/speaking',
       name: 'speaking',
-      component: () => import('../views/SpeakingPage.vue')
+      component: () => import('../views/SpeakingPage.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/listening',
       name: 'listening',
-      component: () => import('../views/ListeningPage.vue')
+      component: () => import('../views/ListeningPage.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/writing',
       name: 'writing',
-      component: () => import('../views/WritingPage.vue')
+      component: () => import('../views/WritingPage.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/vocabulary',
       name: 'vocabulary',
-      component: () => import('../views/VocabPage.vue')
+      component: () => import('../views/VocabPage.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/:pathMatch(.*)*',
@@ -47,6 +57,16 @@ const router = createRouter({
       return savedPosition
     }
     return { top: 0 }
+  }
+})
+
+// Auth guard
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('mamio-token')
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
+  } else {
+    next()
   }
 })
 

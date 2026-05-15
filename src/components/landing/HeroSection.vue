@@ -1,6 +1,11 @@
 <script setup>
 import { useThemeStore } from '../../stores/theme'
+import { useAuthStore } from '../../stores/auth'
+import { useRouter } from 'vue-router'
+
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
+const router = useRouter()
 </script>
 
 <template>
@@ -14,9 +19,12 @@ const themeStore = useThemeStore()
         {{ themeStore.lang === 'zh' ? 'AI 评分 · 语音识别 · 间隔重复 · 打卡追踪' : 'AI Scoring · Speech Recognition · Spaced Repetition · Check-in Tracking' }}
       </p>
       <div class="hero-actions fade-up visible">
-        <a href="/speaking" class="btn-primary-lg">
+        <button v-if="authStore.isLoggedIn" class="btn-primary-lg" @click="router.push('/speaking')">
           {{ themeStore.lang === 'zh' ? '开始学习' : 'Start Learning' }}
-        </a>
+        </button>
+        <button v-else class="btn-primary-lg" @click="router.push('/login')">
+          {{ themeStore.lang === 'zh' ? '免费注册' : 'Sign Up Free' }}
+        </button>
         <a href="#features" class="btn-outline-lg">
           {{ themeStore.lang === 'zh' ? '了解功能' : 'Explore Features' }}
         </a>
