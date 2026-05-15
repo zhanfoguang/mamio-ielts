@@ -1,12 +1,16 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { speakingTopics } from '../data/ielts/speaking'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { scoreSpeaking } from '../services/ai'
 
 const themeStore = useThemeStore()
-const { isListening, transcript, interimTranscript, error: speechError, isSupported, start, stop, reset } = useSpeechRecognition()
+const {
+  isListening, transcript, interimTranscript, error: speechError, isSupported,
+  isRecording, audioUrl, recordingDuration,
+  start, stop, reset, startRecording, stopRecording, clearRecording
+} = useSpeechRecognition()
 
 const activePart = ref(1)
 const selectedTopic = ref(null)
@@ -16,18 +20,42 @@ const aiResult = ref(null)
 const loading = ref(false)
 const showSample = ref(false)
 
+// Timer state
+const timerPhase = ref(null) // null, 'prep', 'speaking'
+const timerSeconds = ref(0)
+let timerInterval = null
+
+// History
+const history = ref(JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]'))
+const showHistory = ref(false)
+
 const topics = computed(() => {
   if (activePart.value === 1) return speakingTopics.part1
   if (activePart.value === 2) return speakingTopics.part2
   return speakingTopics.part3
 })
 
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function formatDuration(seconds) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  if (m === 0) return `${s}s`
+  return `${m}m ${s}s`
+}
+
 function selectTopic(topic) {
   selectedTopic.value = topic
   selectedQuestion.value = activePart.value === 2 ? topic.cueCard : topic.questions[0]
   showResult.value = false
   aiResult.value = null
+  showSample.value = false
   reset()
+  clearTimer()
 }
 
 function selectQuestion(q) {
@@ -35,14 +63,56 @@ function selectQuestion(q) {
   showResult.value = false
   aiResult.value = null
   reset()
+  clearTimer()
+}
+
+// Part 2 Timer
+function startPrepTimer() {
+  clearTimer()
+  timerPhase.value = 'prep'
+  timerSeconds.value = 60
+  timerInterval = setInterval(() => {
+    timerSeconds.value--
+    if (timerSeconds.value <= 0) {
+      clearInterval(timerInterval)
+      startSpeakingTimer()
+    }
+  }, 1000)
+}
+
+function startSpeakingTimer() {
+  timerPhase.value = 'speaking'
+  timerSeconds.value = 120
+  // Auto-start recording when prep ends
+  if (!isListening.value && !isRecording.value) {
+    toggleRecording()
+  }
+  timerInterval = setInterval(() => {
+    timerSeconds.value--
+    if (timerSeconds.value <= 0) {
+      clearInterval(timerInterval)
+      timerPhase.value = null
+      // Auto-stop recording
+      if (isListening.value) toggleRecording()
+      if (isRecording.value) stopRecording()
+    }
+  }, 1000)
+}
+
+function clearTimer() {
+  clearInterval(timerInterval)
+  timerPhase.value = null
+  timerSeconds.value = 0
 }
 
 function toggleRecording() {
   if (isListening.value) {
     stop()
+    stopRecording()
   } else {
     reset()
     start()
+    startRecording()
   }
 }
 
@@ -52,6 +122,8 @@ async function submitForScoring() {
   try {
     aiResult.value = await scoreSpeaking(selectedQuestion.value, transcript.value, activePart.value)
     showResult.value = true
+    // Save to history
+    saveToHistory()
   } catch (e) {
     aiResult.value = { error: e.response?.data?.error || '评分失败，请稍后重试' }
     showResult.value = true
@@ -60,129 +132,216 @@ async function submitForScoring() {
   }
 }
 
+function saveToHistory() {
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    part: activePart.value,
+    topic: activePart.value === 2 ? selectedTopic.value.topic : selectedTopic.value.topic,
+    question: selectedQuestion.value,
+    answer: transcript.value,
+    score: aiResult.value?.overall || null,
+    details: aiResult.value?.error ? null : aiResult.value
+  }
+  history.value.unshift(entry)
+  if (history.value.length > 50) history.value = history.value.slice(0, 50)
+  localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
+}
+
+function deleteHistory(id) {
+  history.value = history.value.filter(h => h.id !== id)
+  localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
+}
+
 function getScoreColor(score) {
   if (score >= 7) return 'var(--green)'
   if (score >= 5.5) return 'var(--yellow)'
   return 'var(--red)'
 }
+
+function formatDate(iso) {
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+watch(activePart, () => {
+  selectedTopic.value = null
+  clearTimer()
+})
 </script>
 
 <template>
   <div class="speaking-page">
     <div class="container">
-      <h1>{{ themeStore.lang === 'zh' ? '雅思口语练习' : 'IELTS Speaking Practice' }}</h1>
-
-      <!-- Part selector -->
-      <div class="part-tabs">
-        <button v-for="p in [1,2,3]" :key="p" class="part-btn" :class="{ active: activePart === p }" @click="activePart = p; selectedTopic = null">
-          Part {{ p }}
+      <div class="page-header">
+        <h1>{{ themeStore.lang === 'zh' ? '雅思口语练习' : 'IELTS Speaking Practice' }}</h1>
+        <button class="history-btn" @click="showHistory = !showHistory">
+          {{ showHistory ? (themeStore.lang === 'zh' ? '返回练习' : 'Back to Practice') : (themeStore.lang === 'zh' ? '练习记录' : 'History') }}
+          <span v-if="history.length" class="history-count">{{ history.length }}</span>
         </button>
       </div>
 
-      <div class="speaking-layout">
-        <!-- Topic list -->
-        <div class="topic-sidebar">
-          <div v-for="(topic, i) in topics" :key="i" class="topic-item" :class="{ active: selectedTopic === topic }" @click="selectTopic(topic)">
-            <span class="topic-label">{{ activePart === 2 ? topic.topic : (topic.topic || themeStore.lang === 'zh' ? '话题' : 'Topic') }}</span>
-          </div>
+      <!-- History Panel -->
+      <div v-if="showHistory" class="history-panel">
+        <div v-if="history.length === 0" class="empty-history">
+          <p>{{ themeStore.lang === 'zh' ? '还没有练习记录，开始练习吧！' : 'No practice history yet. Start practicing!' }}</p>
         </div>
-
-        <!-- Main area -->
-        <div class="speaking-main">
-          <template v-if="selectedTopic">
-            <!-- Question display -->
-            <div class="question-card">
-              <h3 v-if="activePart === 2">{{ selectedTopic.topic }}</h3>
-              <div v-if="activePart === 2" class="cue-card">
-                <pre>{{ selectedTopic.cueCard }}</pre>
-              </div>
-              <div v-else class="question-list">
-                <button v-for="(q, i) in selectedTopic.questions" :key="i" class="q-btn" :class="{ active: selectedQuestion === q }" @click="selectQuestion(q)">
-                  {{ q }}
-                </button>
-              </div>
+        <div v-else class="history-list">
+          <div v-for="h in history" :key="h.id" class="history-item">
+            <div class="history-top">
+              <span class="history-part">Part {{ h.part }}</span>
+              <span class="history-topic">{{ h.topic }}</span>
+              <span v-if="h.score" class="history-score" :style="{ color: getScoreColor(h.score) }">Band {{ h.score }}</span>
+              <span class="history-date">{{ formatDate(h.date) }}</span>
+              <button class="history-delete" @click="deleteHistory(h.id)">×</button>
             </div>
-
-            <!-- Recording area -->
-            <div class="record-area">
-              <p class="current-question" v-if="activePart !== 2">{{ selectedQuestion }}</p>
-
-              <div class="record-controls">
-                <button class="record-btn" :class="{ recording: isListening }" @click="toggleRecording" :disabled="!isSupported">
-                  {{ isListening ? '⏹ ' + (themeStore.lang === 'zh' ? '停止录音' : 'Stop') : '🎤 ' + (themeStore.lang === 'zh' ? '开始录音' : 'Start Recording') }}
-                </button>
-                <p v-if="!isSupported" class="speech-error">{{ themeStore.lang === 'zh' ? '浏览器不支持语音识别，请使用 Chrome' : 'Speech recognition not supported, use Chrome' }}</p>
-                <p v-if="speechError" class="speech-error">{{ speechError }}</p>
-              </div>
-
-              <!-- Transcript display -->
-              <div v-if="transcript || interimTranscript" class="transcript-box">
-                <p class="transcript-text">{{ transcript }}<span class="interim">{{ interimTranscript }}</span></p>
-              </div>
-
-              <!-- Submit button -->
-              <button v-if="transcript && !isListening" class="submit-btn" @click="submitForScoring" :disabled="loading">
-                {{ loading ? (themeStore.lang === 'zh' ? 'AI 评分中...' : 'AI Scoring...') : (themeStore.lang === 'zh' ? 'AI 评分' : 'Get AI Score') }}
-              </button>
-            </div>
-
-            <!-- AI Result -->
-            <div v-if="showResult && aiResult" class="ai-result">
-              <div v-if="aiResult.error" class="result-error">{{ aiResult.error }}</div>
-              <template v-else>
-                <div class="result-header">
-                  <div class="overall-score" :style="{ borderColor: getScoreColor(aiResult.overall) }">
-                    <span class="score-num">{{ aiResult.overall }}</span>
-                    <span class="score-label">Band</span>
-                  </div>
-                </div>
-
-                <div class="score-dimensions">
-                  <div v-for="(dim, key) in { fluency: aiResult.fluency, lexical: aiResult.lexical, grammar: aiResult.grammar, pronunciation: aiResult.pronunciation }" :key="key" class="dim-item">
-                    <div class="dim-header">
-                      <span class="dim-name">{{ { fluency: themeStore.lang === 'zh' ? '流利度' : 'Fluency', lexical: themeStore.lang === 'zh' ? '词汇' : 'Lexical', grammar: themeStore.lang === 'zh' ? '语法' : 'Grammar', pronunciation: themeStore.lang === 'zh' ? '发音' : 'Pronunciation' }[key] }}</span>
-                      <span class="dim-score" :style="{ color: getScoreColor(dim.score) }">{{ dim.score }}</span>
-                    </div>
-                    <p class="dim-comment">{{ dim.comment }}</p>
-                  </div>
-                </div>
-
-                <div v-if="aiResult.suggestions?.length" class="suggestions">
-                  <h4>{{ themeStore.lang === 'zh' ? '改进建议' : 'Suggestions' }}</h4>
-                  <ul>
-                    <li v-for="s in aiResult.suggestions" :key="s">{{ s }}</li>
-                  </ul>
-                </div>
-
-                <div v-if="aiResult.improvedAnswer" class="improved-answer">
-                  <h4>{{ themeStore.lang === 'zh' ? '示范回答' : 'Improved Answer' }}</h4>
-                  <p>{{ aiResult.improvedAnswer }}</p>
-                </div>
-              </template>
-            </div>
-
-            <!-- Sample answer for Part 2 -->
-            <div v-if="activePart === 2 && selectedTopic.sampleAnswer" class="sample-section">
-              <button class="sample-toggle" @click="showSample = !showSample">
-                {{ showSample ? (themeStore.lang === 'zh' ? '隐藏示范' : 'Hide Sample') : (themeStore.lang === 'zh' ? '查看示范回答' : 'Show Sample Answer') }}
-              </button>
-              <div v-if="showSample" class="sample-answer">
-                <p>{{ selectedTopic.sampleAnswer }}</p>
-                <div class="key-vocab" v-if="selectedTopic.keyVocab">
-                  <h4>{{ themeStore.lang === 'zh' ? '关键词汇' : 'Key Vocabulary' }}</h4>
-                  <div class="vocab-tags">
-                    <span v-for="v in selectedTopic.keyVocab" :key="v" class="vocab-tag">{{ v }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <div v-else class="empty-state">
-            <p>{{ themeStore.lang === 'zh' ? '← 选择一个话题开始练习' : '← Select a topic to start practicing' }}</p>
+            <p class="history-question">{{ h.question }}</p>
+            <p class="history-answer">{{ h.answer }}</p>
           </div>
         </div>
       </div>
+
+      <!-- Practice Area -->
+      <template v-if="!showHistory">
+        <!-- Part selector -->
+        <div class="part-tabs">
+          <button v-for="p in [1,2,3]" :key="p" class="part-btn" :class="{ active: activePart === p }" @click="activePart = p; selectedTopic = null">
+            Part {{ p }}
+          </button>
+        </div>
+
+        <div class="speaking-layout">
+          <!-- Topic list -->
+          <div class="topic-sidebar">
+            <div v-for="(topic, i) in topics" :key="i" class="topic-item" :class="{ active: selectedTopic === topic }" @click="selectTopic(topic)">
+              <span class="topic-label">{{ activePart === 2 ? topic.topic : (topic.topic || (themeStore.lang === 'zh' ? '话题' : 'Topic')) }}</span>
+            </div>
+          </div>
+
+          <!-- Main area -->
+          <div class="speaking-main">
+            <template v-if="selectedTopic">
+              <!-- Question display -->
+              <div class="question-card">
+                <h3 v-if="activePart === 2">{{ selectedTopic.topic }}</h3>
+                <div v-if="activePart === 2" class="cue-card">
+                  <pre>{{ selectedTopic.cueCard }}</pre>
+                </div>
+                <div v-else class="question-list">
+                  <button v-for="(q, i) in selectedTopic.questions" :key="i" class="q-btn" :class="{ active: selectedQuestion === q }" @click="selectQuestion(q)">
+                    {{ q }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Part 2 Timer -->
+              <div v-if="activePart === 2" class="timer-section">
+                <div v-if="!timerPhase" class="timer-actions">
+                  <button class="timer-btn" @click="startPrepTimer">
+                    {{ themeStore.lang === 'zh' ? '开始计时 (1分钟准备 + 2分钟作答)' : 'Start Timer (1min prep + 2min speaking)' }}
+                  </button>
+                </div>
+                <div v-else class="timer-display" :class="{ warning: timerSeconds <= 10 }">
+                  <div class="timer-phase">
+                    {{ timerPhase === 'prep' ? (themeStore.lang === 'zh' ? '准备时间' : 'Preparation Time') : (themeStore.lang === 'zh' ? '作答时间' : 'Speaking Time') }}
+                  </div>
+                  <div class="timer-countdown">{{ formatTime(timerSeconds) }}</div>
+                  <button class="timer-stop" @click="clearTimer">{{ themeStore.lang === 'zh' ? '停止计时' : 'Stop Timer' }}</button>
+                </div>
+              </div>
+
+              <!-- Recording area -->
+              <div class="record-area">
+                <p class="current-question" v-if="activePart !== 2">{{ selectedQuestion }}</p>
+
+                <div class="record-controls">
+                  <button class="record-btn" :class="{ recording: isListening }" @click="toggleRecording" :disabled="!isSupported">
+                    {{ isListening ? '⏹ ' + (themeStore.lang === 'zh' ? '停止录音' : 'Stop') : '🎤 ' + (themeStore.lang === 'zh' ? '开始录音' : 'Start Recording') }}
+                  </button>
+                  <p v-if="!isSupported" class="speech-error">{{ themeStore.lang === 'zh' ? '浏览器不支持语音识别，请使用 Chrome' : 'Speech recognition not supported, use Chrome' }}</p>
+                  <p v-if="speechError" class="speech-error">{{ speechError }}</p>
+                </div>
+
+                <!-- Recording indicator -->
+                <div v-if="isRecording" class="recording-indicator">
+                  <span class="rec-dot"></span>
+                  <span>{{ formatDuration(recordingDuration) }}</span>
+                </div>
+
+                <!-- Audio playback -->
+                <div v-if="audioUrl && !isListening" class="audio-playback">
+                  <audio :src="audioUrl" controls class="audio-player"></audio>
+                </div>
+
+                <!-- Transcript display -->
+                <div v-if="transcript || interimTranscript" class="transcript-box">
+                  <p class="transcript-text">{{ transcript }}<span class="interim">{{ interimTranscript }}</span></p>
+                </div>
+
+                <!-- Submit button -->
+                <button v-if="transcript && !isListening" class="submit-btn" @click="submitForScoring" :disabled="loading">
+                  {{ loading ? (themeStore.lang === 'zh' ? 'AI 评分中...' : 'AI Scoring...') : (themeStore.lang === 'zh' ? 'AI 评分' : 'Get AI Score') }}
+                </button>
+              </div>
+
+              <!-- AI Result -->
+              <div v-if="showResult && aiResult" class="ai-result">
+                <div v-if="aiResult.error" class="result-error">{{ aiResult.error }}</div>
+                <template v-else>
+                  <div class="result-header">
+                    <div class="overall-score" :style="{ borderColor: getScoreColor(aiResult.overall) }">
+                      <span class="score-num">{{ aiResult.overall }}</span>
+                      <span class="score-label">Band</span>
+                    </div>
+                  </div>
+
+                  <div class="score-dimensions">
+                    <div v-for="(dim, key) in { fluency: aiResult.fluency, lexical: aiResult.lexical, grammar: aiResult.grammar, pronunciation: aiResult.pronunciation }" :key="key" class="dim-item">
+                      <div class="dim-header">
+                        <span class="dim-name">{{ { fluency: themeStore.lang === 'zh' ? '流利度' : 'Fluency', lexical: themeStore.lang === 'zh' ? '词汇' : 'Lexical', grammar: themeStore.lang === 'zh' ? '语法' : 'Grammar', pronunciation: themeStore.lang === 'zh' ? '发音' : 'Pronunciation' }[key] }}</span>
+                        <span class="dim-score" :style="{ color: getScoreColor(dim.score) }">{{ dim.score }}</span>
+                      </div>
+                      <p class="dim-comment">{{ dim.comment }}</p>
+                    </div>
+                  </div>
+
+                  <div v-if="aiResult.suggestions?.length" class="suggestions">
+                    <h4>{{ themeStore.lang === 'zh' ? '改进建议' : 'Suggestions' }}</h4>
+                    <ul>
+                      <li v-for="s in aiResult.suggestions" :key="s">{{ s }}</li>
+                    </ul>
+                  </div>
+
+                  <div v-if="aiResult.improvedAnswer" class="improved-answer">
+                    <h4>{{ themeStore.lang === 'zh' ? '示范回答' : 'Improved Answer' }}</h4>
+                    <p>{{ aiResult.improvedAnswer }}</p>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Sample answer for Part 2 -->
+              <div v-if="activePart === 2 && selectedTopic.sampleAnswer" class="sample-section">
+                <button class="sample-toggle" @click="showSample = !showSample">
+                  {{ showSample ? (themeStore.lang === 'zh' ? '隐藏示范' : 'Hide Sample') : (themeStore.lang === 'zh' ? '查看示范回答' : 'Show Sample Answer') }}
+                </button>
+                <div v-if="showSample" class="sample-answer">
+                  <p>{{ selectedTopic.sampleAnswer }}</p>
+                  <div class="key-vocab" v-if="selectedTopic.keyVocab">
+                    <h4>{{ themeStore.lang === 'zh' ? '关键词汇' : 'Key Vocabulary' }}</h4>
+                    <div class="vocab-tags">
+                      <span v-for="v in selectedTopic.keyVocab" :key="v" class="vocab-tag">{{ v }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <div v-else class="empty-state">
+              <p>{{ themeStore.lang === 'zh' ? '← 选择一个话题开始练习' : '← Select a topic to start practicing' }}</p>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -193,13 +352,132 @@ function getScoreColor(score) {
   padding-bottom: var(--space-3xl);
 }
 
-.speaking-page h1 {
-  font-size: var(--font-size-2xl);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--space-lg);
 }
 
+.page-header h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.history-btn {
+  position: relative;
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.history-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--blue);
+  color: white;
+  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* History */
+.history-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.empty-history {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-tertiary);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.history-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.history-part {
+  background: var(--black);
+  color: var(--white);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .history-part {
+  background: var(--white);
+  color: var(--black);
+}
+
+.history-topic {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex: 1;
+}
+
+.history-score {
+  font-weight: 800;
+  font-size: var(--font-size-base);
+}
+
+.history-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.history-delete {
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 18px;
+  padding: 0 4px;
+}
+
+.history-question {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.history-answer {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Part tabs */
 .part-tabs {
   display: flex;
   gap: 8px;
@@ -293,6 +571,65 @@ function getScoreColor(score) {
 .q-btn.active { background: var(--black); color: var(--white); }
 [data-theme="dark"] .q-btn.active { background: var(--white); color: var(--black); }
 
+/* Timer */
+.timer-section {
+  text-align: center;
+}
+
+.timer-btn {
+  padding: 12px 28px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  background: var(--blue);
+  color: white;
+}
+
+.timer-display {
+  padding: var(--space-xl);
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.timer-display.warning {
+  border-color: var(--red);
+  animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--red); }
+  50% { border-color: transparent; }
+}
+
+.timer-phase {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.timer-countdown {
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.timer-display.warning .timer-countdown {
+  color: var(--red);
+}
+
+.timer-stop {
+  margin-top: 12px;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Recording */
 .record-area {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -332,6 +669,40 @@ function getScoreColor(score) {
 .record-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .speech-error { color: var(--red); font-size: var(--font-size-xs); margin-top: 8px; }
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: var(--space-md) 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--red);
+}
+
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.audio-playback {
+  margin: var(--space-md) 0;
+}
+
+.audio-player {
+  width: 100%;
+  max-width: 400px;
+  height: 40px;
+}
 
 .transcript-box {
   background: var(--bg-tertiary);
@@ -487,5 +858,7 @@ function getScoreColor(score) {
   .speaking-layout { grid-template-columns: 1fr; }
   .topic-sidebar { max-height: 200px; }
   .score-dimensions { grid-template-columns: 1fr; }
+  .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .timer-countdown { font-size: 36px; }
 }
 </style>

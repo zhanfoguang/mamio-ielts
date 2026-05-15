@@ -62,5 +62,69 @@ export const vocabTopics = [
       { word: 'malnutrition', phonetic: '/ˌmælnjuːˈtrɪʃn/', meaning: '营养不良', example: 'Malnutrition remains a significant problem in many developing nations.', collocations: ['suffer from malnutrition', 'childhood malnutrition', 'combat malnutrition'], band: 7 },
       { word: 'therapeutic', phonetic: '/ˌθerəˈpjuːtɪk/', meaning: '治疗的', example: 'Music has been shown to have therapeutic benefits for patients with dementia.', collocations: ['therapeutic effect', 'therapeutic approach', 'therapeutic value'], band: 7 }
     ]
+  },
+  {
+    topic: 'Society',
+    icon: '🏙️',
+    words: [
+      { word: 'urbanization', phonetic: '/ˌɜːbənaɪˈzeɪʃn/', meaning: '城市化', example: 'Rapid urbanization has led to housing shortages in many developing countries.', collocations: ['rapid urbanization', 'urbanization rate', 'effects of urbanization'], band: 7 },
+      { word: 'inequality', phonetic: '/ˌɪnɪˈkwɒləti/', meaning: '不平等', example: 'Income inequality has been widening in many developed nations.', collocations: ['income inequality', 'social inequality', 'gender inequality'], band: 6 },
+      { word: 'demographic', phonetic: '/ˌdeməˈɡræfɪk/', meaning: '人口统计的', example: 'Demographic changes are affecting the labor market in many countries.', collocations: ['demographic shift', 'demographic change', 'demographic trend'], band: 7 },
+      { word: 'integration', phonetic: '/ˌɪntɪˈɡreɪʃn/', meaning: '融合', example: 'Social integration of immigrants remains a challenge for many governments.', collocations: ['social integration', 'cultural integration', 'economic integration'], band: 7 },
+      { word: 'discrimination', phonetic: '/dɪˌskrɪmɪˈneɪʃn/', meaning: '歧视', example: 'Laws against discrimination in the workplace have been strengthened.', collocations: ['racial discrimination', 'gender discrimination', 'face discrimination'], band: 6 },
+      { word: 'cohesion', phonetic: '/kəʊˈhiːʒn/', meaning: '凝聚力', example: 'Community programs help build social cohesion in diverse neighborhoods.', collocations: ['social cohesion', 'community cohesion', 'lack of cohesion'], band: 7 },
+      { word: 'marginalized', phonetic: '/ˈmɑːdʒɪnəlaɪzd/', meaning: '被边缘化的', example: 'The government should do more to support marginalized communities.', collocations: ['marginalized groups', 'marginalized communities', 'socially marginalized'], band: 7 },
+      { word: 'philanthropy', phonetic: '/fɪˈlænθrəpi/', meaning: '慈善', example: 'Corporate philanthropy can play a significant role in addressing social issues.', collocations: ['corporate philanthropy', 'act of philanthropy', 'philanthropy and charity'], band: 8 },
+      { word: 'stereotype', phonetic: '/ˈsteriətaɪp/', meaning: '刻板印象', example: 'We should challenge stereotypes about different cultures and nationalities.', collocations: ['gender stereotype', 'cultural stereotype', 'break stereotypes'], band: 6 },
+      { word: 'disparity', phonetic: '/dɪˈspærəti/', meaning: '差距', example: 'There is a significant disparity in healthcare access between rural and urban areas.', collocations: ['wealth disparity', 'income disparity', 'disparity in access'], band: 8 }
+    ]
+  },
+  {
+    topic: 'Work & Career',
+    icon: '💼',
+    words: [
+      { word: 'entrepreneur', phonetic: '/ˌɒntrəprəˈnɜːr/', meaning: '企业家', example: 'Young entrepreneurs are driving innovation in the tech sector.', collocations: ['aspiring entrepreneur', 'social entrepreneur', 'entrepreneurial spirit'], band: 7 },
+      { word: 'freelance', phonetic: '/ˈfriːlɑːns/', meaning: '自由职业的', example: 'More people are choosing freelance work for greater flexibility.', collocations: ['freelance work', 'freelance writer', 'freelance career'], band: 6 },
+      { word: 'remuneration', phonetic: '/rɪˌmjuːnəˈreɪʃn/', meaning: '报酬', example: 'The remuneration package includes health insurance and pension contributions.', collocations: ['financial remuneration', 'adequate remuneration', 'remuneration package'], band: 8 },
+      { word: 'vocational', phonetic: '/vəʊˈkeɪʃənl/', meaning: '职业的', example: 'Vocational training programs help students develop practical skills.', collocations: ['vocational training', 'vocational education', 'vocational skills'], band: 6 },
+      { word: 'redundancy', phonetic: '/rɪˈdʌndənsi/', meaning: '裁员', example: 'Factory workers face redundancy as automation replaces manual labor.', collocations: ['face redundancy', 'voluntary redundancy', 'redundancy package'], band: 7 },
+      { word: 'competent', phonetic: '/ˈkɒmpɪtənt/', meaning: '有能力的', example: 'Employers seek competent workers who can adapt to changing demands.', collocations: ['highly competent', 'competent professional', 'competent in'], band: 6 },
+      { word: 'productivity', phonetic: '/ˌprɒdʌkˈtɪvəti/', meaning: '生产力', example: 'Flexible working arrangements can improve employee productivity.', collocations: ['increase productivity', 'labor productivity', 'productivity gains'], band: 6 },
+      { word: 'burnout', phonetic: '/ˈbɜːnaʊt/', meaning: '职业倦怠', example: 'Job burnout is increasingly common among young professionals.', collocations: ['suffer burnout', 'burnout rate', 'prevent burnout'], band: 7 },
+      { word: 'diversity', phonetic: '/daɪˈvɜːsəti/', meaning: '多样性', example: 'Companies with greater workforce diversity tend to be more innovative.', collocations: ['workforce diversity', 'diversity and inclusion', 'cultural diversity'], band: 6 },
+      { word: 'prospects', phonetic: '/ˈprɒspekts/', meaning: '前景', example: 'Career prospects in the renewable energy sector are very promising.', collocations: ['career prospects', 'job prospects', 'employment prospects'], band: 6 }
+    ]
+  },
+  {
+    topic: 'Crime & Law',
+    icon: '⚖️',
+    words: [
+      { word: 'offender', phonetic: '/əˈfendər/', meaning: '罪犯', example: 'Repeat offenders should face stricter penalties to deter crime.', collocations: ['first-time offender', 'repeat offender', 'young offender'], band: 6 },
+      { word: 'deterrent', phonetic: '/dɪˈterənt/', meaning: '威慑', example: 'The death penalty is not an effective deterrent against violent crime.', collocations: ['act as a deterrent', 'effective deterrent', 'deterrent effect'], band: 7 },
+      { word: 'rehabilitate', phonetic: '/ˌriːəˈbɪlɪteɪt/', meaning: '改造', example: 'Prison programs aim to rehabilitate offenders rather than simply punish them.', collocations: ['rehabilitate offenders', 'rehabilitate criminals', 'rehabilitation program'], band: 7 },
+      { word: 'legislation', phonetic: '/ˌledʒɪsˈleɪʃn/', meaning: '立法', example: 'New legislation has been introduced to combat online fraud.', collocations: ['introduce legislation', 'current legislation', 'environmental legislation'], band: 7 },
+      { word: 'enforcement', phonetic: '/ɪnˈfɔːsmənt/', meaning: '执法', example: 'Law enforcement agencies need more resources to fight cybercrime.', collocations: ['law enforcement', 'strict enforcement', 'enforcement agency'], band: 7 },
+      { word: 'recidivism', phonetic: '/rɪˈsɪdɪvɪzəm/', meaning: '累犯', example: 'Reducing recidivism rates is a key goal of the criminal justice system.', collocations: ['reduce recidivism', 'recidivism rate', 'high recidivism'], band: 8 },
+      { word: 'surveillance', phonetic: '/sɜːˈveɪləns/', meaning: '监控', example: 'CCTV surveillance has helped reduce crime in city centers.', collocations: ['surveillance camera', 'surveillance system', 'under surveillance'], band: 7 },
+      { word: 'prosecution', phonetic: '/ˌprɒsɪˈkjuːʃn/', meaning: '起诉', example: 'The prosecution must prove guilt beyond reasonable doubt.', collocations: ['criminal prosecution', 'face prosecution', 'prosecution service'], band: 7 },
+      { word: 'juvenile', phonetic: '/ˈdʒuːvənaɪl/', meaning: '青少年的', example: 'Juvenile crime is often linked to poverty and lack of education.', collocations: ['juvenile delinquency', 'juvenile offender', 'juvenile crime'], band: 7 },
+      { word: 'corruption', phonetic: '/kəˈrʌpʃn/', meaning: '腐败', example: 'Government corruption undermines public trust and economic development.', collocations: ['political corruption', 'fight corruption', 'corruption scandal'], band: 6 }
+    ]
+  },
+  {
+    topic: 'Media & Communication',
+    icon: '📱',
+    words: [
+      { word: 'misinformation', phonetic: '/ˌmɪsɪnfəˈmeɪʃn/', meaning: '错误信息', example: 'The spread of misinformation on social media is a growing concern.', collocations: ['spread misinformation', 'combat misinformation', 'misinformation campaign'], band: 7 },
+      { word: 'censorship', phonetic: '/ˈsensəʃɪp/', meaning: '审查制度', example: 'Internet censorship restricts access to information in some countries.', collocations: ['government censorship', 'press censorship', 'censorship laws'], band: 7 },
+      { word: 'journalism', phonetic: '/ˈdʒɜːnəlɪzəm/', meaning: '新闻业', example: 'Quality journalism plays a vital role in a functioning democracy.', collocations: ['investigative journalism', 'citizen journalism', 'responsible journalism'], band: 6 },
+      { word: 'broadcast', phonetic: '/ˈbrɔːdkɑːst/', meaning: '广播，播放', example: 'The interview was broadcast live to millions of viewers worldwide.', collocations: ['live broadcast', 'broadcast media', 'broadcast news'], band: 6 },
+      { word: 'allegation', phonetic: '/ˌæləˈɡeɪʃn/', meaning: '指控', example: 'The newspaper published allegations of corruption against the politician.', collocations: ['make an allegation', 'deny allegations', 'serious allegation'], band: 7 },
+      { word: 'objectivity', phonetic: '/ˌɒbdʒekˈtɪvəti/', meaning: '客观性', example: 'Journalists should strive for objectivity in their reporting.', collocations: ['maintain objectivity', 'lack of objectivity', 'journalistic objectivity'], band: 7 },
+      { word: 'influencer', phonetic: '/ˈɪnfluənsər/', meaning: '网红，影响者', example: 'Social media influencers have become powerful marketing tools for brands.', collocations: ['social media influencer', 'key influencer', 'influencer marketing'], band: 6 },
+      { word: 'sensationalism', phonetic: '/senˈseɪʃənəlɪzəm/', meaning: '哗众取宠', example: 'Sensationalism in the media can distort public understanding of events.', collocations: ['media sensationalism', 'accusations of sensationalism'], band: 8 },
+      { word: 'credible', phonetic: '/ˈkredɪbl/', meaning: '可信的', example: 'It is important to verify information from credible sources before sharing it.', collocations: ['credible source', 'credible evidence', 'credible threat'], band: 6 },
+      { word: 'narrative', phonetic: '/ˈnærətɪv/', meaning: '叙事', example: 'Different news outlets may present very different narratives of the same event.', collocations: ['dominant narrative', 'personal narrative', 'construct a narrative'], band: 7 }
+    ]
   }
 ]
