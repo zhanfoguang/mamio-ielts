@@ -33,6 +33,15 @@ db.exec(`
     used_at TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS reset_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `)
 
 // Auto-create admin account
@@ -60,7 +69,16 @@ export const userQueries = {
   resetDailyCalls: db.prepare('UPDATE users SET ai_calls_today = 0, ai_calls_date = ? WHERE id = ? AND ai_calls_date != ?'),
   activateCode: db.prepare('UPDATE users SET role = ?, expires_at = ?, invite_code = ? WHERE id = ?'),
   getAllUsers: db.prepare('SELECT id, email, nickname, role, ai_calls_today, trial_start, expires_at, created_at FROM users ORDER BY created_at DESC'),
-  updateRole: db.prepare('UPDATE users SET role = ? WHERE id = ?')
+  updateRole: db.prepare('UPDATE users SET role = ? WHERE id = ?'),
+  updatePassword: db.prepare('UPDATE users SET password = ? WHERE id = ?')
+}
+
+// Reset code queries
+export const resetCodeQueries = {
+  create: db.prepare('INSERT INTO reset_codes (email, code, expires_at) VALUES (?, ?, ?)'),
+  findValid: db.prepare('SELECT * FROM reset_codes WHERE email = ? AND code = ? AND used = 0 AND expires_at > datetime(\'now\') ORDER BY created_at DESC LIMIT 1'),
+  markUsed: db.prepare('UPDATE reset_codes SET used = 1 WHERE id = ?'),
+  cleanExpired: db.prepare('DELETE FROM reset_codes WHERE expires_at < datetime(\'now\')')
 }
 
 // Invite code queries

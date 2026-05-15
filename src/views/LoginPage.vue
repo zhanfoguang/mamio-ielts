@@ -81,6 +81,9 @@ async function handleActivate() {
         <button type="submit" class="submit-btn" :disabled="authStore.loading">
           {{ authStore.loading ? '...' : (themeStore.lang === 'zh' ? '登录' : 'Login') }}
         </button>
+        <button type="button" class="link-btn" @click="router.push('/forgot-password')">
+          {{ themeStore.lang === 'zh' ? '忘记密码？' : 'Forgot password?' }}
+        </button>
       </form>
 
       <!-- Register form -->
@@ -261,6 +264,16 @@ async function handleActivate() {
 
 .submit-btn:hover { opacity: 0.85; }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.link-btn {
+  background: none;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin-top: -4px;
+}
+
+.link-btn:hover { color: var(--blue); }
 
 .error-msg {
   margin-top: var(--space-md);

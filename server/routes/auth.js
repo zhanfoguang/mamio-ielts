@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { userQueries, codeQueries } from '../db.js'
+import { userQueries, codeQueries, resetCodeQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
+import { sendResetCode } from '../mail.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'mamio-ielts-secret-key'
@@ -147,6 +148,87 @@ router.post('/activate', authMiddleware, (req, res) => {
   } catch (err) {
     console.error('Activate error:', err.message)
     res.status(500).json({ error: '激活失败，请稍后重试' })
+  }
+})
+
+// Forgot password - send reset code
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) {
+      return res.status(400).json({ error: '请输入邮箱' })
+    }
+
+    const user = userQueries.findByEmail.get(email.toLowerCase().trim())
+    if (!user) {
+      // Don't reveal if email exists
+      return res.json({ message: '如果该邮箱已注册，验证码已发送' })
+    }
+
+    // Generate 6-digit code
+    const code = Math.random().toString().substring(2, 8)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+
+    resetCodeQueries.create.run(email.toLowerCase().trim(), code, expiresAt)
+
+    await sendResetCode(email, code)
+
+    res.json({ message: '验证码已发送到你的邮箱，10分钟内有效' })
+  } catch (err) {
+    console.error('Forgot password error:', err.message)
+    res.status(500).json({ error: err.message || '发送验证码失败，请稍后重试' })
+  }
+})
+
+// Verify reset code
+router.post('/verify-reset-code', (req, res) => {
+  try {
+    const { email, code } = req.body
+    if (!email || !code) {
+      return res.status(400).json({ error: '请输入邮箱和验证码' })
+    }
+
+    const resetCode = resetCodeQueries.findValid.get(email.toLowerCase().trim(), code.trim())
+    if (!resetCode) {
+      return res.status(400).json({ error: '验证码无效或已过期' })
+    }
+
+    res.json({ message: '验证成功', resetToken: resetCode.id })
+  } catch (err) {
+    console.error('Verify code error:', err.message)
+    res.status(500).json({ error: '验证失败' })
+  }
+})
+
+// Reset password
+router.post('/reset-password', (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: '缺少必要参数' })
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '密码至少 6 位' })
+    }
+
+    const resetCode = resetCodeQueries.findValid.get(email.toLowerCase().trim(), code.trim())
+    if (!resetCode) {
+      return res.status(400).json({ error: '验证码无效或已过期' })
+    }
+
+    const user = userQueries.findByEmail.get(email.toLowerCase().trim())
+    if (!user) {
+      return res.status(400).json({ error: '用户不存在' })
+    }
+
+    const hash = bcrypt.hashSync(newPassword, 10)
+    userQueries.updatePassword.run(hash, user.id)
+    resetCodeQueries.markUsed.run(resetCode.id)
+
+    res.json({ message: '密码重置成功，请重新登录' })
+  } catch (err) {
+    console.error('Reset password error:', err.message)
+    res.status(500).json({ error: '重置失败，请稍后重试' })
   }
 })
 
