@@ -1,0 +1,110 @@
+/* Fade Up Animation */
+.fade-up {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Pulse Animations */
+@keyframes pulse-blue {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(96, 165, 250, 0);
+  }
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(74, 222, 128, 0);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.6);
+  }
+}
+
+/* Slide Animations */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale Animation */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Bar Height Animation */
+@keyframes bar-grow {
+  from {
+    height: 0%;
+  }
+  to {
+    height: var(--target-height);
+  }
+}
+
+/* Flip Animation */
+@keyframes flip-in {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0deg);
+    opacity: 1;
+  }
+}
+
+/* Word Highlight */
+@keyframes word-highlight {
+  0% {
+    background-color: rgba(74, 222, 128, 0.1);
+  }
+  50% {
+    background-color: rgba(74, 222, 128, 0.3);
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
+  }
+  100% {
+    background-color: rgba(74, 222, 128, 0.1);
+  }
+}
