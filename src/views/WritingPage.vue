@@ -115,7 +115,7 @@ async function submitEssay() {
   loading.value = true
   stopTimer()
   try {
-    aiResult.value = await batchWriting(selectedPrompt.value.prompt, essay.value, activeTask.value)
+    aiResult.value = await batchWriting(selectedPrompt.value.prompt, essay.value, activeTask.value, themeStore.lang)
     showResult.value = true
     saveToHistory()
   } catch (e) {
@@ -311,7 +311,6 @@ onUnmounted(() => {
                   <div v-if="aiResult.actionPlan?.length" class="feedback-section">
                     <h4>{{ themeStore.lang === 'zh' ? '行动计划' : 'Action Plan' }}</h4>
                     <ol><li v-for="a in aiResult.actionPlan" :key="a">{{ a }}</li></ol>
-                    <p class="gemini-hint">{{ themeStore.lang === 'zh' ? '提示：可以把以上问题复制到 Gemini 进行深入学习和讨论' : 'Tip: Copy these issues to Gemini for deeper learning and discussion' }}</p>
                   </div>
                 </template>
               </div>
@@ -760,15 +759,6 @@ onUnmounted(() => {
 .feedback-section li { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: 4px; }
 .strength-item { color: var(--green); }
 .weakness-item { color: var(--red); }
-
-.gemini-hint {
-  margin-top: var(--space-md);
-  padding: 10px 14px;
-  background: var(--blue-soft);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  color: var(--blue);
-}
 
 .result-error { color: var(--red); text-align: center; }
 

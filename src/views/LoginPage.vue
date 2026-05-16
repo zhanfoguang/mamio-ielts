@@ -20,7 +20,7 @@ async function handleLogin() {
   error.value = ''
   try {
     await authStore.login(email.value, password.value)
-    router.push('/speaking')
+    router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.error || '登录失败'
   }
@@ -30,7 +30,7 @@ async function handleRegister() {
   error.value = ''
   try {
     await authStore.register(email.value, password.value, nickname.value)
-    router.push('/speaking')
+    router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.error || '注册失败'
   }

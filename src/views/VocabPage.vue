@@ -242,7 +242,7 @@ function isFlipped(index) {
 async function generateMore() {
   loadingAi.value = true
   try {
-    const result = await generateVocab(currentTopic.value.topic)
+    const result = await generateVocab(currentTopic.value.topic, undefined, themeStore.lang)
     aiWords.value = result.words || []
     // Save to localStorage
     const existing = JSON.parse(localStorage.getItem('mamio-vocab-ai') || '[]')

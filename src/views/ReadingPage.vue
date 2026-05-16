@@ -102,9 +102,9 @@ function submitAnswers() {
     } else if (q.type === 'short-answer') {
       q.items.forEach((item, i) => {
         total++
-        const userAns = (answers[i] || '').toLowerCase().trim()
-        const correctAns = item.answer.toLowerCase()
-        if (userAns === correctAns || correctAns.includes(userAns)) correct++
+        const userAns = (answers[i] || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
+        const correctAns = item.answer.toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
+        if (userAns === correctAns) correct++
       })
     } else if (q.type === 'multiple-choice') {
       q.items.forEach((item, i) => {
@@ -309,7 +309,7 @@ function getLevelColor(level) {
               </div>
 
               <div v-if="q.type === 'short-answer'" class="result-items">
-                <div v-for="(item, i) in q.items" :key="i" class="result-item" :class="{ correct: (getAnswer(q.id, i) || '').toLowerCase().trim() === item.answer.toLowerCase() }">
+                <div v-for="(item, i) in q.items" :key="i" class="result-item" :class="{ correct: (getAnswer(q.id, i) || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '') === item.answer.toLowerCase().trim().replace(/^(a|an|the)\s+/i, '') }">
                   <span class="ri-num">{{ i + 1 }}.</span>
                   <span class="ri-text">{{ item.question }}</span>
                   <span class="ri-answer">{{ themeStore.lang === 'zh' ? '正确答案' : 'Answer' }}: <strong>{{ item.answer }}</strong></span>

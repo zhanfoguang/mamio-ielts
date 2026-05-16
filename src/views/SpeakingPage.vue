@@ -134,7 +134,7 @@ async function submitForScoring(fullAnswer) {
   if (!answerText.trim()) return
   loading.value = true
   try {
-    aiResult.value = await scoreSpeaking(selectedQuestion.value, answerText, activePart.value, wordConfidences.value)
+    aiResult.value = await scoreSpeaking(selectedQuestion.value, answerText, activePart.value, wordConfidences.value, themeStore.lang)
     showResult.value = true
     if (fullAnswer) {
       // Conversation mode ended — save with conversation history
@@ -178,7 +178,8 @@ async function submitConvAnswer() {
       selectedQuestion.value,
       convMessages.value.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
       userText,
-      activePart.value
+      activePart.value,
+      themeStore.lang
     )
 
     if (result.type === 'followup') {

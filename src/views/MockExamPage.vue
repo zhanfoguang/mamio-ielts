@@ -218,7 +218,7 @@ async function submitWritingMock() {
       const essay = writingEssays.value[i] || ''
       if (essay.trim().length > 50) {
         const taskText = typeof t.task === 'string' ? t.task : (t.task.task || t.task.question || JSON.stringify(t.task))
-        const result = await batchWriting(taskText, essay, t.type)
+        const result = await batchWriting(taskText, essay, t.type, themeStore.lang)
         results.push({ type: t.type, task: taskText, essay, ...result })
       } else {
         results.push({ type: t.type, overall: 0, taskResponse: { score: 0 }, coherence: { score: 0 }, lexical: { score: 0 }, grammar: { score: 0 } })
