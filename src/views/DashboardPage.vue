@@ -329,6 +329,7 @@ onMounted(() => {
         <router-link v-for="link in [
           { path: '/speaking', icon: '🎤', labelZh: '口语练习', labelEn: 'Speaking Practice' },
           { path: '/listening', icon: '👂', labelZh: '听力练习', labelEn: 'Listening Practice' },
+          { path: '/reading', icon: '📖', labelZh: '阅读练习', labelEn: 'Reading Practice' },
           { path: '/writing', icon: '✍️', labelZh: '写作练习', labelEn: 'Writing Practice' },
           { path: '/vocabulary', icon: '📚', labelZh: '词汇学习', labelEn: 'Vocabulary' }
         ]" :key="link.path" :to="link.path" class="quick-link">
