@@ -13,6 +13,7 @@ const aiResult = ref(null)
 const loading = ref(false)
 const showResult = ref(false)
 const showModel = ref(false)
+const showComparison = ref(false)
 
 // Timer
 const timerRunning = ref(false)
@@ -28,6 +29,36 @@ const showHistory = ref(false)
 const draftKey = computed(() => `mamio-writing-draft-${selectedPrompt.value?.id || 'none'}`)
 
 const tasks = computed(() => activeTask.value === 1 ? writingTasks.task1 : writingTasks.task2)
+
+// Essay comparison
+const userWords = computed(() => {
+  const words = essay.value.toLowerCase().match(/\b[a-z]{3,}\b/g) || []
+  return [...new Set(words)]
+})
+
+const modelWords = computed(() => {
+  const text = selectedPrompt.value?.modelEssay || ''
+  const words = text.toLowerCase().match(/\b[a-z]{3,}\b/g) || []
+  return [...new Set(words)]
+})
+
+const uniqueUserWords = computed(() => {
+  return userWords.value.filter(w => !modelWords.value.includes(w))
+})
+
+const uniqueModelWords = computed(() => {
+  return modelWords.value.filter(w => !userWords.value.includes(w))
+})
+
+const sharedWords = computed(() => {
+  return userWords.value.filter(w => modelWords.value.includes(w))
+})
+
+function highlightText(text, highlightWords, cssClass) {
+  if (!highlightWords.length) return text
+  const regex = new RegExp(`\\b(${highlightWords.join('|')})\\b`, 'gi')
+  return text.replace(regex, `<span class="${cssClass}">$1</span>`)
+}
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -287,11 +318,65 @@ onUnmounted(() => {
 
               <!-- Model Essay -->
               <div v-if="selectedPrompt.modelEssay" class="model-section">
-                <button class="model-toggle" @click="showModel = !showModel">
-                  {{ showModel ? (themeStore.lang === 'zh' ? '隐藏范文' : 'Hide Model Essay') : (themeStore.lang === 'zh' ? '查看高分范文' : 'Show Model Essay') }}
-                </button>
+                <div class="model-actions">
+                  <button class="model-toggle" @click="showModel = !showModel">
+                    {{ showModel ? (themeStore.lang === 'zh' ? '隐藏范文' : 'Hide Model Essay') : (themeStore.lang === 'zh' ? '查看高分范文' : 'Show Model Essay') }}
+                  </button>
+                  <button class="model-toggle compare-btn" @click="showComparison = !showComparison">
+                    {{ showComparison ? (themeStore.lang === 'zh' ? '隐藏对比' : 'Hide Comparison') : (themeStore.lang === 'zh' ? '范文对比' : 'Compare Essays') }}
+                  </button>
+                </div>
+
                 <div v-if="showModel" class="model-essay">
                   <p>{{ selectedPrompt.modelEssay }}</p>
+                </div>
+
+                <!-- Comparison view -->
+                <div v-if="showComparison && essay.trim()" class="comparison-panel">
+                  <div class="comparison-header">
+                    <h4>{{ themeStore.lang === 'zh' ? '词汇对比分析' : 'Vocabulary Comparison' }}</h4>
+                  </div>
+
+                  <div class="comparison-stats">
+                    <div class="comp-stat">
+                      <span class="comp-num" style="color: var(--green)">{{ sharedWords.length }}</span>
+                      <span class="comp-label">{{ themeStore.lang === 'zh' ? '共同词汇' : 'Shared' }}</span>
+                    </div>
+                    <div class="comp-stat">
+                      <span class="comp-num" style="color: var(--blue)">{{ uniqueUserWords.length }}</span>
+                      <span class="comp-label">{{ themeStore.lang === 'zh' ? '你的独有' : 'Yours only' }}</span>
+                    </div>
+                    <div class="comp-stat">
+                      <span class="comp-num" style="color: var(--purple)">{{ uniqueModelWords.length }}</span>
+                      <span class="comp-label">{{ themeStore.lang === 'zh' ? '范文独有' : 'Model only' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="comparison-cols">
+                    <div class="comp-col">
+                      <h5>{{ themeStore.lang === 'zh' ? '你的作文' : 'Your Essay' }}</h5>
+                      <div class="comp-text" v-html="highlightText(essay, uniqueUserWords, 'word-user')"></div>
+                    </div>
+                    <div class="comp-col">
+                      <h5>{{ themeStore.lang === 'zh' ? '高分范文' : 'Model Essay' }}</h5>
+                      <div class="comp-text" v-html="highlightText(selectedPrompt.modelEssay, uniqueModelWords, 'word-model')"></div>
+                    </div>
+                  </div>
+
+                  <div class="vocab-diff">
+                    <div class="diff-section" v-if="uniqueModelWords.length">
+                      <h5>{{ themeStore.lang === 'zh' ? '范文用了但你没用的词' : 'Words in model but not in yours' }}</h5>
+                      <div class="diff-tags">
+                        <span v-for="w in uniqueModelWords.slice(0, 20)" :key="w" class="diff-tag model">{{ w }}</span>
+                      </div>
+                    </div>
+                    <div class="diff-section" v-if="uniqueUserWords.length">
+                      <h5>{{ themeStore.lang === 'zh' ? '你用了但范文没用的词' : 'Words in yours but not in model' }}</h5>
+                      <div class="diff-tags">
+                        <span v-for="w in uniqueUserWords.slice(0, 20)" :key="w" class="diff-tag user">{{ w }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </template>
@@ -713,6 +798,129 @@ onUnmounted(() => {
   line-height: 1.8;
   color: var(--text-secondary);
   white-space: pre-wrap;
+}
+
+.model-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.compare-btn {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* Comparison panel */
+.comparison-panel {
+  margin-top: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+}
+
+.comparison-header h4 {
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.comparison-stats {
+  display: flex;
+  gap: var(--space-xl);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comp-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.comp-num {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+}
+
+.comp-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.comparison-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.comp-col h5 {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+}
+
+.comp-text {
+  font-size: var(--font-size-xs);
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.comp-text :deep(.word-user) {
+  background: var(--blue-soft);
+  color: var(--blue);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.comp-text :deep(.word-model) {
+  background: var(--purple-soft);
+  color: var(--purple);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.vocab-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.diff-section h5 {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+.diff-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.diff-tag {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.diff-tag.model {
+  background: var(--purple-soft);
+  color: var(--purple);
+}
+
+.diff-tag.user {
+  background: var(--blue-soft);
+  color: var(--blue);
 }
 
 .empty-state {
