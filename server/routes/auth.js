@@ -1,26 +1,52 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
+import rateLimit from 'express-rate-limit'
 import { userQueries, codeQueries, resetCodeQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || 'mamio-ielts-secret-key'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is required')
+  process.exit(1)
+}
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { error: '请求过于频繁，请15分钟后再试' }
+})
+
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: '请求过于频繁，请15分钟后再试' }
+})
 
 function generateToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' })
+  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' })
 }
 
 // Register
-router.post('/register', (req, res) => {
+router.post('/register', authLimiter, (req, res) => {
   try {
     const { email, password, nickname } = req.body
     if (!email || !password) {
       return res.status(400).json({ error: '请输入邮箱和密码' })
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: '密码至少 6 位' })
+    if (password.length < 6 || password.length > 128) {
+      return res.status(400).json({ error: '密码长度 6-128 位' })
+    }
+    if (nickname && nickname.length > 50) {
+      return res.status(400).json({ error: '昵称最多 50 个字符' })
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: '邮箱格式不正确' })
     }
 
     const existing = userQueries.findByEmail.get(email.toLowerCase().trim())
@@ -61,7 +87,7 @@ router.post('/register', (req, res) => {
 })
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', authLimiter, (req, res) => {
   try {
     const { email, password } = req.body
     if (!email || !password) {
@@ -152,7 +178,7 @@ router.post('/activate', authMiddleware, (req, res) => {
 })
 
 // Forgot password - send reset code
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', resetLimiter, async (req, res) => {
   try {
     const { email } = req.body
     if (!email) {
@@ -165,8 +191,8 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: '如果该邮箱已注册，验证码已发送' })
     }
 
-    // Generate 6-digit code
-    const code = Math.random().toString().substring(2, 8)
+    // Generate 6-digit code (cryptographically secure)
+    const code = String(crypto.randomInt(100000, 999999))
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
 
     resetCodeQueries.create.run(email.toLowerCase().trim(), code, expiresAt)
@@ -176,12 +202,12 @@ router.post('/forgot-password', async (req, res) => {
     res.json({ message: '验证码已发送到你的邮箱，10分钟内有效' })
   } catch (err) {
     console.error('Forgot password error:', err.message)
-    res.status(500).json({ error: err.message || '发送验证码失败，请稍后重试' })
+    res.status(500).json({ error: '发送验证码失败，请稍后重试' })
   }
 })
 
 // Verify reset code
-router.post('/verify-reset-code', (req, res) => {
+router.post('/verify-reset-code', resetLimiter, (req, res) => {
   try {
     const { email, code } = req.body
     if (!email || !code) {
@@ -193,7 +219,7 @@ router.post('/verify-reset-code', (req, res) => {
       return res.status(400).json({ error: '验证码无效或已过期' })
     }
 
-    res.json({ message: '验证成功', resetToken: resetCode.id })
+    res.json({ message: '验证成功' })
   } catch (err) {
     console.error('Verify code error:', err.message)
     res.status(500).json({ error: '验证失败' })
@@ -201,7 +227,7 @@ router.post('/verify-reset-code', (req, res) => {
 })
 
 // Reset password
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', resetLimiter, (req, res) => {
   try {
     const { email, code, newPassword } = req.body
     if (!email || !code || !newPassword) {
@@ -244,7 +270,9 @@ router.post('/admin/codes', authMiddleware, adminMiddleware, (req, res) => {
     const { count = 1, duration_days = 30 } = req.body
     const codes = []
     for (let i = 0; i < Math.min(count, 50); i++) {
-      const code = 'MAMIO-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
+      const seg1 = crypto.randomBytes(3).toString('base64url').substring(0, 4).toUpperCase()
+      const seg2 = crypto.randomBytes(3).toString('base64url').substring(0, 4).toUpperCase()
+      const code = `MAMIO-${seg1}-${seg2}`
       codeQueries.create.run(code, duration_days)
       codes.push(code)
     }

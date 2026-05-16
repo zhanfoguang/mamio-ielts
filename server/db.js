@@ -101,7 +101,11 @@ db.exec(`
 // Auto-create admin account
 function ensureAdmin() {
   const email = process.env.ADMIN_EMAIL || 'admin@mamio.com'
-  const password = process.env.ADMIN_PASSWORD || 'mamio2024'
+  const password = process.env.ADMIN_PASSWORD
+  if (!password) {
+    console.error('FATAL: ADMIN_PASSWORD environment variable is required')
+    process.exit(1)
+  }
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
   if (!existing) {
     const hash = bcrypt.hashSync(password, 10)
@@ -164,7 +168,13 @@ export const progressQueries = {
   getDailyStats: db.prepare('SELECT * FROM daily_stats WHERE user_id = ? AND date = ?'),
   getDailyStatsRange: db.prepare('SELECT * FROM daily_stats WHERE user_id = ? AND date >= ? ORDER BY date'),
   ensureDailyStats: db.prepare('INSERT OR IGNORE INTO daily_stats (user_id, date) VALUES (?, ?)'),
-  incrementDailyModule: (module) => db.prepare(`UPDATE daily_stats SET ${module} = ${module} + 1 WHERE user_id = ? AND date = ?`)
+  incrementDailyModule: {
+    speaking: db.prepare('UPDATE daily_stats SET speaking = speaking + 1 WHERE user_id = ? AND date = ?'),
+    writing: db.prepare('UPDATE daily_stats SET writing = writing + 1 WHERE user_id = ? AND date = ?'),
+    listening: db.prepare('UPDATE daily_stats SET listening = listening + 1 WHERE user_id = ? AND date = ?'),
+    reading: db.prepare('UPDATE daily_stats SET reading = reading + 1 WHERE user_id = ? AND date = ?'),
+    vocab: db.prepare('UPDATE daily_stats SET vocab = vocab + 1 WHERE user_id = ? AND date = ?')
+  }
 }
 
 // Check and update user quota
