@@ -129,13 +129,19 @@ function toggleRecording() {
 }
 
 // Practice mode: submit for scoring
-async function submitForScoring() {
-  if (!transcript.value.trim()) return
+async function submitForScoring(fullAnswer) {
+  const answerText = fullAnswer || transcript.value
+  if (!answerText.trim()) return
   loading.value = true
   try {
-    aiResult.value = await scoreSpeaking(selectedQuestion.value, transcript.value, activePart.value, wordConfidences.value)
+    aiResult.value = await scoreSpeaking(selectedQuestion.value, answerText, activePart.value, wordConfidences.value)
     showResult.value = true
-    saveToHistory()
+    if (fullAnswer) {
+      // Conversation mode ended — save with conversation history
+      saveConvToHistory(aiResult.value)
+    } else {
+      saveToHistory()
+    }
   } catch (e) {
     aiResult.value = { error: e.response?.data?.error || '评分失败，请稍后重试' }
     showResult.value = true
@@ -203,9 +209,13 @@ function scrollConv() {
 }
 
 function endConversation() {
-  // Force scoring with whatever conversation happened
+  // Concatenate all user messages for full context scoring
+  const fullAnswer = convMessages.value
+    .filter(m => m.role === 'user')
+    .map(m => m.content)
+    .join('\n')
   convEnded.value = true
-  submitForScoring()
+  submitForScoring(fullAnswer)
 }
 
 function saveToHistory() {
@@ -515,6 +525,36 @@ watch(mode, () => {
                     </div>
                   </div>
 
+                  <!-- AI Result for manually ended conversation -->
+                  <div v-if="showResult && aiResult && !convMessages.some(m => m.content === '__SCORE__')" class="ai-result">
+                    <div v-if="aiResult.error" class="result-error">{{ aiResult.error }}</div>
+                    <template v-else>
+                      <div class="result-header">
+                        <div class="overall-score" :style="{ borderColor: getScoreColor(aiResult.overall) }">
+                          <span class="score-num">{{ aiResult.overall }}</span>
+                          <span class="score-label">Band</span>
+                        </div>
+                      </div>
+                      <div class="score-dimensions">
+                        <div v-for="(dim, key) in { fluency: aiResult.fluency, lexical: aiResult.lexical, grammar: aiResult.grammar, pronunciation: aiResult.pronunciation }" :key="key" class="dim-item">
+                          <div class="dim-header">
+                            <span class="dim-name">{{ { fluency: themeStore.lang === 'zh' ? '流利度' : 'Fluency', lexical: themeStore.lang === 'zh' ? '词汇' : 'Lexical', grammar: themeStore.lang === 'zh' ? '语法' : 'Grammar', pronunciation: themeStore.lang === 'zh' ? '发音' : 'Pronunciation' }[key] }}</span>
+                            <span class="dim-score" :style="{ color: getScoreColor(dim.score) }">{{ dim.score }}</span>
+                          </div>
+                          <p class="dim-comment">{{ dim.comment }}</p>
+                        </div>
+                      </div>
+                      <div v-if="aiResult.suggestions?.length" class="suggestions">
+                        <h4>{{ themeStore.lang === 'zh' ? '改进建议' : 'Suggestions' }}</h4>
+                        <ul><li v-for="s in aiResult.suggestions" :key="s">{{ s }}</li></ul>
+                      </div>
+                      <div v-if="aiResult.improvedAnswer" class="improved-answer">
+                        <h4>{{ themeStore.lang === 'zh' ? '示范回答' : 'Improved Answer' }}</h4>
+                        <p>{{ aiResult.improvedAnswer }}</p>
+                      </div>
+                    </template>
+                  </div>
+
                   <!-- Recording input for conversation -->
                   <div v-if="!convEnded" class="conv-input">
                     <div class="conv-record-row">
@@ -536,6 +576,11 @@ watch(mode, () => {
                       <button class="submit-btn" @click="submitConvAnswer" :disabled="convLoading">
                         {{ themeStore.lang === 'zh' ? '发送回答' : 'Send Answer' }}
                       </button>
+                      <button class="end-btn" @click="endConversation" :disabled="convLoading">
+                        {{ themeStore.lang === 'zh' ? '结束并评分' : 'End & Score' }}
+                      </button>
+                    </div>
+                    <div v-else-if="!isListening && convMessages.filter(m => m.role === 'user').length > 0" class="conv-actions">
                       <button class="end-btn" @click="endConversation" :disabled="convLoading">
                         {{ themeStore.lang === 'zh' ? '结束并评分' : 'End & Score' }}
                       </button>
