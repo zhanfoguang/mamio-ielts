@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { listeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
@@ -12,44 +12,75 @@ const currentSentenceIndex = ref(0)
 const isPlaying = ref(false)
 const subtitleMode = ref('bilingual')
 const showComparison = ref(false)
+const autoPlay = ref(false)
 
 const section = computed(() => listeningSections[activeSection.value])
 const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
 
-let wordInterval = null
 const currentWordIndex = ref(-1)
+let currentUtterance = null
 
-function startPlayback() {
+// Check if TTS is available
+const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
+
+function speakText(text) {
+  if (!ttsSupported) return
+  window.speechSynthesis.cancel()
+
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.lang = 'en-US'
+  utterance.rate = 0.9
+  utterance.pitch = 1
+
+  // Try to find an English voice
+  const voices = window.speechSynthesis.getVoices()
+  const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'))
+    || voices.find(v => v.lang.startsWith('en'))
+  if (enVoice) utterance.voice = enVoice
+
+  utterance.onboundary = (event) => {
+    if (event.name === 'word') {
+      const textUpToChar = text.substring(0, event.charIndex)
+      currentWordIndex.value = textUpToChar.split(/\s+/).length - 1
+    }
+  }
+
+  utterance.onend = () => {
+    currentWordIndex.value = -1
+    if (autoPlay.value && currentSentenceIndex.value < section.value.sentences.length - 1) {
+      setTimeout(() => {
+        currentSentenceIndex.value++
+        playCurrentSentence()
+      }, 800)
+    } else {
+      isPlaying.value = false
+    }
+  }
+
+  utterance.onerror = () => {
+    isPlaying.value = false
+    currentWordIndex.value = -1
+  }
+
+  currentUtterance = utterance
+  window.speechSynthesis.speak(utterance)
+}
+
+function playCurrentSentence() {
   isPlaying.value = true
   currentWordIndex.value = -1
-  const words = currentSentence.value.en.split(' ')
-  const wordDuration = currentSentence.value.duration / words.length
-
-  wordInterval = setInterval(() => {
-    if (currentWordIndex.value < words.length - 1) {
-      currentWordIndex.value++
-    } else {
-      clearInterval(wordInterval)
-      setTimeout(() => {
-        if (currentSentenceIndex.value < section.value.sentences.length - 1) {
-          currentSentenceIndex.value++
-          startPlayback()
-        } else {
-          isPlaying.value = false
-        }
-      }, 500)
-    }
-  }, wordDuration)
+  speakText(currentSentence.value.en)
 }
 
 function stopPlayback() {
   isPlaying.value = false
-  clearInterval(wordInterval)
+  if (ttsSupported) window.speechSynthesis.cancel()
+  currentWordIndex.value = -1
 }
 
 function togglePlay() {
   if (isPlaying.value) stopPlayback()
-  else startPlayback()
+  else playCurrentSentence()
 }
 
 function goToSentence(i) {
@@ -96,6 +127,14 @@ const wordDiff = computed(() => {
   return getWordDiff(currentSentence.value.en, transcript.value)
 })
 
+// Load TTS voices
+onMounted(() => {
+  if (ttsSupported) {
+    window.speechSynthesis.getVoices()
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
+  }
+})
+
 onUnmounted(() => stopPlayback())
 </script>
 
@@ -117,7 +156,7 @@ onUnmounted(() => stopPlayback())
       </div>
 
       <div class="listening-layout">
-        <!-- Audio area (simulated) -->
+        <!-- Audio area -->
         <div class="audio-area">
           <div class="audio-player">
             <div class="audio-visual">
@@ -132,6 +171,16 @@ onUnmounted(() => stopPlayback())
                 <div class="progress-fill" :style="{ width: ((currentSentenceIndex + 1) / section.sentences.length * 100) + '%' }"></div>
               </div>
               <span class="time">{{ currentSentenceIndex + 1 }} / {{ section.sentences.length }}</span>
+            </div>
+
+            <div class="tts-controls">
+              <label class="autoplay-toggle">
+                <input type="checkbox" v-model="autoPlay" />
+                <span>{{ themeStore.lang === 'zh' ? '自动播放下一句' : 'Auto-play next' }}</span>
+              </label>
+              <span v-if="!ttsSupported" class="tts-warning">
+                {{ themeStore.lang === 'zh' ? '浏览器不支持语音合成' : 'TTS not supported' }}
+              </span>
             </div>
           </div>
 
@@ -287,6 +336,31 @@ onUnmounted(() => stopPlayback())
 .progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, #60a5fa, #a78bfa); border-radius: 2px; transition: width 0.3s; }
 .time { font-size: var(--font-size-xs); color: rgba(255,255,255,0.6); }
+
+.tts-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.autoplay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+}
+
+.autoplay-toggle input { accent-color: #60a5fa; }
+
+.tts-warning {
+  font-size: var(--font-size-xs);
+  color: #f87171;
+}
 
 .subtitle-display {
   background: var(--bg-secondary);
