@@ -66,6 +66,20 @@ function startDictation() {
 function stopDictation() {
   stop()
   showComparison.value = true
+
+  // Save listening practice to history
+  if (transcript.value.trim()) {
+    const history = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
+    history.unshift({
+      id: Date.now(),
+      date: new Date().toISOString(),
+      section: section.value.title,
+      sentence: currentSentence.value.en,
+      transcript: transcript.value
+    })
+    if (history.length > 50) history.length = 50
+    localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+  }
 }
 
 function getWordDiff(original, spoken) {

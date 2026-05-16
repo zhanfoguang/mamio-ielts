@@ -15,6 +15,8 @@ const weekDays = checkinStore.getWeekDays()
 // Load all history
 const speakingHistory = ref([])
 const writingHistory = ref([])
+const listeningHistory = ref([])
+const readingHistory = ref([])
 
 // Practice stats for today
 const today = new Date().toISOString().split('T')[0]
@@ -23,8 +25,12 @@ const dailyGoal = 10
 const todayStats = computed(() => {
   const speaking = speakingHistory.value.filter(h => h.date?.startsWith(today)).length
   const writing = writingHistory.value.filter(h => h.date?.startsWith(today)).length
-  const vocab = JSON.parse(localStorage.getItem('mamio-progress') || '{}').vocabulary?.learned || 0
-  return { speaking, writing, vocab, total: speaking + writing }
+  const listening = listeningHistory.value.filter(h => h.date?.startsWith(today)).length
+  const reading = readingHistory.value.filter(h => h.date?.startsWith(today)).length
+  // Vocab: count today's SRS reviews
+  const vocabDaily = JSON.parse(localStorage.getItem('mamio-vocab-daily') || '{}')
+  const vocab = vocabDaily[today] || 0
+  return { speaking, writing, listening, reading, vocab, total: speaking + writing + listening + reading + vocab }
 })
 
 // Score trends (last 10 entries per module)
@@ -66,7 +72,9 @@ const heatmapDays = computed(() => {
     const dateStr = d.toISOString().split('T')[0]
     const speakingCount = speakingHistory.value.filter(h => h.date?.startsWith(dateStr)).length
     const writingCount = writingHistory.value.filter(h => h.date?.startsWith(dateStr)).length
-    const total = speakingCount + writingCount
+    const listeningCount = listeningHistory.value.filter(h => h.date?.startsWith(dateStr)).length
+    const readingCount = readingHistory.value.filter(h => h.date?.startsWith(dateStr)).length
+    const total = speakingCount + writingCount + listeningCount + readingCount
     days.push({
       date: dateStr,
       day: d.getDate(),
@@ -81,9 +89,12 @@ const heatmapDays = computed(() => {
 const recommendation = computed(() => {
   const speakingCount = speakingHistory.value.length
   const writingCount = writingHistory.value.length
+  const listeningCount = listeningHistory.value.length
+  const readingCount = readingHistory.value.length
   const vocab = JSON.parse(localStorage.getItem('mamio-progress') || '{}').vocabulary?.learned || 0
 
-  if (speakingCount === 0 && writingCount === 0) {
+  const totalPractice = speakingCount + writingCount + listeningCount + readingCount
+  if (totalPractice === 0) {
     return {
       icon: '🎯',
       zh: '开始你的第一次练习吧！建议从口语 Part 1 开始',
@@ -147,6 +158,22 @@ const moduleStats = computed(() => [
     color: 'var(--green)'
   },
   {
+    icon: '🎧',
+    labelZh: '听力练习',
+    labelEn: 'Listening',
+    count: listeningHistory.value.length,
+    score: null,
+    color: 'var(--blue)'
+  },
+  {
+    icon: '📖',
+    labelZh: '阅读练习',
+    labelEn: 'Reading',
+    count: readingHistory.value.length,
+    score: null,
+    color: 'var(--amber)'
+  },
+  {
     icon: '📚',
     labelZh: '词汇掌握',
     labelEn: 'Vocabulary',
@@ -155,6 +182,14 @@ const moduleStats = computed(() => [
     color: 'var(--purple)'
   }
 ])
+
+// Onboarding
+const showOnboarding = ref(false)
+
+function closeOnboarding() {
+  showOnboarding.value = false
+  localStorage.setItem('mamio-onboarded', '1')
+}
 
 // Score chart (simple SVG sparkline)
 function getSparklinePath(scores) {
@@ -179,11 +214,66 @@ function getScoreColor(score) {
 onMounted(() => {
   speakingHistory.value = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
   writingHistory.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+  listeningHistory.value = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
+  readingHistory.value = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+
+  // Show onboarding for first-time users
+  if (!localStorage.getItem('mamio-onboarded')) {
+    showOnboarding.value = true
+  }
 })
 </script>
 
 <template>
   <div class="dashboard-page">
+    <!-- Onboarding modal -->
+    <div v-if="showOnboarding" class="onboarding-overlay" @click.self="closeOnboarding">
+      <div class="onboarding-card">
+        <h2>{{ themeStore.lang === 'zh' ? '欢迎使用 Mamio IELTS!' : 'Welcome to Mamio IELTS!' }}</h2>
+        <p class="onboarding-desc">{{ themeStore.lang === 'zh' ? '你的 AI 雅思备考助手，帮你高效提分' : 'Your AI-powered IELTS prep assistant' }}</p>
+        <div class="onboarding-steps">
+          <div class="ob-step">
+            <span class="ob-icon">🎤</span>
+            <div>
+              <strong>{{ themeStore.lang === 'zh' ? '口语练习' : 'Speaking' }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? 'AI 实时评分 + 对话模拟' : 'AI scoring + conversation simulation' }}</p>
+            </div>
+          </div>
+          <div class="ob-step">
+            <span class="ob-icon">✍️</span>
+            <div>
+              <strong>{{ themeStore.lang === 'zh' ? '写作批改' : 'Writing' }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? 'AI 方向性指导 + 范文对比' : 'AI feedback + essay comparison' }}</p>
+            </div>
+          </div>
+          <div class="ob-step">
+            <span class="ob-icon">🎧</span>
+            <div>
+              <strong>{{ themeStore.lang === 'zh' ? '听力训练' : 'Listening' }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? '跟读练习 + 逐句对比' : 'Dictation practice + word comparison' }}</p>
+            </div>
+          </div>
+          <div class="ob-step">
+            <span class="ob-icon">📖</span>
+            <div>
+              <strong>{{ themeStore.lang === 'zh' ? '阅读理解' : 'Reading' }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? '限时练习 + 详细解析' : 'Timed practice + detailed analysis' }}</p>
+            </div>
+          </div>
+          <div class="ob-step">
+            <span class="ob-icon">📚</span>
+            <div>
+              <strong>{{ themeStore.lang === 'zh' ? '词汇记忆' : 'Vocabulary' }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? '间隔重复 + 每日新词' : 'Spaced repetition + daily words' }}</p>
+            </div>
+          </div>
+        </div>
+        <button class="onboarding-btn" @click="closeOnboarding">
+          {{ themeStore.lang === 'zh' ? '开始学习' : 'Start Learning' }}
+        </button>
+      </div>
+    </div>
+
     <div class="container">
       <!-- Header -->
       <div class="dashboard-header">
@@ -216,6 +306,9 @@ onMounted(() => {
         <div class="today-breakdown">
           <span class="breakdown-item">🎤 {{ todayStats.speaking }}</span>
           <span class="breakdown-item">✍️ {{ todayStats.writing }}</span>
+          <span class="breakdown-item">🎧 {{ todayStats.listening }}</span>
+          <span class="breakdown-item">📖 {{ todayStats.reading }}</span>
+          <span class="breakdown-item">📚 {{ todayStats.vocab }}</span>
         </div>
       </div>
 
@@ -726,5 +819,76 @@ onMounted(() => {
 @media (max-width: 768px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .quick-links { grid-template-columns: 1fr; }
+}
+
+/* Onboarding */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-xl);
+}
+
+.onboarding-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.onboarding-card h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.onboarding-desc {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.onboarding-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: var(--space-xl);
+}
+
+.ob-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.ob-icon { font-size: 1.5rem; flex-shrink: 0; }
+.ob-step strong { font-size: var(--font-size-sm); display: block; margin-bottom: 2px; }
+.ob-step p { font-size: var(--font-size-xs); color: var(--text-secondary); margin: 0; }
+
+.onboarding-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: var(--font-size-base);
+}
+
+[data-theme="dark"] .onboarding-btn {
+  background: var(--white);
+  color: var(--black);
 }
 </style>

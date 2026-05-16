@@ -13,6 +13,13 @@ const isMobileMenuOpen = ref(false)
 const showUserMenu = ref(false)
 
 const isLanding = ref(route.path === '/')
+const userAreaRef = ref(null)
+
+function handleClickOutside(e) {
+  if (showUserMenu.value && userAreaRef.value && !userAreaRef.value.contains(e.target)) {
+    showUserMenu.value = false
+  }
+}
 
 function handleScroll() {
   isScrolled.value = window.scrollY > 50
@@ -53,8 +60,14 @@ router.afterEach((to) => {
   isLanding.value = to.path === '/'
 })
 
-onMounted(() => window.addEventListener('scroll', handleScroll))
-onUnmounted(() => window.removeEventListener('scroll', handleScroll))
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+  document.addEventListener('click', handleClickOutside)
+})
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -93,7 +106,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
         </button>
 
         <!-- User info (logged in) -->
-        <div v-if="authStore.isLoggedIn" class="user-area">
+        <div v-if="authStore.isLoggedIn" class="user-area" ref="userAreaRef">
           <button class="user-btn" @click="showUserMenu = !showUserMenu">
             <span class="user-avatar">{{ (authStore.user?.nickname || 'U')[0].toUpperCase() }}</span>
             <span class="user-info">

@@ -182,12 +182,15 @@ function startQuiz(type) {
   const words = allCurrentWords.value
   if (words.length < 4) return
 
+  // All words pool for distractors (from all topics)
+  const allPool = vocabTopics.flatMap(t => t.words)
+
   // Generate 10 questions
   const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 10)
   quizQuestions.value = shuffled.map(w => {
     if (type === 'choice') {
-      // Wrong options from other words
-      const others = words.filter(x => x.word !== w.word).sort(() => Math.random() - 0.5).slice(0, 3)
+      // Wrong options from ALL topics, not just current
+      const others = allPool.filter(x => x.word !== w.word).sort(() => Math.random() - 0.5).slice(0, 3)
       const options = [w.meaning, ...others.map(o => o.meaning)].sort(() => Math.random() - 0.5)
       return { word: w, options, answer: w.meaning }
     } else if (type === 'spelling') {

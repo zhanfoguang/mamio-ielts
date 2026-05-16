@@ -116,6 +116,20 @@ function submitAnswers() {
 
   score.value = { correct, total, percentage: Math.round((correct / total) * 100) }
   showResults.value = true
+
+  // Save to reading history
+  const history = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+  history.unshift({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    passage: selectedPassage.value.title,
+    score: score.value.percentage,
+    correct,
+    total,
+    time: timerSeconds.value
+  })
+  if (history.length > 50) history.length = 50
+  localStorage.setItem('mamio-reading-history', JSON.stringify(history))
 }
 
 function getScoreColor(pct) {
