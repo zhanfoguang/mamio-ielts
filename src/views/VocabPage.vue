@@ -6,7 +6,7 @@ import { generateVocab } from '../services/ai'
 
 const themeStore = useThemeStore()
 
-// Mode: browse, quiz, srs
+// Mode: browse, quiz, srs, daily
 const mode = ref('browse')
 const activeTopic = ref(0)
 const flippedCards = ref(new Set())
@@ -30,6 +30,52 @@ const quizDone = ref(false)
 
 // Saved AI words
 const savedAiWords = ref(JSON.parse(localStorage.getItem('mamio-vocab-ai') || '[]'))
+
+// Daily words state
+const dailyGoal = 10
+const today = new Date().toISOString().split('T')[0]
+const dailyProgress = ref(JSON.parse(localStorage.getItem('mamio-vocab-daily') || '{}'))
+const vocabStreak = ref(JSON.parse(localStorage.getItem('mamio-vocab-streak') || '{"count":0,"lastDate":""}'))
+
+// Daily recommendations
+const dailyWords = computed(() => {
+  const learned = Object.keys(srsData.value)
+  const allWords = vocabTopics.flatMap(t => t.words)
+  const unseen = allWords.filter(w => !learned.includes(w.word.toLowerCase()))
+  // Mix: 5 new words + 5 due for review
+  const newWords = unseen.sort(() => Math.random() - 0.5).slice(0, 5)
+  const due = getDueWords().slice(0, 5)
+  const combined = [...newWords, ...due]
+  // Deduplicate
+  const seen = new Set()
+  return combined.filter(w => {
+    if (seen.has(w.word.toLowerCase())) return false
+    seen.add(w.word.toLowerCase())
+    return true
+  }).slice(0, dailyGoal)
+})
+
+const todayStudied = computed(() => {
+  return dailyProgress.value[today] || 0
+})
+
+function updateDailyProgress() {
+  dailyProgress.value[today] = (dailyProgress.value[today] || 0) + 1
+  localStorage.setItem('mamio-vocab-daily', JSON.stringify(dailyProgress.value))
+  updateVocabStreak()
+}
+
+function updateVocabStreak() {
+  if (vocabStreak.value.lastDate === today) return
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  if (vocabStreak.value.lastDate === yesterday) {
+    vocabStreak.value.count++
+  } else {
+    vocabStreak.value.count = 1
+  }
+  vocabStreak.value.lastDate = today
+  localStorage.setItem('mamio-vocab-streak', JSON.stringify(vocabStreak.value))
+}
 
 const currentTopic = computed(() => vocabTopics[activeTopic.value])
 
@@ -118,6 +164,7 @@ function rateSrs(quality) {
 
   srsData.value[key] = entry
   localStorage.setItem('mamio-vocab-srs', JSON.stringify(srsData.value))
+  updateDailyProgress()
 
   // Next card
   showSrsAnswer.value = false
@@ -230,6 +277,32 @@ watch(activeTopic, () => {
     <div class="container">
       <h1>{{ themeStore.lang === 'zh' ? '雅思词汇' : 'IELTS Vocabulary' }}</h1>
 
+      <!-- Daily words card -->
+      <div class="daily-card">
+        <div class="daily-top">
+          <div>
+            <h3>{{ themeStore.lang === 'zh' ? '今日词汇' : "Today's Words" }}</h3>
+            <p class="daily-sub">{{ themeStore.lang === 'zh' ? `目标 ${dailyGoal} 个词` : `Goal: ${dailyGoal} words` }}</p>
+          </div>
+          <div class="daily-stats">
+            <div class="daily-count">
+              <span class="daily-num">{{ todayStudied }}</span>
+              <span class="daily-label">/ {{ dailyGoal }}</span>
+            </div>
+            <div class="daily-streak">
+              🔥 {{ vocabStreak.count }} {{ themeStore.lang === 'zh' ? '天' : 'days' }}
+            </div>
+          </div>
+        </div>
+        <div class="daily-progress-bar">
+          <div class="daily-progress-fill" :style="{ width: Math.min(100, (todayStudied / dailyGoal) * 100) + '%' }"></div>
+        </div>
+        <button class="daily-btn" @click="mode = 'daily'">
+          {{ themeStore.lang === 'zh' ? '开始今日学习' : 'Start Daily Review' }}
+          <span class="daily-btn-count">{{ dailyWords.length }} {{ themeStore.lang === 'zh' ? '个待学' : 'words' }}</span>
+        </button>
+      </div>
+
       <!-- Stats bar -->
       <div class="stats-bar">
         <div class="stat-item">
@@ -316,6 +389,41 @@ watch(activeTopic, () => {
               </div>
             </div>
           </div>
+        </div>
+      </template>
+
+      <!-- Mode: Daily Words -->
+      <template v-if="mode === 'daily'">
+        <div class="srs-header">
+          <h2>{{ themeStore.lang === 'zh' ? '今日词汇学习' : "Today's Word Study" }}</h2>
+          <button class="back-btn" @click="mode = 'browse'">{{ themeStore.lang === 'zh' ? '返回' : 'Back' }}</button>
+        </div>
+
+        <div v-if="dailyWords.length === 0" class="srs-empty">
+          <p>{{ themeStore.lang === 'zh' ? '今日词汇已全部学完！' : "All today's words completed!" }}</p>
+        </div>
+
+        <div v-else class="daily-words-grid">
+          <div v-for="(w, i) in dailyWords" :key="w.word" class="daily-word-card" :class="{ flipped: flippedCards.has('daily-' + i) }" @click="toggleFlip('daily-' + i)">
+            <div class="dwc-front">
+              <span class="band-badge" :style="{ color: getBandColor(w.band) }">Band {{ w.band }}</span>
+              <h4>{{ w.word }}</h4>
+              <p class="dwc-phonetic">{{ w.phonetic }}</p>
+            </div>
+            <div class="dwc-back">
+              <p class="dwc-meaning">{{ w.meaning }}</p>
+              <p class="dwc-example">"{{ w.example }}"</p>
+              <div class="dwc-collocations">
+                <span v-for="c in w.collocations" :key="c" class="col-tag">{{ c }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="dailyWords.length > 0" class="daily-actions">
+          <button class="srs-show-btn" @click="startSrs">
+            {{ themeStore.lang === 'zh' ? '开始间隔复习' : 'Start SRS Review' }}
+          </button>
         </div>
       </template>
 
@@ -715,6 +823,146 @@ watch(activeTopic, () => {
   margin-left: 12px;
   font-weight: 600;
   color: var(--blue);
+}
+
+/* Daily card */
+.daily-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.daily-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.daily-top h3 { font-weight: 700; font-size: var(--font-size-base); }
+.daily-sub { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 2px; }
+
+.daily-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.daily-count {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.daily-num { font-size: var(--font-size-2xl); font-weight: 800; }
+.daily-label { font-size: var(--font-size-sm); color: var(--text-tertiary); }
+
+.daily-streak {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.daily-progress-bar {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+
+.daily-progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: width var(--transition-base);
+}
+
+.daily-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background var(--transition-fast);
+}
+
+.daily-btn:hover { background: var(--border-color); }
+
+.daily-btn-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* Daily words grid */
+.daily-words-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: var(--space-xl);
+}
+
+.daily-word-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: 120px;
+}
+
+.daily-word-card:hover { box-shadow: var(--shadow-md); }
+
+.daily-word-card h4 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+
+.dwc-phonetic {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.daily-word-card .dwc-back {
+  display: none;
+}
+
+.daily-word-card.flipped .dwc-front { display: none; }
+.daily-word-card.flipped .dwc-back { display: block; }
+
+.dwc-meaning {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.dwc-example {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.dwc-collocations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.daily-actions {
+  text-align: center;
 }
 
 .srs-empty {
