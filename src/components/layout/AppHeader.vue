@@ -112,7 +112,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
             <button class="dropdown-item" @click="goTo('/login')">
               {{ themeStore.lang === 'zh' ? '激活码' : 'Activate Code' }}
             </button>
-            <button v-if="authStore.isAdmin" class="dropdown-item" @click="goTo('/login')">
+            <button v-if="authStore.isAdmin" class="dropdown-item" @click="goTo('/admin')">
               {{ themeStore.lang === 'zh' ? '管理面板' : 'Admin Panel' }}
             </button>
             <button class="dropdown-item logout" @click="handleLogout">

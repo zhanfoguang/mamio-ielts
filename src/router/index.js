@@ -50,6 +50,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminPage.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/'
     }
@@ -70,6 +76,18 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('mamio-token')
   if (to.meta.requiresAuth && !token) {
     next('/login')
+  } else if (to.meta.requiresAdmin) {
+    // Check admin by decoding JWT payload
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (payload.role === 'admin') {
+        next()
+      } else {
+        next('/')
+      }
+    } catch {
+      next('/login')
+    }
   } else {
     next()
   }
