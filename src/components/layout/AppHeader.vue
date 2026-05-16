@@ -72,13 +72,15 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
           <a @click.prevent="goTo('/listening')">{{ themeStore.lang === 'zh' ? '听力' : 'Listening' }}</a>
           <a @click.prevent="goTo('/reading')">{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</a>
           <a @click.prevent="goTo('/writing')">{{ themeStore.lang === 'zh' ? '写作' : 'Writing' }}</a>
+          <a @click.prevent="goTo('/mock')">{{ themeStore.lang === 'zh' ? '模考' : 'Mock' }}</a>
         </template>
         <template v-else>
           <a @click.prevent="goTo('/speaking')" :class="{ active: route.path === '/speaking' }">{{ themeStore.lang === 'zh' ? '口语' : 'Speaking' }}</a>
           <a @click.prevent="goTo('/listening')" :class="{ active: route.path === '/listening' }">{{ themeStore.lang === 'zh' ? '听力' : 'Listening' }}</a>
           <a @click.prevent="goTo('/reading')" :class="{ active: route.path === '/reading' }">{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</a>
           <a @click.prevent="goTo('/writing')" :class="{ active: route.path === '/writing' }">{{ themeStore.lang === 'zh' ? '写作' : 'Writing' }}</a>
-          <a @click.prevent="goTo('/vocabulary')" :class="{ active: route.path === '/vocabulary' }">{{ themeStore.lang === 'zh' ? '词汇' : 'Vocabulary' }}</a>
+          <a @click.prevent="goTo('/vocabulary')" :class="{ active: route.path === '/vocabulary' }">{{ themeStore.lang === 'zh' ? '词汇' : 'Vocab' }}</a>
+          <a @click.prevent="goTo('/mock')" :class="{ active: route.path === '/mock', mockLink: true }">{{ themeStore.lang === 'zh' ? '模考' : 'Mock' }}</a>
         </template>
       </nav>
 
