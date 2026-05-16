@@ -155,7 +155,7 @@ router.post('/speaking-conversation', checkQuota, async (req, res) => {
 // 口语评分
 router.post('/speaking', checkQuota, async (req, res) => {
   try {
-    const { question, userAnswer, part } = req.body
+    const { question, userAnswer, part, confidenceData } = req.body
     if (!question || !userAnswer) {
       return res.status(400).json({ error: '缺少题目或回答内容' })
     }
@@ -163,10 +163,15 @@ router.post('/speaking', checkQuota, async (req, res) => {
       return res.status(400).json({ error: '回答内容过长，最多 3000 字符' })
     }
 
+    const confidenceInfo = confidenceData && confidenceData.length > 0
+      ? `\n\n语音识别置信度数据（每句话的识别置信度，0-1，越低表示发音可能越不清晰）：${JSON.stringify(confidenceData.map(w => ({ word: w.word, confidence: Math.round(w.confidence * 100) / 100 })))}\n平均置信度：${Math.round((confidenceData.reduce((s, w) => s + w.confidence, 0) / confidenceData.length) * 100) / 100}`
+      : ''
+
     const systemPrompt = `你是一位资深雅思考官。请根据雅思口语评分标准对考生的回答进行评分。
 评分维度：流利度与连贯性(Fluency)、词汇多样性(Lexical)、语法准确性(Grammar)、发音(Pronunciation)。
-注意：考生的回答是通过语音识别转文字得到的，发音评分基于用词和表达的准确性推测。
+${confidenceData && confidenceData.length > 0 ? '发音评分时请参考语音识别置信度数据——置信度低的词可能发音不清晰。' : '发音评分基于用词和表达的准确性推测。'}
 每个维度给 band 分数(1-9)，并给出总分。
+${confidenceData && confidenceData.length > 0 ? '另外请分析可能发音不准的词（尤其是置信度低于0.8的词、以及中国考生常见的发音难点词），给出 pronunciationWords 数组。' : ''}
 请用 JSON 格式回复，不要包含其他内容：
 {
   "fluency": {"score": 7, "comment": "..."},
@@ -175,10 +180,10 @@ router.post('/speaking', checkQuota, async (req, res) => {
   "pronunciation": {"score": 6, "comment": "..."},
   "overall": 6.5,
   "suggestions": ["建议1", "建议2"],
-  "improvedAnswer": "改进后的示范回答"
+  "improvedAnswer": "改进后的示范回答"${confidenceData && confidenceData.length > 0 ? ',\n  "pronunciationWords": [\n    {"word": "example", "issue": "th音发音不准", "tip": "舌尖轻触上齿"}\n  ]' : ''}
 }`
 
-    const userPrompt = `Part ${part || 1} 口语题目：${question}\n\n考生回答（语音转文字）：${userAnswer}`
+    const userPrompt = `Part ${part || 1} 口语题目：${question}\n\n考生回答（语音转文字）：${userAnswer}${confidenceInfo}`
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)

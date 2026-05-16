@@ -9,6 +9,7 @@ const themeStore = useThemeStore()
 const {
   isListening, transcript, interimTranscript, error: speechError, isSupported,
   isRecording, audioUrl, recordingDuration,
+  wordConfidences, overallConfidence,
   start, stop, reset, startRecording, stopRecording, clearRecording
 } = useSpeechRecognition()
 
@@ -132,7 +133,7 @@ async function submitForScoring() {
   if (!transcript.value.trim()) return
   loading.value = true
   try {
-    aiResult.value = await scoreSpeaking(selectedQuestion.value, transcript.value, activePart.value)
+    aiResult.value = await scoreSpeaking(selectedQuestion.value, transcript.value, activePart.value, wordConfidences.value)
     showResult.value = true
     saveToHistory()
   } catch (e) {
@@ -427,6 +428,25 @@ watch(mode, () => {
                     <div v-if="aiResult.improvedAnswer" class="improved-answer">
                       <h4>{{ themeStore.lang === 'zh' ? '示范回答' : 'Improved Answer' }}</h4>
                       <p>{{ aiResult.improvedAnswer }}</p>
+                    </div>
+
+                    <div v-if="aiResult.pronunciationWords?.length" class="pronunciation-section">
+                      <h4>{{ themeStore.lang === 'zh' ? '发音提示' : 'Pronunciation Tips' }}</h4>
+                      <div class="pronunciation-words">
+                        <div v-for="pw in aiResult.pronunciationWords" :key="pw.word" class="pronunciation-word">
+                          <span class="pw-word">{{ pw.word }}</span>
+                          <span class="pw-issue">{{ pw.issue }}</span>
+                          <span class="pw-tip">{{ pw.tip }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="overallConfidence > 0" class="confidence-bar">
+                      <span class="confidence-label">{{ themeStore.lang === 'zh' ? '识别清晰度' : 'Recognition Clarity' }}</span>
+                      <div class="confidence-track">
+                        <div class="confidence-fill" :style="{ width: Math.round(overallConfidence * 100) + '%', background: overallConfidence > 0.8 ? 'var(--green)' : overallConfidence > 0.5 ? 'var(--yellow)' : 'var(--red)' }"></div>
+                      </div>
+                      <span class="confidence-value">{{ Math.round(overallConfidence * 100) }}%</span>
                     </div>
                   </template>
                 </div>
@@ -1059,6 +1079,89 @@ watch(mode, () => {
 }
 
 .result-error { color: var(--red); text-align: center; }
+
+.pronunciation-section {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.pronunciation-section h4 {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.pronunciation-words {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pronunciation-word {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--red-soft);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+
+.pw-word {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--red);
+  font-size: var(--font-size-base);
+}
+
+.pw-issue {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.pw-tip {
+  font-size: var(--font-size-xs);
+  color: var(--green);
+  margin-left: auto;
+}
+
+.confidence-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.confidence-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.confidence-track {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width var(--transition-base);
+}
+
+.confidence-value {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: right;
+}
 
 /* Conversation mode */
 .conv-start {

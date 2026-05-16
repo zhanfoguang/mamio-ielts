@@ -6,6 +6,10 @@ export function useSpeechRecognition() {
   const interimTranscript = ref('')
   const error = ref(null)
 
+  // Pronunciation confidence data
+  const wordConfidences = ref([])
+  const overallConfidence = ref(0)
+
   // Recording state
   const isRecording = ref(false)
   const audioBlob = ref(null)
@@ -35,6 +39,13 @@ export function useSpeechRecognition() {
         const result = event.results[i]
         if (result.isFinal) {
           final += result[0].transcript
+          // Capture word-level confidence
+          const words = result[0].transcript.trim().split(/\s+/)
+          const conf = result[0].confidence
+          words.forEach(w => {
+            wordConfidences.value.push({ word: w, confidence: conf })
+          })
+          overallConfidence.value = conf
         } else {
           interim += result[0].transcript
         }
@@ -130,6 +141,8 @@ export function useSpeechRecognition() {
     transcript.value = ''
     interimTranscript.value = ''
     error.value = null
+    wordConfidences.value = []
+    overallConfidence.value = 0
     clearRecording()
   }
 
@@ -146,6 +159,7 @@ export function useSpeechRecognition() {
   return {
     isListening, transcript, interimTranscript, error, isSupported,
     isRecording, audioBlob, audioUrl, recordingDuration,
+    wordConfidences, overallConfidence,
     start, stop, reset, startRecording, stopRecording, clearRecording
   }
 }

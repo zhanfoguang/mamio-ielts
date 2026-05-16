@@ -1,7 +1,7 @@
 import api from './api.js'
 
-export async function scoreSpeaking(question, userAnswer, part) {
-  const { data } = await api.post('/ai/speaking', { question, userAnswer, part })
+export async function scoreSpeaking(question, userAnswer, part, confidenceData) {
+  const { data } = await api.post('/ai/speaking', { question, userAnswer, part, confidenceData })
   return data
 }
 
