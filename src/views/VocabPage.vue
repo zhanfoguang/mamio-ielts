@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { vocabTopics } from '../data/ielts/vocabulary'
 import { generateVocab } from '../services/ai'
+import { getVocabProgress, updateVocabProgress } from '../services/progress'
 
 const themeStore = useThemeStore()
 
@@ -18,6 +19,34 @@ const srsData = ref(JSON.parse(localStorage.getItem('mamio-vocab-srs') || '{}'))
 const srsQueue = ref([])
 const srsIndex = ref(0)
 const showSrsAnswer = ref(false)
+
+// Load SRS from API on mount
+onMounted(async () => {
+  try {
+    const apiData = await getVocabProgress()
+    if (apiData.length > 0) {
+      const merged = { ...srsData.value }
+      for (const row of apiData) {
+        const key = row.word.toLowerCase()
+        const existing = merged[key]
+        // Use API data if it's newer or local doesn't have it
+        if (!existing || (row.last_review && row.last_review > (existing.lastReview || 0))) {
+          merged[key] = {
+            ease: row.ease,
+            interval: row.interval,
+            reps: row.reps,
+            due: row.due,
+            lastReview: row.last_review
+          }
+        }
+      }
+      srsData.value = merged
+      localStorage.setItem('mamio-vocab-srs', JSON.stringify(merged))
+    }
+  } catch {
+    // API failed, localStorage data already loaded
+  }
+})
 
 // Quiz state
 const quizType = ref('choice') // choice, spelling, meaning
@@ -165,6 +194,16 @@ function rateSrs(quality) {
   srsData.value[key] = entry
   localStorage.setItem('mamio-vocab-srs', JSON.stringify(srsData.value))
   updateDailyProgress()
+
+  // Save to API (fire-and-forget)
+  updateVocabProgress({
+    word: word.word,
+    ease: entry.ease,
+    interval: entry.interval,
+    reps: entry.reps,
+    due: entry.due,
+    last_review: entry.lastReview
+  }).catch(() => {})
 
   // Next card
   showSrsAnswer.value = false

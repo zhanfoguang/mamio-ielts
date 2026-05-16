@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { listeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
+import { incrementDailyStats } from '../services/progress'
 
 const themeStore = useThemeStore()
 const { isListening, transcript, interimTranscript, isSupported, start, stop, reset } = useSpeechRecognition()
@@ -111,6 +112,8 @@ function stopDictation() {
     if (history.length > 50) history.length = 50
     localStorage.setItem('mamio-listening-history', JSON.stringify(history))
   }
+
+  incrementDailyStats(new Date().toISOString().split('T')[0], 'listening')
 }
 
 function getWordDiff(original, spoken) {

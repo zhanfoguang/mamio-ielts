@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { writingTasks } from '../data/ielts/writing'
 import { batchWriting } from '../services/ai'
+import { getWritingHistory, addWritingRecord } from '../services/progress'
 
 const themeStore = useThemeStore()
 const activeTask = ref(1)
@@ -22,8 +23,18 @@ let timerInterval = null
 const timerLimit = computed(() => activeTask.value === 1 ? 1200 : 2400) // 20min / 40min
 
 // History
-const history = ref(JSON.parse(localStorage.getItem('mamio-writing-history') || '[]'))
+const history = ref([])
 const showHistory = ref(false)
+
+onMounted(async () => {
+  try {
+    const data = await getWritingHistory()
+    history.value = data
+    localStorage.setItem('mamio-writing-history', JSON.stringify(data))
+  } catch {
+    history.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+  }
+})
 
 // Draft auto-save
 const draftKey = computed(() => `mamio-writing-draft-${selectedPrompt.value?.id || 'none'}`)
@@ -126,20 +137,27 @@ async function submitEssay() {
   }
 }
 
-function saveToHistory() {
+async function saveToHistory() {
   const entry = {
-    id: Date.now(),
-    date: new Date().toISOString(),
-    taskType: activeTask.value,
-    promptId: selectedPrompt.value.id,
-    promptType: selectedPrompt.value.type,
-    promptPreview: selectedPrompt.value.prompt.substring(0, 80),
+    task_type: activeTask.value,
+    task: selectedPrompt.value.prompt,
     essay: essay.value,
-    wordCount: wordCount.value,
-    timeSpent: timerSeconds.value,
     score: aiResult.value?.overall || null,
     details: aiResult.value?.error ? null : aiResult.value
   }
+  try {
+    const result = await addWritingRecord(entry)
+    entry.id = result.id
+    entry.date = new Date().toISOString()
+  } catch {
+    entry.id = Date.now()
+    entry.date = new Date().toISOString()
+  }
+  entry.promptId = selectedPrompt.value.id
+  entry.promptType = selectedPrompt.value.type
+  entry.promptPreview = selectedPrompt.value.prompt.substring(0, 80)
+  entry.wordCount = wordCount.value
+  entry.timeSpent = timerSeconds.value
   history.value.unshift(entry)
   if (history.value.length > 30) history.value = history.value.slice(0, 30)
   localStorage.setItem('mamio-writing-history', JSON.stringify(history.value))

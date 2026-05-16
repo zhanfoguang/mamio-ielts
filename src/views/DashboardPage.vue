@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { useAuthStore } from '../stores/auth'
 import { useCheckinStore } from '../stores/checkin'
 import { useRouter } from 'vue-router'
+import { getDashboardData } from '../services/progress'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -211,9 +212,20 @@ function getScoreColor(score) {
   return 'var(--red)'
 }
 
-onMounted(() => {
-  speakingHistory.value = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
-  writingHistory.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+onMounted(async () => {
+  // Try loading from API first
+  try {
+    const data = await getDashboardData()
+    speakingHistory.value = data.speaking || []
+    writingHistory.value = data.writing || []
+    // Cache to localStorage
+    localStorage.setItem('mamio-speaking-history', JSON.stringify(speakingHistory.value))
+    localStorage.setItem('mamio-writing-history', JSON.stringify(writingHistory.value))
+  } catch {
+    // API failed, load from localStorage
+    speakingHistory.value = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
+    writingHistory.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+  }
   listeningHistory.value = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
   readingHistory.value = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
 

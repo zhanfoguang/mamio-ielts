@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { speakingTopics } from '../data/ielts/speaking'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { scoreSpeaking, speakingConversation } from '../services/ai'
+import { getSpeakingHistory, addSpeakingRecord } from '../services/progress'
 
 const themeStore = useThemeStore()
 const {
@@ -36,8 +37,18 @@ const timerSeconds = ref(0)
 let timerInterval = null
 
 // History
-const history = ref(JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]'))
+const history = ref([])
 const showHistory = ref(false)
+
+onMounted(async () => {
+  try {
+    const data = await getSpeakingHistory()
+    history.value = data
+    localStorage.setItem('mamio-speaking-history', JSON.stringify(data))
+  } catch {
+    history.value = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
+  }
+})
 
 const topics = computed(() => {
   if (activePart.value === 1) return speakingTopics.part1
@@ -219,10 +230,8 @@ function endConversation() {
   submitForScoring(fullAnswer)
 }
 
-function saveToHistory() {
+async function saveToHistory() {
   const entry = {
-    id: Date.now(),
-    date: new Date().toISOString(),
     mode: 'practice',
     part: activePart.value,
     topic: selectedTopic.value.topic,
@@ -231,19 +240,25 @@ function saveToHistory() {
     score: aiResult.value?.overall || null,
     details: aiResult.value?.error ? null : aiResult.value
   }
+  try {
+    const result = await addSpeakingRecord(entry)
+    entry.id = result.id
+    entry.date = new Date().toISOString()
+  } catch {
+    entry.id = Date.now()
+    entry.date = new Date().toISOString()
+  }
   history.value.unshift(entry)
   if (history.value.length > 50) history.value = history.value.slice(0, 50)
   localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
 }
 
-function saveConvToHistory(scoreData) {
+async function saveConvToHistory(scoreData) {
   const allAnswers = convMessages.value
     .filter(m => m.role === 'user')
     .map(m => m.content)
     .join(' | ')
   const entry = {
-    id: Date.now(),
-    date: new Date().toISOString(),
     mode: 'conversation',
     part: activePart.value,
     topic: selectedTopic.value.topic,
@@ -252,6 +267,14 @@ function saveConvToHistory(scoreData) {
     score: scoreData?.overall || null,
     details: scoreData,
     exchanges: convMessages.value.filter(m => m.role === 'user').length
+  }
+  try {
+    const result = await addSpeakingRecord(entry)
+    entry.id = result.id
+    entry.date = new Date().toISOString()
+  } catch {
+    entry.id = Date.now()
+    entry.date = new Date().toISOString()
   }
   history.value.unshift(entry)
   if (history.value.length > 50) history.value = history.value.slice(0, 50)

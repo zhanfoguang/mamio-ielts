@@ -9,6 +9,7 @@ import express from 'express'
 import cors from 'cors'
 import authRoutes from './routes/auth.js'
 import aiRoutes from './routes/ai.js'
+import progressRoutes from './routes/progress.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -21,6 +22,9 @@ app.use('/api/auth', authRoutes)
 
 // AI routes (with auth + quota)
 app.use('/api/ai', aiRoutes)
+
+// Progress routes (with auth)
+app.use('/api/progress', progressRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {

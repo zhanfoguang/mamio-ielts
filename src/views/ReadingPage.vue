@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { readingPassages } from '../data/ielts/reading'
+import { incrementDailyStats } from '../services/progress'
 
 const themeStore = useThemeStore()
 
@@ -130,6 +131,8 @@ function submitAnswers() {
   })
   if (history.length > 50) history.length = 50
   localStorage.setItem('mamio-reading-history', JSON.stringify(history))
+
+  incrementDailyStats(new Date().toISOString().split('T')[0], 'reading')
 }
 
 function getScoreColor(pct) {

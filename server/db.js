@@ -42,6 +42,60 @@ db.exec(`
     used INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS speaking_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    mode TEXT DEFAULT 'practice',
+    part INTEGER,
+    topic TEXT,
+    question TEXT,
+    answer TEXT,
+    score REAL,
+    details TEXT,
+    exchanges INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS writing_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    task_type INTEGER,
+    task TEXT,
+    essay TEXT,
+    score REAL,
+    details TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS vocab_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    word TEXT NOT NULL,
+    ease REAL DEFAULT 2.5,
+    interval INTEGER DEFAULT 0,
+    reps INTEGER DEFAULT 0,
+    due INTEGER,
+    last_review INTEGER,
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, word),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS daily_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    speaking INTEGER DEFAULT 0,
+    writing INTEGER DEFAULT 0,
+    listening INTEGER DEFAULT 0,
+    reading INTEGER DEFAULT 0,
+    vocab INTEGER DEFAULT 0,
+    UNIQUE(user_id, date),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `)
 
 // Auto-create admin account
@@ -88,6 +142,29 @@ export const codeQueries = {
   markUsed: db.prepare('UPDATE invite_codes SET used_by = ?, used_at = datetime(\'now\') WHERE id = ?'),
   getAll: db.prepare('SELECT ic.*, u.email as used_by_email FROM invite_codes ic LEFT JOIN users u ON ic.used_by = u.id ORDER BY ic.created_at DESC'),
   getUnused: db.prepare('SELECT * FROM invite_codes WHERE used_by IS NULL ORDER BY created_at DESC')
+}
+
+// Progress queries
+export const progressQueries = {
+  // Speaking
+  getSpeaking: db.prepare('SELECT * FROM speaking_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
+  addSpeaking: db.prepare('INSERT INTO speaking_history (user_id, mode, part, topic, question, answer, score, details, exchanges) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+
+  // Writing
+  getWriting: db.prepare('SELECT * FROM writing_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
+  addWriting: db.prepare('INSERT INTO writing_history (user_id, task_type, task, essay, score, details) VALUES (?, ?, ?, ?, ?, ?)'),
+
+  // Vocab
+  getVocab: db.prepare('SELECT * FROM vocab_progress WHERE user_id = ?'),
+  upsertVocab: db.prepare(`INSERT INTO vocab_progress (user_id, word, ease, interval, reps, due, last_review, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(user_id, word) DO UPDATE SET ease=excluded.ease, interval=excluded.interval, reps=excluded.reps, due=excluded.due, last_review=excluded.last_review, updated_at=datetime('now')`),
+
+  // Daily stats
+  getDailyStats: db.prepare('SELECT * FROM daily_stats WHERE user_id = ? AND date = ?'),
+  getDailyStatsRange: db.prepare('SELECT * FROM daily_stats WHERE user_id = ? AND date >= ? ORDER BY date'),
+  ensureDailyStats: db.prepare('INSERT OR IGNORE INTO daily_stats (user_id, date) VALUES (?, ?)'),
+  incrementDailyModule: (module) => db.prepare(`UPDATE daily_stats SET ${module} = ${module} + 1 WHERE user_id = ? AND date = ?`)
 }
 
 // Check and update user quota
