@@ -5,6 +5,11 @@ export async function scoreSpeaking(question, userAnswer, part) {
   return data
 }
 
+export async function speakingConversation(question, history, userAnswer, part) {
+  const { data } = await api.post('/ai/speaking-conversation', { question, history, userAnswer, part })
+  return data
+}
+
 export async function batchWriting(task, essay, taskType) {
   const { data } = await api.post('/ai/writing', { task, essay, taskType })
   return data

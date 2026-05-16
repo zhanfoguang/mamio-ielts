@@ -68,6 +68,90 @@ function incrementCalls(userId) {
   userQueries.incrementCalls.run(today, userId)
 }
 
+// 口语 AI 对话模式
+router.post('/speaking-conversation', checkQuota, async (req, res) => {
+  try {
+    const { question, history, userAnswer, part } = req.body
+    if (!question || !userAnswer) {
+      return res.status(400).json({ error: '缺少题目或回答内容' })
+    }
+
+    const exchangeCount = (history || []).filter(h => h.role === 'user').length
+    const maxExchanges = (part === 1 || part === 3) ? 3 : 2
+    const shouldScore = exchangeCount >= maxExchanges
+
+    const systemPrompt = shouldScore
+      ? `你是一位资深雅思考官。考生刚完成了一段口语对话练习（Part ${part}）。请根据整个对话过程进行评分。
+评分维度：流利度与连贯性(Fluency)、词汇多样性(Lexical)、语法准确性(Grammar)、发音(Pronunciation)。
+每个维度给 band 分数(1-9)，并给出总分和改进建议。
+请用 JSON 格式回复，不要包含其他内容：
+{
+  "type": "score",
+  "fluency": {"score": 7, "comment": "..."},
+  "lexical": {"score": 6, "comment": "..."},
+  "grammar": {"score": 7, "comment": "..."},
+  "pronunciation": {"score": 6, "comment": "..."},
+  "overall": 6.5,
+  "suggestions": ["建议1", "建议2"],
+  "improvedAnswer": "改进后的示范回答"
+}`
+      : `你是一位雅思考官，正在进行口语考试 Part ${part}。请根据考生的回答提出一个自然的追问问题（像真实考官那样），让对话更深入。
+要求：
+- 追问要自然，不能太长
+- 如果考生回答太短，可以引导他们展开
+- 如果考生回答不错，可以深入探讨细节
+- 用英文提问，保持考试氛围
+请用 JSON 格式回复，不要包含其他内容：
+{
+  "type": "followup",
+  "question": "Your follow-up question here"
+}`
+
+    const messages = [{ role: 'system', content: systemPrompt }]
+    if (history && history.length > 0) {
+      for (const h of history) {
+        messages.push({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })
+      }
+    }
+    messages.push({ role: 'user', content: `原始题目：${question}\n\n考生回答：${userAnswer}` })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    try {
+      const response = await fetch(`${DEEPSEEK_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages,
+          temperature: 0.7,
+          max_tokens: 2000
+        }),
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        const err = await response.text()
+        throw new Error(`DeepSeek API error: ${response.status} ${err}`)
+      }
+
+      const data = await response.json()
+      const result = parseJSON(data.choices[0].message.content)
+      incrementCalls(req.user.id)
+      res.json({ ...result, quota: req.quota })
+    } finally {
+      clearTimeout(timeout)
+    }
+  } catch (err) {
+    console.error('AI conversation error:', err.message)
+    res.status(500).json({ error: 'AI 对话失败，请稍后重试' })
+  }
+})
+
 // 口语评分
 router.post('/speaking', checkQuota, async (req, res) => {
   try {
