@@ -169,5 +169,402 @@ Today, global tea production exceeds 6 million metric tons annually, with China,
         explanation: '2737 BCE = emperor legend. 9th century = Japan monks. 18th century = British popularity. 16th century = European traders.'
       }
     ]
+  },
+  {
+    id: 4,
+    title: 'The Future of Space Exploration',
+    level: 'medium',
+    passage: `Space exploration has entered a transformative new era, driven by a combination of government ambition, private enterprise, and rapid technological advancement. Whereas the Apollo missions of the 1960s and 1970s represented the pinnacle of state-sponsored space travel, the current landscape is increasingly shaped by commercial companies such as SpaceX, Blue Origin, and Rocket Lab. These organisations have dramatically reduced the cost of reaching orbit through innovations like reusable rocket boosters, making space more accessible than at any point in history.
+
+One of the most significant goals of contemporary space exploration is the establishment of a permanent human presence on Mars. NASA's Artemis programme, which aims to return astronauts to the Moon as a stepping stone, is central to this vision. The Moon is seen as a testing ground for the technologies and life-support systems that will be required for the far longer journey to Mars, which takes approximately seven months with current propulsion methods. Scientists are developing advanced life-support systems capable of recycling air and water, as well as investigating the feasibility of growing food in extraterrestrial soil.
+
+The role of robotic missions should not be underestimated. Unmanned probes and rovers continue to provide invaluable scientific data at a fraction of the cost of crewed missions. NASA's Perseverance rover, which landed on Mars in 2021, has been collecting rock samples and searching for signs of ancient microbial life. Meanwhile, the James Webb Space Telescope, launched in the same year, has revolutionised our understanding of distant galaxies and exoplanets, detecting atmospheric compositions that could indicate habitable conditions beyond our solar system.
+
+However, the expansion of space activity raises important questions about governance and sustainability. The growing accumulation of orbital debris poses a serious threat to satellites and crewed spacecraft. Furthermore, the 1967 Outer Space Treaty, which forms the basis of international space law, was drafted long before commercial space travel was conceivable and may need updating to address issues such as resource extraction on the Moon and asteroid mining.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Reusable rocket technology has lowered the cost of reaching orbit.', answer: 'TRUE', explanation: 'The passage states these companies "dramatically reduced the cost of reaching orbit through innovations like reusable rocket boosters."' },
+          { text: 'A journey to Mars currently takes approximately three months.', answer: 'FALSE', explanation: 'The passage states the journey "takes approximately seven months with current propulsion methods."' },
+          { text: 'The Perseverance rover has found definitive evidence of microbial life on Mars.', answer: 'FALSE', explanation: 'The passage says the rover has been "searching for signs" of ancient microbial life, not that it has found definitive evidence.' },
+          { text: 'The James Webb Space Telescope was launched before the Perseverance rover.', answer: 'NOT GIVEN', explanation: 'Both are said to have been relevant "in the same year" (2021), but their exact launch sequence is not specified.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'According to the passage, the Moon is important for Mars exploration because:',
+            options: [
+              'A. it contains resources that can be used for the Mars journey',
+              'B. it serves as a location to test technologies needed for Mars',
+              'C. it has similar atmospheric conditions to Mars',
+              'D. it is the closest point for launching Mars missions'
+            ],
+            answer: 'B',
+            explanation: 'The passage describes the Moon as "a testing ground for the technologies and life-support systems" needed for Mars.'
+          },
+          {
+            question: 'The passage suggests the 1967 Outer Space Treaty:',
+            options: [
+              'A. has been effective in preventing all conflicts in space',
+              'B. should be abandoned entirely',
+              'C. may need revision to address modern commercial activities',
+              'D. already covers asteroid mining regulations'
+            ],
+            answer: 'C',
+            explanation: 'The passage states it "may need updating to address issues such as resource extraction on the Moon and asteroid mining."'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What programme does NASA plan to use to return astronauts to the Moon?', answer: 'Artemis programme' },
+          { question: 'What poses a growing threat to satellites and spacecraft?', answer: 'orbital debris' },
+          { question: 'What year did the Perseverance rover land on Mars?', answer: '2021' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 5,
+    title: 'Language Acquisition in Children',
+    level: 'easy',
+    passage: `The process by which children learn to speak and understand language is one of the most remarkable feats of human development. From the moment they are born, infants begin absorbing the linguistic sounds of their environment. By the age of six months, babies can typically distinguish between phonemes — the smallest units of sound — from any language in the world. However, by ten to twelve months, this ability narrows to the phonemes of their native language, a process known as perceptual narrowing.
+
+Children generally begin producing their first recognizable words at around twelve months of age. This milestone marks the transition from babbling to meaningful speech. Initially, a child's vocabulary grows slowly, perhaps acquiring only a few new words each week. However, between the ages of 18 and 24 months, most children experience what researchers call a "vocabulary explosion," during which they may learn ten or more new words per day. By the age of six, the average child has a vocabulary of approximately 10,000 words.
+
+Grammar development follows a predictable pattern as well. Around the age of two, children begin combining words into simple two-word phrases such as "more milk" or "daddy go." By age three, most children can construct simple sentences, though they frequently make errors such as overgeneralising grammatical rules. A classic example is a child saying "goed" instead of "went" or "mouses" instead of "mice." These errors actually demonstrate that children are actively learning and applying grammatical rules rather than simply memorising phrases.
+
+The debate over how children acquire language has persisted for decades. The linguist Noam Chomsky argued that humans are born with an innate "language acquisition device" — a mental module specifically designed for learning language. In contrast, behaviourist theories, associated with B.F. Skinner, proposed that language is learned entirely through imitation and reinforcement. Most contemporary researchers adopt an interactionist position, acknowledging that while biological predispositions play a crucial role, social interaction and environmental input are equally essential for language development.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Babies can distinguish between phonemes of all languages at six months old.', answer: 'TRUE', explanation: 'The passage states that at six months, babies "can typically distinguish between phonemes... from any language in the world."' },
+          { text: 'The vocabulary explosion occurs before the age of 18 months.', answer: 'FALSE', explanation: 'The passage states it occurs "between the ages of 18 and 24 months."' },
+          { text: 'Grammatical errors in children indicate they have not yet learned any rules.', answer: 'FALSE', explanation: 'The passage states these errors "demonstrate that children are actively learning and applying grammatical rules."' },
+          { text: 'Chomsky believed language is learned through social reinforcement.', answer: 'FALSE', explanation: 'Chomsky argued for an innate "language acquisition device." Social reinforcement is attributed to Skinner.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'matching',
+        question: 'Match each age or stage to the correct description.',
+        items: [
+          '6 months',
+          '12 months',
+          '18-24 months',
+          '6 years'
+        ],
+        answers: ['Distinguish all phonemes globally', 'First recognizable words produced', 'Vocabulary explosion occurs', 'Vocabulary reaches approximately 10,000 words'],
+        explanation: '6 months = all phonemes. 12 months = first words. 18-24 months = vocabulary explosion. 6 years = 10,000-word vocabulary.'
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What is the term for the narrowing of phoneme recognition to one language?', answer: 'perceptual narrowing' },
+          { question: 'What did Chomsky call the innate mental module for language?', answer: 'language acquisition device' },
+          { question: 'What position do most modern researchers take on language acquisition?', answer: 'interactionist position' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 6,
+    title: 'The Economics of Renewable Energy',
+    level: 'hard',
+    passage: `The global energy landscape is undergoing a profound structural transformation as renewable energy sources become increasingly cost-competitive with fossil fuels. According to the International Renewable Energy Agency (IRENA), the global weighted-average cost of electricity from solar photovoltaic (PV) systems fell by 85% between 2010 and 2022, while onshore wind costs declined by 56% over the same period. These dramatic reductions have been driven by economies of scale in manufacturing, improvements in panel and turbine efficiency, and favourable government policies such as feed-in tariffs and tax credits.
+
+The concept of the "levelised cost of energy" (LCOE) provides a standardised metric for comparing the lifetime costs of different electricity generation technologies. LCOE accounts for capital expenditure, operating costs, fuel costs, and the expected output of a power plant over its lifetime. As of 2023, new solar and onshore wind installations in many regions have a lower LCOE than new coal or natural gas plants, even without subsidies. This crossover point — where renewables become cheaper than fossil fuels on a purely economic basis — represents a fundamental tipping point in energy markets.
+
+However, the intermittency of solar and wind power presents significant challenges for grid management. Unlike conventional power plants that can generate electricity on demand, renewable sources depend on weather conditions and time of day. Energy storage technologies, particularly lithium-ion batteries, are critical to addressing this limitation. The cost of lithium-ion battery packs has fallen by approximately 97% since 1991, making large-scale storage increasingly viable. Nevertheless, current battery technology can typically provide only four to six hours of storage, which may be insufficient during extended periods of low wind or cloud cover.
+
+The economic implications of the energy transition extend well beyond the power sector. Employment in renewable energy reached 13.7 million jobs globally in 2022, according to IRENA, with solar photovoltaic alone accounting for 4.9 million positions. However, this transition also creates significant challenges for communities and regions dependent on fossil fuel extraction. Coal-producing regions in countries such as Australia, India, and the United States face potential economic disruption, necessitating proactive "just transition" policies that include retraining programmes, economic diversification initiatives, and targeted social support.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Solar PV electricity costs decreased by more than 80% between 2010 and 2022.', answer: 'TRUE', explanation: 'The passage states costs "fell by 85% between 2010 and 2022."' },
+          { text: 'LCOE includes only the capital cost of building a power plant.', answer: 'FALSE', explanation: 'LCOE "accounts for capital expenditure, operating costs, fuel costs, and expected output" over the plant lifetime.' },
+          { text: 'Lithium-ion battery costs have decreased by approximately 50% since 1991.', answer: 'FALSE', explanation: 'The passage states costs "fell by approximately 97% since 1991."' },
+          { text: 'Solar PV created more renewable energy jobs than any other technology in 2022.', answer: 'NOT GIVEN', explanation: 'Solar PV accounts for 4.9 million of 13.7 million total, but the passage does not compare it explicitly to all other technologies.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'The passage defines the "tipping point" in energy markets as the moment when:',
+            options: [
+              'A. governments stop subsidising fossil fuels',
+              'B. renewable energy becomes cheaper than fossil fuels without subsidies',
+              'C. all countries adopt renewable energy targets',
+              'D. battery storage can power cities overnight'
+            ],
+            answer: 'B',
+            explanation: 'The passage describes the "crossover point — where renewables become cheaper than fossil fuels on a purely economic basis."' },
+          {
+            question: 'According to the passage, the main limitation of current battery storage is:',
+            options: [
+              'A. the high cost of lithium-ion batteries',
+              'B. the inability to store solar energy',
+              'C. limited duration of storage capacity',
+              'D. insufficient manufacturing capacity'
+            ],
+            answer: 'C',
+            explanation: 'The passage states current battery technology "can typically provide only four to six hours of storage."'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What metric standardises the comparison of electricity generation costs?', answer: 'levelised cost of energy' },
+          { question: 'How many renewable energy jobs existed globally in 2022?', answer: '13.7 million' },
+          { question: 'What term describes policies supporting fossil fuel communities through transition?', answer: 'just transition' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 7,
+    title: 'Artificial Intelligence in Healthcare',
+    level: 'medium',
+    passage: `Artificial intelligence is rapidly reshaping the healthcare industry, offering the potential to improve diagnostic accuracy, streamline administrative processes, and accelerate drug development. Machine learning algorithms, which can identify patterns in vast datasets far more quickly than human analysts, are at the forefront of this transformation. One of the most promising applications is in medical imaging, where AI systems have demonstrated the ability to detect conditions such as diabetic retinopathy, lung cancer, and breast cancer with accuracy comparable to — and in some cases exceeding — that of experienced radiologists.
+
+A landmark study published in Nature Medicine in 2020 described an AI system developed by Google Health that outperformed human radiologists in detecting breast cancer from mammograms. The system reduced false positives by 5.7% and false negatives by 9.4% in a study involving nearly 29,000 women. Such improvements, even if seemingly modest in percentage terms, could translate into thousands of earlier diagnoses and saved lives when applied at population scale.
+
+Beyond diagnostics, AI is being used to personalise treatment plans for patients. By analysing a patient's genetic profile, medical history, and lifestyle factors, AI algorithms can recommend tailored therapies that are more likely to be effective and less likely to cause adverse reactions. This approach, known as precision medicine, represents a shift away from the traditional "one-size-fits-all" model of healthcare. In oncology, for example, AI tools can analyse tumour genetics to predict which chemotherapy regimens will be most effective for individual patients.
+
+Despite its promise, the integration of AI into healthcare raises significant ethical and practical concerns. Algorithmic bias is a major issue: if training data disproportionately represents certain demographic groups, AI systems may perform less accurately for underrepresented populations, potentially exacerbating existing health disparities. Additionally, the "black box" nature of many AI models — where even developers cannot fully explain how a system arrives at its conclusions — poses challenges for clinical accountability and patient trust. Regulatory frameworks are still evolving to address these issues, with bodies such as the U.S. Food and Drug Administration developing new pathways for evaluating AI-based medical devices.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'AI diagnostic accuracy in medical imaging has matched or surpassed that of experienced radiologists.', answer: 'TRUE', explanation: 'The passage states AI systems detect conditions "with accuracy comparable to — and in some cases exceeding — that of experienced radiologists."' },
+          { text: 'The Google Health study involved over 50,000 women.', answer: 'FALSE', explanation: 'The passage states the study involved "nearly 29,000 women."' },
+          { text: 'Precision medicine tailors treatment based on individual patient characteristics.', answer: 'TRUE', explanation: 'The passage describes precision medicine as recommending "tailored therapies" based on genetic profile, medical history, and lifestyle.' },
+          { text: 'The FDA has already established comprehensive regulations for all AI medical devices.', answer: 'FALSE', explanation: 'The passage states regulatory bodies are "developing new pathways," implying regulations are not yet comprehensive.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'matching',
+        question: 'Match each concept to the correct description.',
+        items: [
+          'Machine learning',
+          'Precision medicine',
+          'Algorithmic bias',
+          'Black box models'
+        ],
+        answers: ['Identifies patterns in large datasets quickly', 'Tailors treatments to individual patient profiles', 'Results from unrepresentative training data', 'Systems whose decision processes cannot be fully explained'],
+        explanation: 'Machine learning = pattern identification. Precision medicine = tailored treatments. Algorithmic bias = unrepresentative data. Black box = unexplainable decisions.'
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'By how much did the AI system reduce false positives in the breast cancer study?', answer: '5.7%' },
+          { question: 'What shift does precision medicine represent away from in healthcare?', answer: 'one-size-fits-all' },
+          { question: 'Which organisation is developing new evaluation pathways for AI medical devices?', answer: 'Food and Drug Administration' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 8,
+    title: 'The History of Written Communication',
+    level: 'easy',
+    passage: `The invention of writing is widely regarded as one of the most transformative developments in human history. Before writing systems emerged, all knowledge was transmitted orally, making it vulnerable to loss and distortion over generations. The earliest known writing system, cuneiform, developed in Mesopotamia around 3400 BCE. The Sumerians used a reed stylus to press wedge-shaped marks into soft clay tablets, initially to record agricultural transactions and trade. Over time, cuneiform evolved to express complex literary, legal, and scientific ideas, giving rise to some of the world's earliest known works of literature, including the Epic of Gilgamesh.
+
+Around the same period, the ancient Egyptians developed a distinct writing system known as hieroglyphics. Unlike cuneiform, which was primarily used on clay, hieroglyphics were carved into stone monuments and painted on the walls of tombs and temples. Egyptian writing served both practical and ceremonial purposes: administrative records were kept on papyrus scrolls, while elaborate hieroglyphic inscriptions celebrated the achievements of pharaohs and communicated religious beliefs. The discovery of the Rosetta Stone in 1799, which contained the same text in hieroglyphics, Demotic script, and Greek, finally enabled scholars to decipher Egyptian hieroglyphics in the early 19th century.
+
+The development of the alphabet represented another major milestone. The Phoenicians, a seafaring trading civilisation based in the eastern Mediterranean, are credited with creating the first widely adopted alphabet around 1050 BCE. Unlike earlier writing systems that used hundreds or even thousands of symbols, the Phoenician alphabet consisted of only 22 consonant letters, making it far simpler to learn and use. The Greeks later adapted the Phoenician alphabet by adding vowels, and the Romans further refined it into the Latin alphabet that is now the most widely used writing system in the world.
+
+The invention of the printing press by Johannes Gutenberg around 1440 revolutionised written communication once again. Before the press, books were copied by hand, making them expensive and accessible only to the wealthy and clergy. Gutenberg's movable-type press made it possible to produce books quickly and cheaply, leading to a dramatic increase in literacy rates across Europe. Within fifty years of its invention, an estimated 20 million volumes had been printed, laying the groundwork for the spread of knowledge that would fuel the Renaissance and the Scientific Revolution.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Cuneiform was initially developed to record religious texts.', answer: 'FALSE', explanation: 'The passage states cuneiform was used "initially to record agricultural transactions and trade."' },
+          { text: 'The Rosetta Stone contained text in three different scripts.', answer: 'TRUE', explanation: 'The passage states it "contained the same text in hieroglyphics, Demotic script, and Greek."' },
+          { text: 'The Phoenician alphabet included vowel letters.', answer: 'FALSE', explanation: 'The passage states "the Greeks later adapted the Phoenician alphabet by adding vowels," implying the original had none.' },
+          { text: 'Gutenberg invented the printing press in the 15th century.', answer: 'TRUE', explanation: 'The passage states it was invented "around 1440," which is the 15th century.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'matching',
+        question: 'Match each writing system to its origin or key characteristic.',
+        items: [
+          'Cuneiform',
+          'Hieroglyphics',
+          'Phoenician alphabet',
+          'Latin alphabet'
+        ],
+        answers: ['Mesopotamia, wedge-shaped marks on clay', 'Egypt, carved into stone and painted on walls', '22 consonant letters, created around 1050 BCE', 'Refined by Romans, most widely used today'],
+        explanation: 'Cuneiform = Mesopotamia/clay. Hieroglyphics = Egypt/stone. Phoenician = 22 consonants. Latin = Romans/most widespread.'
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What material did the Egyptians use for administrative records?', answer: 'papyrus scrolls' },
+          { question: 'What is considered the earliest known work of literature?', answer: 'Epic of Gilgamesh' },
+          { question: 'How many volumes were printed within fifty years of the printing press?', answer: '20 million volumes' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 9,
+    title: 'Climate Change and Ocean Currents',
+    level: 'hard',
+    passage: `The world's oceans play a critical role in regulating the Earth's climate, absorbing approximately 90% of the excess heat generated by greenhouse gas emissions and acting as a vast carbon sink. Central to this regulatory function are ocean currents — continuous, directed movements of seawater driven by differences in temperature, salinity, and wind patterns. The most significant of these circulation systems is the Atlantic Meridional Overturning Circulation (AMOC), which transports warm surface water from the tropics toward the North Atlantic, where it cools, becomes denser, and sinks to the deep ocean before flowing southward.
+
+Recent research has raised alarming concerns about the stability of the AMOC. A study published in Nature Climate Change in 2023 concluded that the AMOC has weakened by approximately 15% since the mid-20th century, primarily due to increased freshwater input from the melting Greenland ice sheet. Freshwater reduces the salinity and density of surface water, inhibiting the sinking process that drives the circulation. Climate models suggest that continued warming could push the AMOC past a critical tipping point, potentially leading to a dramatic slowdown or even a complete shutdown within this century.
+
+The consequences of a significant AMOC disruption would be far-reaching. Europe, which currently enjoys a relatively mild climate for its latitude due to the warming influence of the North Atlantic Current, could experience substantially colder winters. Precipitation patterns across the tropics would shift, potentially devastating agricultural systems in West Africa and South America that depend on consistent rainfall. Sea levels along the eastern coast of North America could rise more rapidly as the compensating force of the northward current diminishes.
+
+It is important to note, however, that considerable uncertainty remains in climate models regarding the timing and probability of an AMOC collapse. While some models project a shutdown as early as 2050 under high-emission scenarios, others suggest the system is more resilient than previously thought. The Intergovernmental Panel on Climate Change (IPCC) has stated with medium confidence that a full AMOC collapse before 2100 is unlikely but cannot be ruled out. Continued monitoring through networks such as the RAPID array, which has measured AMOC strength at 26.5 degrees north latitude since 2004, is essential for reducing this uncertainty.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'The oceans absorb about 90% of excess heat from greenhouse gas emissions.', answer: 'TRUE', explanation: 'The passage states oceans absorb "approximately 90% of the excess heat generated by greenhouse gas emissions."' },
+          { text: 'The AMOC has weakened by approximately 30% since the mid-20th century.', answer: 'FALSE', explanation: 'The passage states it has weakened "by approximately 15%."' },
+          { text: 'All climate models agree the AMOC will shut down before 2050.', answer: 'FALSE', explanation: 'The passage states "some models project a shutdown as early as 2050... others suggest the system is more resilient."' },
+          { text: 'The RAPID monitoring array has been operational since 2004.', answer: 'TRUE', explanation: 'The passage states it "has measured AMOC strength... since 2004."' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'According to the passage, the AMOC is primarily driven by:',
+            options: [
+              'A. wind patterns over the Atlantic Ocean',
+              'B. differences in water temperature and salinity',
+              'C. tidal forces from the Moon',
+              'D. volcanic activity on the ocean floor'
+            ],
+            answer: 'B',
+            explanation: 'The passage states ocean currents are "driven by differences in temperature, salinity, and wind patterns," and the AMOC involves water that "cools, becomes denser, and sinks."' },
+          {
+            question: 'What would be a likely consequence of an AMOC shutdown for North America?',
+            options: [
+              'A. lower sea levels on the east coast',
+              'B. more consistent rainfall in agricultural regions',
+              'C. faster sea-level rise along the eastern coast',
+              'D. warmer winters in Europe'
+            ],
+            answer: 'C',
+            explanation: 'The passage states "sea levels along the eastern coast of North America could rise more rapidly."'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What ice sheet is contributing freshwater that weakens the AMOC?', answer: 'Greenland ice sheet' },
+          { question: 'At what latitude does the RAPID array measure the AMOC?', answer: '26.5 degrees north' },
+          { question: 'What confidence level did the IPCC assign to its AMOC collapse assessment?', answer: 'medium confidence' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 10,
+    title: 'The Psychology of Consumer Behavior',
+    level: 'medium',
+    passage: `Understanding why consumers make the purchasing decisions they do has been a central concern of marketers and psychologists for over a century. Early models of consumer behaviour assumed that individuals were rational agents who carefully weighed the costs and benefits of each purchase. However, decades of research have revealed that purchasing decisions are heavily influenced by psychological, social, and emotional factors that often operate below the level of conscious awareness.
+
+One of the most well-established findings in consumer psychology is the power of social proof — the tendency for people to look to the behaviour of others when making decisions. This principle explains why product reviews, testimonials, and "bestseller" lists are such effective marketing tools. A classic experiment by researchers at Columbia University demonstrated that people were significantly more likely to choose a restaurant that had a long queue outside than one that was empty, even when both offered identical menus. In the digital age, social proof has become even more pervasive, with online ratings, influencer endorsements, and user-generated content shaping consumer preferences on a massive scale.
+
+The concept of anchoring also plays a significant role in how consumers perceive price and value. Retailers frequently exploit this bias by displaying a high "original" price next to a discounted sale price, making the reduction appear more substantial. Research has shown that even when consumers are aware that the original price may be inflated, the anchor still influences their perception of the deal's attractiveness. Similarly, the strategy of offering three pricing tiers — a basic, mid-range, and premium option — takes advantage of the "decoy effect," whereby the presence of an asymmetrically dominated option makes the mid-range choice seem like the best value.
+
+Emotion is another powerful driver of consumer behaviour. Studies in neuromarketing have shown that purchasing decisions activate brain regions associated with reward and pleasure, rather than those involved in analytical reasoning. Brands that create strong emotional associations — through storytelling, imagery, or shared values — tend to enjoy greater customer loyalty and willingness to pay premium prices. The success of brands like Apple and Nike illustrates how emotional branding can transform functional products into aspirational lifestyle symbols, creating communities of consumers who identify strongly with the brand's identity.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Early models of consumer behaviour assumed people made irrational purchasing decisions.', answer: 'FALSE', explanation: 'The passage states early models "assumed that individuals were rational agents."' },
+          { text: 'In the Columbia University experiment, people preferred the busier restaurant even though both had the same food.', answer: 'TRUE', explanation: 'The passage states people were "significantly more likely to choose a restaurant that had a long queue... even when both offered identical menus."' },
+          { text: 'Consumers are immune to anchoring effects when they know about them.', answer: 'FALSE', explanation: 'The passage states "even when consumers are aware... the anchor still influences their perception."' },
+          { text: 'Neuromarketing studies show that purchasing decisions involve the brain\'s analytical reasoning centres.', answer: 'FALSE', explanation: 'The passage states purchasing decisions "activate brain regions associated with reward and pleasure, rather than those involved in analytical reasoning."' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'The "decoy effect" in pricing strategy works by:',
+            options: [
+              'A. offering the cheapest option to attract customers',
+              'B. making all options appear equally valuable',
+              'C. adding an inferior option to make the mid-range choice more appealing',
+              'D. removing the premium option to simplify decisions'
+            ],
+            answer: 'C',
+            explanation: 'The passage describes it as "an asymmetrically dominated option" that "makes the mid-range choice seem like the best value."' },
+          {
+            question: 'According to the passage, emotional branding helps companies by:',
+            options: [
+              'A. reducing the cost of advertising',
+              'B. increasing customer loyalty and willingness to pay more',
+              'C. eliminating the need for product quality',
+              'D. making consumers more rational in their choices'
+            ],
+            answer: 'B',
+            explanation: 'The passage states emotional associations lead to "greater customer loyalty and willingness to pay premium prices."'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What principle explains why people follow others\' purchasing behaviour?', answer: 'social proof' },
+          { question: 'What strategy uses three pricing levels to guide consumer choice?', answer: 'decoy effect' },
+          { question: 'What field studies the brain\'s response to marketing stimuli?', answer: 'neuromarketing' }
+        ]
+      }
+    ]
   }
 ]
