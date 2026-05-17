@@ -61,7 +61,28 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 ### Deploy
 - `deploy/ecosystem.config.cjs` — PM2 config (reads .env and injects as env vars)
 - `deploy/deploy.sh` — Manual deploy script (rsync to VPS)
-- VPS auto-deploy: cron runs `/var/www/mimio/auto-deploy.sh` every 5 min (git pull + build + pm2 restart)
+- `deploy/nginx.conf` — nginx config template
+- `deploy/setup-vps.sh` — VPS initial setup script
+
+### VPS Paths (Alibaba Cloud, 47.88.87.116)
+- **项目目录:** `/var/www/mimio/`
+- **前端构建产物:** `/var/www/mimio/dist/` (nginx 直接 serve)
+- **后端入口:** `/var/www/mimio/server/index.js`
+- **数据库:** `/var/www/mimio/server/mamio.db` (SQLite)
+- **环境变量:** `/var/www/mimio/server/.env`
+- **PM2 配置:** `/var/www/mimio/deploy/ecosystem.config.cjs`
+- **自动部署脚本:** `/var/www/mimio/auto-deploy.sh` (cron 每 5 分钟)
+- **部署日志:** `/var/www/mimio/deploy.log`
+- **nginx 配置:** `/etc/nginx/conf.d/mimio.conf`
+- **nginx 监听端口:** 8080
+- **后端端口:** 3000 (nginx 反代 → /api)
+- **PM2 进程名:** `mamio-server` (以 root 运行)
+
+### 部署流程
+1. 本地 `git push origin main`
+2. VPS cron 每 5 分钟执行 `auto-deploy.sh`
+3. 脚本执行: `git fetch` → 比较 commit → `git pull` → `npm install` → `npm run build` → `pm2 restart`
+4. nginx 自动 serve 新的 `dist/` 产物
 
 ## Database Schema (SQLite)
 - `users` — email, password_hash, nickname, role (trial/paid/expired/admin), ai_calls_today, trial_start, expires_at
@@ -117,13 +138,23 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 
 ## Development
 
+### 本地路径
+- **项目根目录:** `/Users/zfg/mimio-clone/`
+- **前端源码:** `/Users/zfg/mimio-clone/src/`
+- **后端源码:** `/Users/zfg/mimio-clone/server/`
+- **前端入口:** `/Users/zfg/mimio-clone/src/main.js`
+- **后端入口:** `/Users/zfg/mimio-clone/server/index.js`
+- **本地 .env:** `/Users/zfg/mimio-clone/server/.env`
+- **本地数据库:** `/Users/zfg/mimio-clone/server/mamio.db`
+- **构建产物:** `/Users/zfg/mimio-clone/dist/`
+
 ```bash
 # Frontend
 npm install && npm run dev    # localhost:5173
 
 # Backend
 cd server
-cp .env.example .env          # fill in DEEPSEEK_API_KEY
+cp .env.example .env          # fill in DEEPSEEK_API_KEY, JWT_SECRET, ADMIN_PASSWORD
 npm install && node index.js  # localhost:3000
 ```
 
