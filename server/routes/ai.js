@@ -82,38 +82,49 @@ function normalizeWritingResult(parsed) {
   }
 }
 
-async function callDeepSeek(systemPrompt, userPrompt) {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 15000)
+async function callDeepSeek(systemPrompt, userPrompt, retries = 1) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20000)
+    try {
+      const res = await fetch(`${DEEPSEEK_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: attempt === 0 ? 0.7 : 0.3,
+          max_tokens: 2500
+        }),
+        signal: controller.signal
+      })
 
-  try {
-    const res = await fetch(`${DEEPSEEK_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2500
-      }),
-      signal: controller.signal
-    })
+      if (!res.ok) {
+        const err = await res.text()
+        throw new Error(`DeepSeek API error: ${res.status} ${err}`)
+      }
 
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`DeepSeek API error: ${res.status} ${err}`)
+      const data = await res.json()
+      const content = data.choices[0].message.content
+      // Validate JSON parseability before returning
+      parseJSON(content)
+      return content
+    } catch (err) {
+      clearTimeout(timeout)
+      if (attempt < retries && (err.message.includes('Failed to parse') || err.name === 'AbortError')) {
+        console.warn(`AI attempt ${attempt + 1} failed, retrying: ${err.message}`)
+        continue
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
     }
-
-    const data = await res.json()
-    return data.choices[0].message.content
-  } finally {
-    clearTimeout(timeout)
   }
 }
 
@@ -257,7 +268,11 @@ Reply in JSON format only, no other content:
     }
   } catch (err) {
     console.error('AI conversation error:', err.message)
-    res.status(500).json({ error: 'AI 对话失败，请稍后重试' })
+    if (err.message.includes('Failed to parse')) {
+      res.json({ type: 'followup', question: 'Could you tell me more about that?', warning: 'AI 返回格式异常' })
+    } else {
+      res.status(500).json({ error: 'AI 对话失败，请稍后重试' })
+    }
   }
 })
 
@@ -337,7 +352,12 @@ Reply in JSON format only, no other content:
     res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI speaking error:', err.message)
-    res.status(500).json({ error: 'AI 评分失败，请稍后重试' })
+    if (err.message.includes('Failed to parse')) {
+      incrementCalls(req.user.id)
+      res.json({ ...normalizeSpeakingResult({}), quota: req.quota, warning: 'AI 返回格式异常，已使用默认值' })
+    } else {
+      res.status(500).json({ error: 'AI 评分失败，请稍后重试' })
+    }
   }
 })
 
@@ -420,7 +440,12 @@ Reply in JSON format only, no other content:
     res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI writing error:', err.message)
-    res.status(500).json({ error: 'AI 批改失败，请稍后重试' })
+    if (err.message.includes('Failed to parse')) {
+      incrementCalls(req.user.id)
+      res.json({ ...normalizeWritingResult({}), quota: req.quota, warning: 'AI 返回格式异常，已使用默认值' })
+    } else {
+      res.status(500).json({ error: 'AI 批改失败，请稍后重试' })
+    }
   }
 })
 
@@ -477,7 +502,12 @@ Reply in JSON format only, no other content:
     res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI vocab error:', err.message)
-    res.status(500).json({ error: '词汇生成失败，请稍后重试' })
+    if (err.message.includes('Failed to parse')) {
+      incrementCalls(req.user.id)
+      res.json({ words: [], quota: req.quota, warning: 'AI 返回格式异常，请重试' })
+    } else {
+      res.status(500).json({ error: '词汇生成失败，请稍后重试' })
+    }
   }
 })
 
@@ -536,7 +566,12 @@ Reply in JSON format only, no other content:
     res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI listening error:', err.message)
-    res.status(500).json({ error: '听力材料生成失败，请稍后重试' })
+    if (err.message.includes('Failed to parse')) {
+      incrementCalls(req.user.id)
+      res.json({ transcript: '', translation: '', questions: [], quota: req.quota, warning: 'AI 返回格式异常，请重试' })
+    } else {
+      res.status(500).json({ error: '听力材料生成失败，请稍后重试' })
+    }
   }
 })
 

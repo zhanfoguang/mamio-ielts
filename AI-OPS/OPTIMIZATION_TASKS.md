@@ -59,3 +59,12 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Speaking pronunciationWords saved as review items.
 - [x] Reading wrong answers saved as review items.
 - [x] Listening unrecognized dictation words saved as review items.
+
+## Phase 10: AI Retry & Fallback
+
+- [x] callDeepSeek retries once on parse failure with lower temperature (0.3).
+- [x] Speaking endpoint returns normalized empty result on parse failure.
+- [x] Writing endpoint returns normalized empty result on parse failure.
+- [x] Speaking-conversation returns safe followup on parse failure.
+- [x] Vocab endpoint returns empty words array on parse failure.
+- [x] Listening endpoint returns empty transcript/questions on parse failure.
