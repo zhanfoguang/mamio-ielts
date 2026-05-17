@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { speakingTopics } from '../data/ielts/speaking'
 import { writingTasks } from '../data/ielts/writing'
@@ -23,8 +23,12 @@ let timerInterval = null
 // Speaking mock state
 const speakingQuestions = ref([])
 const speakingAnswers = ref({})
+const speakingAudioUrls = ref({})
 const speakingResults = ref(null)
 const speakingLoading = ref(false)
+
+// Part 2 timer phases
+const part2Phase = ref(null) // 'prep' | 'speaking' | null
 
 // Writing mock state
 const writingTasksList = ref([])
@@ -35,6 +39,13 @@ const writingLoading = ref(false)
 // Overall
 const mockStartTime = ref(null)
 const mockEndTime = ref(null)
+
+// Score trend
+const mockScoreHistory = ref([])
+
+onMounted(() => {
+  mockScoreHistory.value = JSON.parse(localStorage.getItem('mamio-mock-scores') || '[]')
+})
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -107,15 +118,19 @@ function startSpeakingMock() {
 
 function nextSpeakingPart() {
   stopTimer()
-  // Save current answer
+  part2Phase.value = null
+  // Save current answer + audio
   speakingAnswers.value[currentPart.value] = transcript.value
+  if (audioUrl.value) speakingAudioUrls.value[currentPart.value] = audioUrl.value
+  if (isListening.value) stop()
+  if (isRecording.value) stopRecording()
   reset()
 
   if (currentPart.value < 2) {
     currentPart.value++
     if (currentPart.value === 1) {
-      // Part 2: 3-4 min (1 prep + 2 speak)
-      startTimer(210)
+      // Part 2: 1 min prep then 2 min speaking
+      startPart2Prep()
     } else {
       // Part 3: 4-5 min
       startTimer(300)
@@ -125,9 +140,45 @@ function nextSpeakingPart() {
   }
 }
 
+function startPart2Prep() {
+  part2Phase.value = 'prep'
+  timerSeconds.value = 60
+  timerRunning.value = true
+  timerInterval = setInterval(() => {
+    timerSeconds.value--
+    if (timerSeconds.value <= 0) {
+      clearInterval(timerInterval)
+      startPart2Speaking()
+    }
+  }, 1000)
+}
+
+function startPart2Speaking() {
+  part2Phase.value = 'speaking'
+  timerSeconds.value = 120
+  // Auto-start recording
+  reset()
+  start()
+  startRecording()
+  timerInterval = setInterval(() => {
+    timerSeconds.value--
+    if (timerSeconds.value <= 0) {
+      clearInterval(timerInterval)
+      timerRunning.value = false
+      part2Phase.value = null
+      if (isListening.value) stop()
+      if (isRecording.value) stopRecording()
+    }
+  }, 1000)
+}
+
 async function submitSpeakingMock() {
   stopTimer()
+  part2Phase.value = null
   speakingAnswers.value[currentPart.value] = transcript.value
+  if (audioUrl.value) speakingAudioUrls.value[currentPart.value] = audioUrl.value
+  if (isListening.value) stop()
+  if (isRecording.value) stopRecording()
   mockEndTime.value = Date.now()
   speakingLoading.value = true
 
@@ -138,16 +189,17 @@ async function submitSpeakingMock() {
       const answer = speakingAnswers.value[i] || ''
       if (answer.trim()) {
         const result = await scoreSpeaking(q.question, answer, q.part)
-        results.push({ part: q.part, question: q.question, answer, ...result })
+        results.push({ part: q.part, question: q.question, answer, audioUrl: speakingAudioUrls.value[i] || null, ...result })
       } else {
-        results.push({ part: q.part, question: q.question, answer, overall: 0, fluency: { score: 0, comment: 'No answer' }, lexical: { score: 0, comment: '' }, grammar: { score: 0, comment: '' }, pronunciation: { score: 0, comment: '' } })
+        results.push({ part: q.part, question: q.question, answer, audioUrl: null, overall: 0, fluency: { score: 0, comment: 'No answer' }, lexical: { score: 0, comment: '' }, grammar: { score: 0, comment: '' }, pronunciation: { score: 0, comment: '' } })
       }
     }
     speakingResults.value = results
     examPhase.value = 'result'
 
     // Save to history
-    const avgScore = results.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / results.filter(r => r.overall > 0).length
+    const validResults = results.filter(r => r.overall > 0)
+    const avgScore = validResults.length > 0 ? validResults.reduce((s, r) => s + r.overall, 0) / validResults.length : 0
     const history = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
     history.unshift({
       id: Date.now(),
@@ -162,6 +214,20 @@ async function submitSpeakingMock() {
     })
     if (history.length > 50) history.length = 50
     localStorage.setItem('mamio-speaking-history', JSON.stringify(history))
+
+    // Save score trend
+    const scoreEntry = {
+      date: new Date().toISOString(),
+      type: 'speaking',
+      overall: Math.round(avgScore * 10) / 10,
+      fluency: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.fluency?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      lexical: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.lexical?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      grammar: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.grammar?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      pronunciation: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.pronunciation?.score || 0), 0) / validResults.length * 10) / 10 : 0
+    }
+    mockScoreHistory.value.unshift(scoreEntry)
+    if (mockScoreHistory.value.length > 20) mockScoreHistory.value.length = 20
+    localStorage.setItem('mamio-mock-scores', JSON.stringify(mockScoreHistory.value))
   } catch (e) {
     console.error('Mock scoring error:', e)
   } finally {
@@ -227,7 +293,8 @@ async function submitWritingMock() {
     writingResults.value = results
     examPhase.value = 'result'
 
-    const avgScore = results.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / results.filter(r => r.overall > 0).length
+    const validResults = results.filter(r => r.overall > 0)
+    const avgScore = validResults.length > 0 ? validResults.reduce((s, r) => s + r.overall, 0) / validResults.length : 0
     const history = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
     history.unshift({
       id: Date.now(),
@@ -241,6 +308,20 @@ async function submitWritingMock() {
     })
     if (history.length > 50) history.length = 50
     localStorage.setItem('mamio-writing-history', JSON.stringify(history))
+
+    // Save score trend
+    const scoreEntry = {
+      date: new Date().toISOString(),
+      type: 'writing',
+      overall: Math.round(avgScore * 10) / 10,
+      taskResponse: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.taskResponse?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      coherence: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.coherence?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      lexical: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.lexical?.score || 0), 0) / validResults.length * 10) / 10 : 0,
+      grammar: validResults.length ? Math.round(validResults.reduce((s, r) => s + (r.grammar?.score || 0), 0) / validResults.length * 10) / 10 : 0
+    }
+    mockScoreHistory.value.unshift(scoreEntry)
+    if (mockScoreHistory.value.length > 20) mockScoreHistory.value.length = 20
+    localStorage.setItem('mamio-mock-scores', JSON.stringify(mockScoreHistory.value))
   } catch (e) {
     console.error('Mock scoring error:', e)
   } finally {
@@ -259,6 +340,25 @@ function formatDuration(seconds) {
   const s = seconds % 60
   if (m === 0) return `${s}s`
   return `${m}m ${s}s`
+}
+
+function formatDate(iso) {
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+// Score trend chart data (last 10 attempts)
+const trendData = computed(() => {
+  const relevant = mockScoreHistory.value
+    .filter(e => e.type === examType.value)
+    .slice(0, 10)
+    .reverse()
+  if (relevant.length < 2) return null
+  return relevant
+})
+
+function trendBarHeight(score) {
+  return Math.max(4, (score / 9) * 100)
 }
 
 function resetExam() {
@@ -343,17 +443,37 @@ onUnmounted(() => {
             <p v-if="currentPart === 2" class="exam-q-text">{{ speakingQuestions[currentPart].question }}</p>
           </div>
 
+          <!-- Part 2 prep phase indicator -->
+          <div v-if="currentPart === 1 && part2Phase === 'prep'" class="prep-notice">
+            <div class="prep-icon">📝</div>
+            <p class="prep-text">{{ themeStore.lang === 'zh' ? '准备时间 — 可以做笔记，不要说话' : 'Preparation time — make notes, do not speak' }}</p>
+            <p class="prep-hint">{{ themeStore.lang === 'zh' ? '录音将在准备时间结束后自动开始' : 'Recording will start automatically when prep time ends' }}</p>
+          </div>
+
           <div class="exam-record">
-            <button class="record-btn" :class="{ recording: isListening }" @click="isListening ? (stop(), stopRecording()) : (reset(), start(), startRecording())" :disabled="!isSupported">
-              {{ isListening ? '⏹ ' + (themeStore.lang === 'zh' ? '停止录音' : 'Stop') : '🎤 ' + (themeStore.lang === 'zh' ? '开始录音' : 'Record') }}
-            </button>
-            <div v-if="isRecording" class="recording-indicator">
-              <span class="rec-dot"></span>
-              <span>{{ formatDuration(recordingDuration) }}</span>
-            </div>
-            <div v-if="transcript" class="exam-transcript">
-              {{ transcript }}<span class="interim">{{ interimTranscript }}</span>
-            </div>
+            <!-- Part 2: auto-record during speaking phase, manual for other parts -->
+            <template v-if="currentPart === 1">
+              <div v-if="part2Phase === 'speaking'" class="recording-indicator active-recording">
+                <span class="rec-dot"></span>
+                <span>{{ themeStore.lang === 'zh' ? '正在录音...' : 'Recording...' }}</span>
+                <span v-if="isRecording">{{ formatDuration(recordingDuration) }}</span>
+              </div>
+              <div v-if="transcript" class="exam-transcript">
+                {{ transcript }}<span class="interim">{{ interimTranscript }}</span>
+              </div>
+            </template>
+            <template v-else>
+              <button class="record-btn" :class="{ recording: isListening }" @click="isListening ? (stop(), stopRecording()) : (reset(), start(), startRecording())" :disabled="!isSupported">
+                {{ isListening ? '⏹ ' + (themeStore.lang === 'zh' ? '停止录音' : 'Stop') : '🎤 ' + (themeStore.lang === 'zh' ? '开始录音' : 'Record') }}
+              </button>
+              <div v-if="isRecording" class="recording-indicator">
+                <span class="rec-dot"></span>
+                <span>{{ formatDuration(recordingDuration) }}</span>
+              </div>
+              <div v-if="transcript" class="exam-transcript">
+                {{ transcript }}<span class="interim">{{ interimTranscript }}</span>
+              </div>
+            </template>
           </div>
 
           <button class="next-btn" @click="nextSpeakingPart">
@@ -413,9 +533,28 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- Score trend chart -->
+          <div v-if="trendData" class="trend-section">
+            <h3>{{ themeStore.lang === 'zh' ? '分数趋势' : 'Score Trend' }}</h3>
+            <div class="trend-chart">
+              <div v-for="(entry, i) in trendData" :key="i" class="trend-bar-group">
+                <div class="trend-bar" :style="{ height: trendBarHeight(entry.overall) + '%', background: getScoreColor(entry.overall) }">
+                  <span class="trend-value">{{ entry.overall }}</span>
+                </div>
+                <span class="trend-date">{{ formatDate(entry.date).split(' ')[0] }}</span>
+              </div>
+            </div>
+          </div>
+
           <div v-for="(result, i) in speakingResults" :key="i" class="report-part">
             <h3>Part {{ result.part }} — {{ result.question }}</h3>
-            <p class="report-answer">{{ result.answer || (themeStore.lang === 'zh' ? '未作答' : 'No answer') }}</p>
+            <!-- Transcript replay -->
+            <div class="replay-section">
+              <p class="report-answer">{{ result.answer || (themeStore.lang === 'zh' ? '未作答' : 'No answer') }}</p>
+              <div v-if="result.audioUrl" class="replay-audio">
+                <audio :src="result.audioUrl" controls class="audio-player-mini"></audio>
+              </div>
+            </div>
             <div v-if="result.overall > 0" class="report-dims">
               <span class="report-dim">Fluency: {{ result.fluency?.score }}</span>
               <span class="report-dim">Lexical: {{ result.lexical?.score }}</span>
@@ -423,6 +562,7 @@ onUnmounted(() => {
               <span class="report-dim">Pronunciation: {{ result.pronunciation?.score }}</span>
             </div>
             <p v-if="result.suggestions?.length" class="report-suggestions">{{ result.suggestions.join(' | ') }}</p>
+            <p v-if="result.improvedAnswer" class="report-improved"><strong>{{ themeStore.lang === 'zh' ? '示范：' : 'Model: ' }}</strong>{{ result.improvedAnswer }}</p>
           </div>
         </template>
 
@@ -434,6 +574,19 @@ onUnmounted(() => {
                 {{ (writingResults.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / writingResults.filter(r => r.overall > 0).length).toFixed(1) }}
               </span>
               <span class="report-score-label">{{ themeStore.lang === 'zh' ? '总分' : 'Overall' }}</span>
+            </div>
+          </div>
+
+          <!-- Score trend chart -->
+          <div v-if="trendData" class="trend-section">
+            <h3>{{ themeStore.lang === 'zh' ? '分数趋势' : 'Score Trend' }}</h3>
+            <div class="trend-chart">
+              <div v-for="(entry, i) in trendData" :key="i" class="trend-bar-group">
+                <div class="trend-bar" :style="{ height: trendBarHeight(entry.overall) + '%', background: getScoreColor(entry.overall) }">
+                  <span class="trend-value">{{ entry.overall }}</span>
+                </div>
+                <span class="trend-date">{{ formatDate(entry.date).split(' ')[0] }}</span>
+              </div>
             </div>
           </div>
 
@@ -832,7 +985,119 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
+.report-improved {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* Part 2 prep notice */
+.prep-notice {
+  background: var(--blue-soft);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  text-align: center;
+  margin-bottom: var(--space-lg);
+}
+
+.prep-icon { font-size: 2rem; margin-bottom: 8px; }
+.prep-text { font-weight: 600; margin-bottom: 4px; }
+.prep-hint { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+
+.active-recording {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--space-md);
+  background: var(--red-soft);
+  border-radius: var(--radius-sm);
+}
+
+/* Replay section */
+.replay-section {
+  margin-bottom: var(--space-md);
+}
+
+.replay-audio {
+  margin-top: 8px;
+}
+
+.audio-player-mini {
+  width: 100%;
+  max-width: 400px;
+  height: 36px;
+}
+
+/* Score trend */
+.trend-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.trend-section h3 {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-lg);
+}
+
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 140px;
+  padding-bottom: 28px;
+  position: relative;
+}
+
+.trend-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.trend-bar {
+  width: 100%;
+  max-width: 40px;
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 0.3s;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.trend-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  padding-top: 4px;
+}
+
+.trend-date {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .exam-select { grid-template-columns: 1fr; }
+  .trend-chart { gap: 6px; }
+  .trend-value { font-size: 9px; }
+  .trend-date { font-size: 9px; }
 }
 </style>

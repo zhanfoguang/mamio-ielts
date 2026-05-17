@@ -68,3 +68,9 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Speaking-conversation returns safe followup on parse failure.
 - [x] Vocab endpoint returns empty words array on parse failure.
 - [x] Listening endpoint returns empty transcript/questions on parse failure.
+
+## Phase 11: Speaking Mock Enhancement
+
+- [x] Part 2 proper IELTS timer: 1min prep (no recording) + 2min speaking (auto-record).
+- [x] Score trend tracking: mock scores saved and displayed as bar chart on results page.
+- [x] Transcript replay: recorded audio playback alongside transcript in results.
