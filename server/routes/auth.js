@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import rateLimit from 'express-rate-limit'
-import db, { userQueries, codeQueries, resetCodeQueries } from '../db.js'
+import db, { userQueries, codeQueries, resetCodeQueries, logQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 
@@ -350,6 +350,18 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
   } catch (err) {
     console.error('Admin stats error:', err.message)
     res.status(500).json({ error: '获取统计数据失败' })
+  }
+})
+
+// Admin: recent API logs
+router.get('/admin/logs', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const logs = logQueries.getRecent.all()
+    const dailyStats = logQueries.statsByDay.all()
+    res.json({ logs, dailyStats })
+  } catch (err) {
+    console.error('Admin logs error:', err.message)
+    res.status(500).json({ error: '获取日志失败' })
   }
 })
 

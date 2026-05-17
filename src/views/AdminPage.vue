@@ -13,6 +13,8 @@ const tab = ref('codes')
 const codes = ref([])
 const users = ref([])
 const stats = ref(null)
+const logs = ref([])
+const logStats = ref([])
 const loading = ref(false)
 const generating = ref(false)
 const newCodes = ref([])
@@ -102,6 +104,16 @@ async function fetchStats() {
   }
 }
 
+async function fetchLogs() {
+  try {
+    const { data } = await api.get('/auth/admin/logs')
+    logs.value = data.logs
+    logStats.value = data.dailyStats
+  } catch (e) {
+    console.error('Failed to fetch logs:', e)
+  }
+}
+
 function copyAllNew() {
   navigator.clipboard.writeText(newCodes.value.join('\n'))
 }
@@ -115,6 +127,7 @@ onMounted(() => {
   fetchCodes()
   fetchUsers()
   fetchStats()
+  fetchLogs()
 })
 </script>
 
@@ -136,6 +149,9 @@ onMounted(() => {
         </button>
         <button class="tab" :class="{ active: tab === 'users' }" @click="tab = 'users'; fetchUsers()">
           {{ themeStore.lang === 'zh' ? '用户列表' : 'Users' }}
+        </button>
+        <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'; fetchLogs()">
+          {{ themeStore.lang === 'zh' ? 'API日志' : 'API Logs' }}
         </button>
       </div>
 
@@ -391,6 +407,55 @@ onMounted(() => {
             </table>
           </div>
           <p v-else class="empty-hint">{{ themeStore.lang === 'zh' ? '暂无用户' : 'No users yet' }}</p>
+        </div>
+      </div>
+
+      <!-- Logs Tab -->
+      <div v-if="tab === 'logs'" class="tab-content">
+        <!-- Daily stats chart -->
+        <div v-if="logStats.length" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '近7天调用量' : 'Last 7 Days API Calls' }}</h3>
+          <div class="log-chart">
+            <div v-for="d in logStats" :key="d.day" class="log-bar-col">
+              <span class="log-bar-value">{{ d.calls }}</span>
+              <div class="log-bar" :style="{ height: Math.max(4, d.calls / Math.max(...logStats.map(s => s.calls), 1) * 100) + '%' }"></div>
+              <span class="log-bar-label">{{ d.day.slice(5) }}</span>
+              <span class="log-bar-latency">{{ Math.round(d.avg_latency || 0) }}ms</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent logs table -->
+        <div class="table-section">
+          <h3 class="section-title">
+            {{ themeStore.lang === 'zh' ? '最近调用记录' : 'Recent API Calls' }}
+            <span class="count-badge">{{ logs.length }}</span>
+          </h3>
+          <div class="table-wrap" v-if="logs.length">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ themeStore.lang === 'zh' ? '时间' : 'Time' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '用户' : 'User' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '端点' : 'Endpoint' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '状态' : 'Status' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '耗时' : 'Latency' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in logs" :key="log.id">
+                  <td class="time-cell">{{ new Date(log.created_at).toLocaleString() }}</td>
+                  <td class="email-cell">{{ log.nickname || log.email || `#${log.user_id}` }}</td>
+                  <td><code class="endpoint-tag">{{ log.endpoint }}</code></td>
+                  <td>
+                    <span class="status-badge" :class="log.status === 200 ? 'ok' : 'err'">{{ log.status }}</span>
+                  </td>
+                  <td :class="{ 'latency-slow': log.latency_ms > 10000 }">{{ log.latency_ms }}ms</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="empty-hint">{{ themeStore.lang === 'zh' ? '暂无日志' : 'No logs yet' }}</p>
         </div>
       </div>
     </div>
@@ -849,6 +914,80 @@ onMounted(() => {
   padding: var(--space-2xl);
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
+}
+
+/* Log chart */
+.log-chart {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-end;
+  height: 140px;
+  padding: var(--space-md) 0;
+}
+
+.log-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.log-bar-value {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.log-bar {
+  width: 100%;
+  max-width: 40px;
+  background: var(--blue);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s;
+}
+
+.log-bar-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.log-bar-latency {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.endpoint-tag {
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.status-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.status-badge.ok {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.status-badge.err {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.latency-slow {
+  color: var(--red);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {

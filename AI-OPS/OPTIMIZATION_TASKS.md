@@ -99,3 +99,18 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add admin stats API endpoint (`GET /auth/admin/stats`): role counts, active users (7d/30d), AI calls today, top users, trial conversion rate, expiring soon list.
 - [x] Add Usage tab to AdminPage with overview cards, role breakdown bars, top users table, expiring soon list.
 - [x] Add trial countdown banner on Dashboard for trial/expired users with activate CTA.
+
+## Phase 15: Operational Logging
+
+- [x] Add `api_logs` table in `server/db.js` with indexes and 30-day auto-prune.
+- [x] Add `logQueries` prepared statements (add, getByUser, getRecent, prune, statsByDay).
+- [x] Add `logApiCall()` helper in `server/routes/ai.js`.
+- [x] Add logging to all 5 AI endpoints (speaking-conversation, speaking, writing, vocab, listening).
+- [x] Add admin logs API endpoint (`GET /auth/admin/logs`): recent 200 logs + daily stats for 7 days.
+- [x] Add API Logs tab to AdminPage with daily call chart and recent logs table.
+
+## Phase 16: Landing Page Improvement
+
+- [x] Add pricing section with trial/monthly/yearly plans.
+- [x] Add activation code explanation with 3-step guide.
+- [x] Create `src/components/landing/PricingSection.vue` with i18n support.

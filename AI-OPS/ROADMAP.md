@@ -47,8 +47,8 @@ Goal: make Mamio viable as a small paid product.
 - [x] Add server-side `review_items` table with API endpoints.
 - [x] Add admin visibility into usage and active users (Usage tab).
 - [x] Add trial countdown banner on Dashboard.
-- [ ] Add basic operational logs for AI endpoints.
-- [ ] Improve pricing/activation explanation on landing page.
+- [x] Add basic operational logs for AI endpoints.
+- [x] Improve pricing/activation explanation on landing page.
 
 Success signal: It is clear who is using Mamio, how often, and why they convert or stop.
 
@@ -64,8 +64,11 @@ Success signal: It is clear who is using Mamio, how often, and why they convert 
 
 ## Current Recommended Next Moves
 
-1. Add VPS SQLite backup cron job (prerequisite for server-side review_items).
-2. Create `review_items` table and API endpoints, migrate localStorage data.
-3. Add admin usage dashboard (active users, AI calls, trial conversion).
-4. Add operational logging for AI endpoints.
-5. Clean up trial-to-paid flow with clear pricing and countdown.
+1. ~~Add VPS SQLite backup cron job~~ — Done.
+2. ~~Create `review_items` table and API endpoints~~ — Done.
+3. ~~Add admin usage dashboard~~ — Done.
+4. ~~Add operational logging for AI endpoints~~ — Done.
+5. ~~Clean up trial-to-paid flow with clear pricing and countdown~~ — Done.
+6. ~~Improve landing page (pricing, activation explanation, feature highlights)~~ — Done.
+
+## All Phase 4 items complete. Product is ready for wider testing.

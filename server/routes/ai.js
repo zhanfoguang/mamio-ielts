@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/auth.js'
-import { checkUserQuota, userQueries } from '../db.js'
+import { checkUserQuota, userQueries, logQueries } from '../db.js'
 
 const router = Router()
 
@@ -145,8 +145,15 @@ function incrementCalls(userId) {
   userQueries.incrementCalls.run(today, userId)
 }
 
+function logApiCall(userId, endpoint, status, startTime) {
+  try {
+    logQueries.add.run(userId, endpoint, 'POST', status, Date.now() - startTime)
+  } catch {}
+}
+
 // 口语 AI 对话模式
 router.post('/speaking-conversation', checkQuota, async (req, res) => {
+  const startTime = Date.now()
   try {
     const { question, history, userAnswer, part, lang } = req.body
     if (!question || !userAnswer) {
@@ -262,12 +269,14 @@ Reply in JSON format only, no other content:
       const result = parseJSON(data.choices[0].message.content)
       const normalized = result.type === 'score' ? normalizeSpeakingResult(result) : result
       incrementCalls(req.user.id)
+      logApiCall(req.user.id, '/ai/speaking-conversation', 200, startTime)
       res.json({ ...normalized, quota: req.quota })
     } finally {
       clearTimeout(timeout)
     }
   } catch (err) {
     console.error('AI conversation error:', err.message)
+    logApiCall(req.user.id, '/ai/speaking-conversation', err.message.includes('Failed to parse') ? 200 : 500, startTime)
     if (err.message.includes('Failed to parse')) {
       res.json({ type: 'followup', question: 'Could you tell me more about that?', warning: 'AI 返回格式异常' })
     } else {
@@ -278,6 +287,7 @@ Reply in JSON format only, no other content:
 
 // 口语评分
 router.post('/speaking', checkQuota, async (req, res) => {
+  const startTime = Date.now()
   try {
     const { question, userAnswer, part, confidenceData, lang } = req.body
     if (!question || !userAnswer) {
@@ -349,9 +359,11 @@ Reply in JSON format only, no other content:
     const parsed = parseJSON(result)
     const normalized = normalizeSpeakingResult(parsed)
     incrementCalls(req.user.id)
+    logApiCall(req.user.id, '/ai/speaking', 200, startTime)
     res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI speaking error:', err.message)
+    logApiCall(req.user.id, '/ai/speaking', err.message.includes('Failed to parse') ? 200 : 500, startTime)
     if (err.message.includes('Failed to parse')) {
       incrementCalls(req.user.id)
       res.json({ ...normalizeSpeakingResult({}), quota: req.quota, warning: 'AI 返回格式异常，已使用默认值' })
@@ -363,6 +375,7 @@ Reply in JSON format only, no other content:
 
 // 写作批改
 router.post('/writing', checkQuota, async (req, res) => {
+  const startTime = Date.now()
   try {
     const { task, essay, taskType, lang } = req.body
     if (!task || !essay) {
@@ -437,9 +450,11 @@ Reply in JSON format only, no other content:
     const parsed = parseJSON(result)
     const normalized = normalizeWritingResult(parsed)
     incrementCalls(req.user.id)
+    logApiCall(req.user.id, '/ai/writing', 200, startTime)
     res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI writing error:', err.message)
+    logApiCall(req.user.id, '/ai/writing', err.message.includes('Failed to parse') ? 200 : 500, startTime)
     if (err.message.includes('Failed to parse')) {
       incrementCalls(req.user.id)
       res.json({ ...normalizeWritingResult({}), quota: req.quota, warning: 'AI 返回格式异常，已使用默认值' })
@@ -451,6 +466,7 @@ Reply in JSON format only, no other content:
 
 // 词汇生成
 router.post('/vocab', checkQuota, async (req, res) => {
+  const startTime = Date.now()
   try {
     const { topic, level, lang } = req.body
     if (!topic) {
@@ -499,9 +515,11 @@ Reply in JSON format only, no other content:
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
     incrementCalls(req.user.id)
+    logApiCall(req.user.id, '/ai/vocab', 200, startTime)
     res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI vocab error:', err.message)
+    logApiCall(req.user.id, '/ai/vocab', err.message.includes('Failed to parse') ? 200 : 500, startTime)
     if (err.message.includes('Failed to parse')) {
       incrementCalls(req.user.id)
       res.json({ words: [], quota: req.quota, warning: 'AI 返回格式异常，请重试' })
@@ -513,6 +531,7 @@ Reply in JSON format only, no other content:
 
 // 听力理解题生成
 router.post('/listening', checkQuota, async (req, res) => {
+  const startTime = Date.now()
   try {
     const { topic, section, lang } = req.body
     if (!topic) {
@@ -563,9 +582,11 @@ Reply in JSON format only, no other content:
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
     incrementCalls(req.user.id)
+    logApiCall(req.user.id, '/ai/listening', 200, startTime)
     res.json({ ...parsed, quota: req.quota })
   } catch (err) {
     console.error('AI listening error:', err.message)
+    logApiCall(req.user.id, '/ai/listening', err.message.includes('Failed to parse') ? 200 : 500, startTime)
     if (err.message.includes('Failed to parse')) {
       incrementCalls(req.user.id)
       res.json({ transcript: '', translation: '', questions: [], quota: req.quota, warning: 'AI 返回格式异常，请重试' })

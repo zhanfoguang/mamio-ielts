@@ -112,6 +112,20 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_review_items_user ON review_items(user_id);
   CREATE INDEX IF NOT EXISTS idx_review_items_due ON review_items(user_id, reviewed_at);
+
+  CREATE TABLE IF NOT EXISTS api_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    endpoint TEXT NOT NULL,
+    method TEXT DEFAULT 'POST',
+    status INTEGER,
+    latency_ms INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_api_logs_user ON api_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_api_logs_time ON api_logs(created_at);
+`)
 `)
 
 // Auto-create admin account
@@ -203,6 +217,18 @@ export const reviewItemQueries = {
   deleteAll: db.prepare('DELETE FROM review_items WHERE user_id = ?'),
   countByUser: db.prepare('SELECT COUNT(*) as total, SUM(CASE WHEN reviewed_at IS NULL THEN 1 ELSE 0 END) as due FROM review_items WHERE user_id = ?')
 }
+
+// API log queries
+export const logQueries = {
+  add: db.prepare('INSERT INTO api_logs (user_id, endpoint, method, status, latency_ms) VALUES (?, ?, ?, ?, ?)'),
+  getByUser: db.prepare('SELECT * FROM api_logs WHERE user_id = ? ORDER BY created_at DESC LIMIT 100'),
+  getRecent: db.prepare('SELECT al.*, u.email, u.nickname FROM api_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 200'),
+  prune: db.prepare("DELETE FROM api_logs WHERE created_at < datetime('now', '-30 days')"),
+  statsByDay: db.prepare("SELECT date(created_at) as day, COUNT(*) as calls, AVG(latency_ms) as avg_latency FROM api_logs WHERE created_at >= datetime('now', '-7 days') GROUP BY date(created_at) ORDER BY day DESC")
+}
+
+// Prune old logs on startup
+logQueries.prune.run()
 
 // Check and update user quota
 export function checkUserQuota(userId) {

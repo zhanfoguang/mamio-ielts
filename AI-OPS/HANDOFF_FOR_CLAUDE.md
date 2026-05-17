@@ -190,32 +190,22 @@ Do not assume these are production-ready until checked.
 
 ## Recommended Next Tasks
 
-### 1. Operational Logging
+### 1. ~~Operational Logging~~ — Done
 
-Add basic request logging for AI endpoints:
-- User ID, endpoint, timestamp, response status, latency
-- Store in SQLite `api_logs` table (auto-prune after 30 days)
+`api_logs` table, `logApiCall()` helper, all 5 AI endpoints logged, admin logs endpoint (`GET /auth/admin/logs`), Logs tab in AdminPage with daily call chart and recent logs table.
 
-Files involved:
-- `server/db.js` — new `api_logs` table
-- `server/routes/ai.js` — log after each call
-- `server/routes/auth.js` — admin endpoint to query logs
+### 2. ~~VPS Setup~~ — Done
 
-### 2. VPS Setup
+Backup cron confirmed by user.
 
-After pushing these changes:
-- SSH to VPS and run `deploy/backup-db.sh` setup (add to crontab)
-- Verify review_items table was auto-created on server restart
-- Test the admin stats endpoint on live site
+### 3. ~~Landing Page Improvement~~ — Done
 
-### 3. Landing Page Improvement
-
-- Add pricing/activation explanation
-- Show trial benefits clearly
-- Add testimonials or feature highlights
-
-Files involved:
-- `src/views/LandingPage.vue`
+Added `src/components/landing/PricingSection.vue` with:
+- Three-tier pricing cards (trial free / monthly / yearly)
+- Trial benefits clearly listed (10 AI calls/day, all modules, 3-day window)
+- Activation code 3-step guide
+- i18n (zh/en) support
+- Highlighted monthly plan as recommended
 
 ## Product Direction After This
 

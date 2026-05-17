@@ -52,6 +52,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `src/views/AdminPage.vue` — Admin panel (user management, invite codes)
 - `src/views/LoginPage.vue` — Login/register
 - `src/views/LandingPage.vue` — Marketing landing page
+- `src/components/landing/PricingSection.vue` — Pricing plans and activation guide
 - `src/services/ai.js` — AI API calls (speaking, writing, vocab, listening)
 - `src/services/progress.js` — Progress API calls (history, SRS, daily stats)
 - `src/services/api.js` — Axios instance with JWT interceptor
@@ -106,6 +107,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `vocab_progress` — user_id, word, ease, interval, reps, due, last_review (SM-2 fields)
 - `daily_stats` — user_id, date, speaking, writing, listening, reading, vocab counts
 - `review_items` — user_id, module, type, text, reason, source, reviewed_at, created_at
+- `api_logs` — user_id, endpoint, method, status, latency_ms, created_at (auto-pruned after 30 days)
 
 ## User Roles
 - `trial` — 10 AI calls/day, 3-day window, auto-expires
@@ -128,6 +130,8 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 | GET | /admin/users | Admin | List all users |
 | POST | /admin/codes | Admin | Generate invite codes |
 | GET | /admin/codes | Admin | List all codes |
+| GET | /admin/stats | Admin | Usage stats (roles, active users, AI calls, conversion) |
+| GET | /admin/logs | Admin | Recent API logs + daily stats |
 
 ### AI (`/api/ai`)
 | Method | Path | Auth | Description |

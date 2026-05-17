@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import HeroSection from '../components/landing/HeroSection.vue'
 import FeaturesGrid from '../components/landing/FeaturesGrid.vue'
+import PricingSection from '../components/landing/PricingSection.vue'
 import VideoDemo from '../components/landing/VideoDemo.vue'
 import PhonemeDemo from '../components/landing/PhonemeDemo.vue'
 import ThemeToggle from '../components/landing/ThemeToggle.vue'
@@ -30,6 +31,7 @@ onMounted(() => {
   <div class="landing-page">
     <HeroSection />
     <FeaturesGrid />
+    <PricingSection />
     <VideoDemo />
     <PhonemeDemo />
     <ThemeToggle />
