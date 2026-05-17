@@ -146,7 +146,8 @@ router.post('/activate', authMiddleware, (req, res) => {
       return res.status(400).json({ error: '请输入激活码' })
     }
 
-    const inviteCode = codeQueries.findByCode.get(code.trim())
+    const normalizedCode = String(code).trim().toUpperCase()
+    const inviteCode = codeQueries.findByCode.get(normalizedCode)
     if (!inviteCode) {
       return res.status(400).json({ error: '激活码无效' })
     }

@@ -67,7 +67,7 @@ async function handleActivate() {
   error.value = ''
   success.value = ''
   try {
-    const data = await authStore.activate(inviteCode.value)
+    const data = await authStore.activate(inviteCode.value.trim().toUpperCase())
     success.value = data.message
     inviteCode.value = ''
   } catch (e) {
@@ -143,7 +143,7 @@ async function handleActivate() {
         <template v-if="authStore.isLoggedIn">
           <div class="form-group">
             <label>{{ themeStore.lang === 'zh' ? '激活码' : 'Invite Code' }}</label>
-            <input v-model="inviteCode" type="text" placeholder="MAMIO-XXXX-YYYY" />
+            <input v-model.trim="inviteCode" type="text" placeholder="MAMIO-XXXX-YYYY" autocapitalize="characters" @input="inviteCode = inviteCode.toUpperCase()" />
           </div>
           <button class="submit-btn" @click="handleActivate" :disabled="!inviteCode.trim()">
             {{ themeStore.lang === 'zh' ? '激活' : 'Activate' }}
