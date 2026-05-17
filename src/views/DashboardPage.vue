@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCheckinStore } from '../stores/checkin'
 import { useRouter } from 'vue-router'
 import { getDashboardData } from '../services/progress'
+import { getReviewItemStats } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -33,6 +34,17 @@ const todayStats = computed(() => {
   const vocab = vocabDaily[today] || 0
   return { speaking, writing, listening, reading, vocab, total: speaking + writing + listening + reading + vocab }
 })
+
+const vocabReviewStats = computed(() => {
+  const srsData = JSON.parse(localStorage.getItem('mamio-vocab-srs') || '{}')
+  const now = Date.now()
+  const rows = Object.values(srsData)
+  const due = rows.filter(item => Number(item?.due || 0) <= now).length
+  return { total: rows.length, due }
+})
+
+const reviewItemStats = computed(() => getReviewItemStats())
+const dueReviewItemsPreview = computed(() => reviewItemStats.value.dueItems.slice(0, 3))
 
 // Score trends (last 10 entries per module)
 const speakingScores = computed(() => {
@@ -63,6 +75,81 @@ const avgWritingScore = computed(() => {
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
 })
 
+function getScoreField(details, keys) {
+  for (const key of keys) {
+    const value = details?.[key]
+    if (typeof value === 'number') return value
+    if (typeof value?.score === 'number') return value.score
+  }
+  return null
+}
+
+function inferWeakestFromDetails(details, module) {
+  if (!details) return null
+  if (details.weakestArea) {
+    return {
+      module,
+      area: details.weakestArea,
+      nextAction: details.nextAction,
+      reviewItems: details.reviewItems || [],
+      source: 'ai'
+    }
+  }
+
+  const candidates = module === 'speaking'
+    ? [
+      ['fluency', 'Fluency'],
+      ['lexical', 'Lexical Resource'],
+      ['grammar', 'Grammar'],
+      ['pronunciation', 'Pronunciation']
+    ]
+    : [
+      ['taskResponse', 'Task Response'],
+      ['coherence', 'Coherence'],
+      ['lexical', 'Lexical Resource'],
+      ['grammar', 'Grammar']
+    ]
+
+  const scored = candidates
+    .map(([key, label]) => ({ key, label, score: getScoreField(details, [key]) }))
+    .filter(item => typeof item.score === 'number')
+    .sort((a, b) => a.score - b.score)
+
+  if (!scored.length) return null
+  const weakest = scored[0]
+  return {
+    module,
+    area: weakest.label,
+    score: weakest.score,
+    nextAction: Array.isArray(details.actionPlan) ? details.actionPlan[0] : details.suggestions?.[0],
+    reviewItems: details.reviewItems || [],
+    source: 'rubric'
+  }
+}
+
+const aiWeaknessSummary = computed(() => {
+  const recentSpeaking = speakingHistory.value
+    .slice(0, 8)
+    .map(item => inferWeakestFromDetails(item.details, 'speaking'))
+    .filter(Boolean)
+  const recentWriting = writingHistory.value
+    .slice(0, 8)
+    .map(item => inferWeakestFromDetails(item.details, 'writing'))
+    .filter(Boolean)
+  const all = [...recentSpeaking, ...recentWriting]
+  if (!all.length) return null
+
+  const counts = all.reduce((acc, item) => {
+    const key = `${item.module}:${item.area}`
+    acc[key] = acc[key] || { ...item, count: 0 }
+    acc[key].count += 1
+    if (!acc[key].nextAction && item.nextAction) acc[key].nextAction = item.nextAction
+    return acc
+  }, {})
+
+  return Object.values(counts).sort((a, b) => b.count - a.count)[0]
+})
+
 // Heatmap data (last 28 days = 4 weeks)
 const heatmapDays = computed(() => {
   const days = []
@@ -86,58 +173,228 @@ const heatmapDays = computed(() => {
   return days
 })
 
-// Recommendation
-const recommendation = computed(() => {
+function buildPlanTask({ icon, zh, en, path, reasonZh, reasonEn, tone = 'neutral' }) {
+  return { icon, zh, en, path, reasonZh, reasonEn, tone }
+}
+
+// Study plan
+const studyPlan = computed(() => {
   const speakingCount = speakingHistory.value.length
   const writingCount = writingHistory.value.length
   const listeningCount = listeningHistory.value.length
   const readingCount = readingHistory.value.length
   const vocab = JSON.parse(localStorage.getItem('mamio-progress') || '{}').vocabulary?.learned || 0
+  const dueVocab = vocabReviewStats.value.due
+  const dueReviewItems = reviewItemStats.value.due
 
   const totalPractice = speakingCount + writingCount + listeningCount + readingCount
   if (totalPractice === 0) {
     return {
-      icon: '🎯',
-      zh: '开始你的第一次练习吧！建议从口语 Part 1 开始',
-      en: 'Start your first practice! Try Speaking Part 1',
-      path: '/speaking'
+      primary: buildPlanTask({
+        icon: '🎤',
+        zh: '完成 1 次口语 Part 1',
+        en: 'Complete one Speaking Part 1 practice',
+        path: '/speaking',
+        reasonZh: '先用短回答建立第一次 AI 反馈样本',
+        reasonEn: 'Start with short answers to create your first AI feedback sample',
+        tone: 'blue'
+      }),
+      review: buildPlanTask({
+        icon: '📚',
+        zh: '学习 10 个 IELTS 高频词',
+        en: 'Learn 10 high-frequency IELTS words',
+        path: '/vocabulary',
+        reasonZh: '词汇库还没有建立，先补底层材料',
+        reasonEn: 'Build the vocabulary base before heavier practice'
+      }),
+      insight: {
+        icon: '🎯',
+        zh: '先跑出第一次有效反馈，不需要一开始就完整。',
+        en: 'Get the first useful feedback loop before trying to be complete.'
+      },
+      tasks: [
+        buildPlanTask({ icon: '🎤', zh: '口语 Part 1', en: 'Speaking Part 1', path: '/speaking' }),
+        buildPlanTask({ icon: '📚', zh: '词汇闪卡', en: 'Vocabulary cards', path: '/vocabulary' }),
+        buildPlanTask({ icon: '✍️', zh: '看 1 篇范文', en: 'Read one model essay', path: '/writing' })
+      ]
     }
   }
 
-  // Find weakest area
   const avgSpk = avgSpeakingScore.value ? parseFloat(avgSpeakingScore.value) : 0
   const avgWrt = avgWritingScore.value ? parseFloat(avgWritingScore.value) : 0
+  const practicedToday = todayStats.value.total > 0
 
-  if (avgSpk > 0 && avgSpk < 6) {
-    return {
-      icon: '🎤',
-      zh: `口语平均 ${avgSpk} 分，建议多练习 Part 2 长回答`,
-      en: `Speaking avg ${avgSpk}, practice Part 2 long answers`,
-      path: '/speaking'
-    }
-  }
-  if (avgWrt > 0 && avgWrt < 6) {
-    return {
-      icon: '✍️',
-      zh: `写作平均 ${avgWrt} 分，建议练习 Task 2 议论文`,
-      en: `Writing avg ${avgWrt}, practice Task 2 essays`,
-      path: '/writing'
-    }
-  }
-  if (vocab < 50) {
-    return {
+  let primary
+  let insight
+
+  if (!practicedToday && dueReviewItems > 0) {
+    primary = buildPlanTask({
+      icon: '🎯',
+      zh: `先处理 ${Math.min(dueReviewItems, 5)} 个 AI 复习项`,
+      en: `Clear ${Math.min(dueReviewItems, 5)} AI review items first`,
+      path: '/dashboard',
+      reasonZh: '这些是从你自己的口语/写作反馈里提取的弱点',
+      reasonEn: 'These came from your own speaking and writing feedback',
+      tone: 'amber'
+    })
+  } else if (!practicedToday && dueVocab >= 10) {
+    primary = buildPlanTask({
       icon: '📚',
-      zh: '词汇量还需要积累，每天学习 10 个新词',
-      en: 'Build your vocabulary, learn 10 new words daily',
-      path: '/vocabulary'
+      zh: `先复习 ${Math.min(dueVocab, 20)} 个到期词`,
+      en: `Review ${Math.min(dueVocab, 20)} due words first`,
+      path: '/vocabulary',
+      reasonZh: '到期复习不处理，词汇会越积越多',
+      reasonEn: 'Due reviews compound quickly if ignored',
+      tone: 'purple'
+    })
+  } else if (avgWrt > 0 && avgWrt < 6) {
+    primary = buildPlanTask({
+      icon: '✍️',
+      zh: '完成 1 篇 Writing Task 2',
+      en: 'Complete one Writing Task 2 essay',
+      path: '/writing',
+      reasonZh: `写作平均 ${avgWrt}，先补最影响总分的输出项`,
+      reasonEn: `Writing average is ${avgWrt}; prioritize the output skill`,
+      tone: 'green'
+    })
+  } else if (avgSpk > 0 && avgSpk < 6) {
+    primary = buildPlanTask({
+      icon: '🎤',
+      zh: '练 1 轮口语 Part 2 长回答',
+      en: 'Practice one Speaking Part 2 long turn',
+      path: '/speaking',
+      reasonZh: `口语平均 ${avgSpk}，需要更长回答样本`,
+      reasonEn: `Speaking average is ${avgSpk}; collect a longer answer sample`,
+      tone: 'blue'
+    })
+  } else if (writingCount < Math.max(1, Math.floor(speakingCount / 2))) {
+    primary = buildPlanTask({
+      icon: '✍️',
+      zh: '补 1 次写作批改',
+      en: 'Add one writing feedback session',
+      path: '/writing',
+      reasonZh: '写作练习明显少于口语，输出结构需要补样本',
+      reasonEn: 'Writing practice is lagging behind speaking',
+      tone: 'green'
+    })
+  } else if (listeningCount + readingCount < speakingCount + writingCount) {
+    primary = buildPlanTask({
+      icon: '🎧',
+      zh: '做 1 次听力或阅读输入训练',
+      en: 'Do one listening or reading input drill',
+      path: listeningCount <= readingCount ? '/listening' : '/reading',
+      reasonZh: '输入训练偏少，容易限制词汇和表达质量',
+      reasonEn: 'Input practice is behind output practice',
+      tone: 'amber'
+    })
+  } else if (vocab < 50) {
+    primary = buildPlanTask({
+      icon: '📚',
+      zh: '学习 10 个话题词',
+      en: 'Learn 10 topic words',
+      path: '/vocabulary',
+      reasonZh: '词汇基础还薄，先提高表达材料储备',
+      reasonEn: 'Vocabulary base is still thin',
+      tone: 'purple'
+    })
+  } else {
+    primary = buildPlanTask({
+      icon: '✨',
+      zh: '做 1 次口语 AI 对话',
+      en: 'Try one AI speaking conversation',
+      path: '/speaking',
+      reasonZh: '当前节奏不错，继续增加真实互动压力',
+      reasonEn: 'Keep the rhythm and add real interaction pressure',
+      tone: 'blue'
+    })
+  }
+
+  if (aiWeaknessSummary.value?.nextAction) {
+    const weak = aiWeaknessSummary.value
+    insight = {
+      icon: weak.module === 'writing' ? '✍️' : '🎤',
+      zh: `${weak.module === 'writing' ? '写作' : '口语'}最近反复卡在 ${weak.area}。下一步：${weak.nextAction}`,
+      en: `${weak.module === 'writing' ? 'Writing' : 'Speaking'} is repeatedly weak in ${weak.area}. Next: ${weak.nextAction}`
+    }
+  } else if (avgWrt > 0 && avgWrt < 6) {
+    insight = {
+      icon: '✍️',
+      zh: `写作是当前弱项，平均 Band ${avgWrt}。重点看任务回应、结构和论证深度。`,
+      en: `Writing is the current weak area at Band ${avgWrt}. Focus on response, structure, and argument depth.`
+    }
+  } else if (avgSpk > 0 && avgSpk < 6) {
+    insight = {
+      icon: '🎤',
+      zh: `口语是当前弱项，平均 Band ${avgSpk}。优先练延展回答和连贯表达。`,
+      en: `Speaking is the current weak area at Band ${avgSpk}. Prioritize extended and coherent answers.`
+    }
+  } else if (dueReviewItems > 0) {
+    insight = {
+      icon: '🎯',
+      zh: `有 ${dueReviewItems} 个 AI 复习项待处理，优先复练自己的真实弱点。`,
+      en: `${dueReviewItems} AI review items are due. Prioritize your real weak spots.`
+    }
+  } else if (dueVocab > 0) {
+    insight = {
+      icon: '📚',
+      zh: `有 ${dueVocab} 个词到期复习，先处理它们能稳住长期记忆。`,
+      en: `${dueVocab} words are due. Clear them first to protect long-term memory.`
+    }
+  } else {
+    insight = {
+      icon: '📈',
+      zh: '当前没有明显低分项，重点保持连续练习并扩大样本量。',
+      en: 'No obvious low-score area yet. Keep the streak and collect more samples.'
     }
   }
-  return {
-    icon: '✨',
-    zh: '保持练习节奏，尝试 AI 对话模式提升口语',
-    en: 'Keep practicing, try AI conversation mode for speaking',
-    path: '/speaking'
-  }
+
+  const review = dueReviewItems > 0
+    ? buildPlanTask({
+      icon: '🎯',
+      zh: `复练 ${Math.min(dueReviewItems, 5)} 个 AI 弱点`,
+      en: `Review ${Math.min(dueReviewItems, 5)} AI weak spots`,
+      path: '/dashboard',
+      reasonZh: '来自最近口语/写作反馈',
+      reasonEn: 'From recent speaking and writing feedback'
+    })
+    : dueVocab > 0
+    ? buildPlanTask({
+      icon: '📚',
+      zh: `复习 ${Math.min(dueVocab, 20)} 个到期词`,
+      en: `Review ${Math.min(dueVocab, 20)} due words`,
+      path: '/vocabulary',
+      reasonZh: '先清到期词，再做新练习',
+      reasonEn: 'Clear due words before new practice'
+    })
+    : buildPlanTask({
+      icon: '📚',
+      zh: '补充 10 个新词',
+      en: 'Add 10 new words',
+      path: '/vocabulary',
+      reasonZh: '为写作和口语准备可复用表达',
+      reasonEn: 'Prepare reusable language for writing and speaking'
+    })
+
+  const weakPath = aiWeaknessSummary.value?.module === 'writing' ? '/writing' : '/speaking'
+  const weakLabelZh = aiWeaknessSummary.value
+    ? `${aiWeaknessSummary.value.module === 'writing' ? '写作' : '口语'}弱点复练`
+    : (writingCount <= speakingCount ? '写作批改' : '口语练习')
+  const weakLabelEn = aiWeaknessSummary.value
+    ? `${aiWeaknessSummary.value.module === 'writing' ? 'Writing' : 'Speaking'} weak-area drill`
+    : (writingCount <= speakingCount ? 'Writing feedback' : 'Speaking practice')
+
+  const tasks = [
+    primary,
+    review,
+    buildPlanTask({
+      icon: aiWeaknessSummary.value?.module === 'writing' || writingCount <= speakingCount ? '✍️' : '🎤',
+      zh: weakLabelZh,
+      en: weakLabelEn,
+      path: aiWeaknessSummary.value ? weakPath : (writingCount <= speakingCount ? '/writing' : '/speaking')
+    })
+  ]
+
+  return { primary, review, insight, tasks }
 })
 
 // Module stats
@@ -324,14 +581,56 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Recommendation -->
-      <div class="recommendation-card" @click="router.push(recommendation.path)">
-        <span class="rec-icon">{{ recommendation.icon }}</span>
-        <div class="rec-text">
-          <span class="rec-label">{{ themeStore.lang === 'zh' ? '今日推荐' : 'Recommendation' }}</span>
-          <span class="rec-content">{{ themeStore.lang === 'zh' ? recommendation.zh : recommendation.en }}</span>
+      <!-- Study Plan -->
+      <div class="study-plan-card">
+        <div class="study-plan-header">
+          <div>
+            <span class="plan-kicker">{{ themeStore.lang === 'zh' ? '今日学习计划' : "Today's Study Plan" }}</span>
+            <h2>{{ themeStore.lang === 'zh' ? '先抓最该推进的一步' : 'Start with the highest-leverage step' }}</h2>
+          </div>
+          <span class="plan-status">{{ todayStats.total }}/{{ dailyGoal }}</span>
         </div>
-        <span class="rec-arrow">→</span>
+
+        <button class="primary-plan" :class="'tone-' + studyPlan.primary.tone" @click="router.push(studyPlan.primary.path)">
+          <span class="primary-icon">{{ studyPlan.primary.icon }}</span>
+          <span class="primary-body">
+            <span class="primary-label">{{ themeStore.lang === 'zh' ? '主任务' : 'Primary' }}</span>
+            <strong>{{ themeStore.lang === 'zh' ? studyPlan.primary.zh : studyPlan.primary.en }}</strong>
+            <small>{{ themeStore.lang === 'zh' ? studyPlan.primary.reasonZh : studyPlan.primary.reasonEn }}</small>
+          </span>
+          <span class="primary-arrow">→</span>
+        </button>
+
+        <div class="plan-support">
+          <button class="support-card" @click="router.push(studyPlan.review.path)">
+            <span class="support-icon">{{ studyPlan.review.icon }}</span>
+            <span>
+              <strong>{{ themeStore.lang === 'zh' ? studyPlan.review.zh : studyPlan.review.en }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? studyPlan.review.reasonZh : studyPlan.review.reasonEn }}</small>
+            </span>
+          </button>
+          <div class="support-card insight-card">
+            <span class="support-icon">{{ studyPlan.insight.icon }}</span>
+            <span>
+              <strong>{{ themeStore.lang === 'zh' ? '弱点提示' : 'Focus Insight' }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? studyPlan.insight.zh : studyPlan.insight.en }}</small>
+            </span>
+          </div>
+        </div>
+
+        <div class="plan-chips">
+          <button v-for="task in studyPlan.tasks" :key="task.zh" class="plan-chip" @click="router.push(task.path)">
+            <span>{{ task.icon }}</span>
+            {{ themeStore.lang === 'zh' ? task.zh : task.en }}
+          </button>
+        </div>
+
+        <div v-if="dueReviewItemsPreview.length" class="review-strip">
+          <span class="review-strip-label">{{ themeStore.lang === 'zh' ? '待复练' : 'Due Review' }}</span>
+          <span v-for="item in dueReviewItemsPreview" :key="item.id" class="review-pill">
+            {{ item.text }}
+          </span>
+        </div>
       </div>
 
       <div class="dashboard-grid">
@@ -538,49 +837,215 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* Recommendation */
-.recommendation-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: 14px 20px;
-  background: var(--blue-soft);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+/* Study plan */
+.study-plan-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
   margin-bottom: var(--space-xl);
 }
 
-.recommendation-card:hover {
-  transform: translateX(4px);
+.study-plan-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
-.rec-icon {
-  font-size: 1.5rem;
+.plan-kicker {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
-.rec-text {
+.study-plan-header h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.plan-status {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.primary-plan {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.primary-plan:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.tone-blue { background: var(--blue-soft); }
+.tone-green { background: var(--green-soft); }
+.tone-purple { background: var(--purple-soft); }
+.tone-amber { background: var(--yellow-soft); }
+.tone-neutral { background: var(--bg-tertiary); }
+
+.primary-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .primary-icon {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.primary-body {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
-.rec-label {
+.primary-label {
   font-size: var(--font-size-xs);
-  color: var(--blue);
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 
-.rec-content {
-  font-size: var(--font-size-sm);
+.primary-body strong {
+  font-size: var(--font-size-base);
   color: var(--text-primary);
-  font-weight: 500;
 }
 
-.rec-arrow {
-  color: var(--blue);
-  font-weight: 600;
+.primary-body small,
+.support-card small {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.primary-arrow {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-weight: 800;
+}
+
+.plan-support {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.support-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+button.support-card {
+  transition: transform var(--transition-fast);
+}
+
+button.support-card:hover {
+  transform: translateX(3px);
+}
+
+.support-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.support-card span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.support-card strong {
+  font-size: var(--font-size-sm);
+}
+
+.insight-card {
+  border: 1px solid var(--border-color);
+}
+
+.plan-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: var(--space-md);
+}
+
+.plan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.plan-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.review-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: var(--space-md);
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.review-strip-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 800;
+}
+
+.review-pill {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  background: var(--yellow-soft);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 /* Dashboard grid */
@@ -831,6 +1296,8 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .quick-links { grid-template-columns: 1fr; }
+  .plan-support { grid-template-columns: 1fr; }
+  .study-plan-header { flex-direction: column; }
 }
 
 /* Onboarding */

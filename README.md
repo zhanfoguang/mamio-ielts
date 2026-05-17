@@ -4,6 +4,14 @@ AI-powered IELTS preparation platform. Practice Speaking, Listening, Reading, Wr
 
 **Live:** http://47.88.87.116:8080
 
+## Project Governance
+
+Mamio uses a lightweight AI Ops layer in `AI-OPS/` for product planning, review, QA, and roadmap control.
+
+- Start with `AI-OPS/README.md`
+- Use `AI-OPS/FEATURE_SPEC_TEMPLATE.md` before larger features
+- Use `AI-OPS/QA_CHECKLIST.md` before deployment
+
 ## Features
 
 ### Speaking

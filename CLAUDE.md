@@ -6,6 +6,18 @@ AI-powered IELTS preparation web app. Speaking, Listening, Reading, Writing, Voc
 **Live:** http://47.88.87.116:8080
 **Repo:** https://github.com/zhanfoguang/mamio-ielts
 
+## AI Ops / Project Governance
+
+Before planning non-trivial work, read `AI-OPS/README.md`.
+
+- `AI-OPS/PRODUCT_MANAGER.md` — product judgment, priorities, PRD output shape
+- `AI-OPS/CODE_REVIEWER.md` — Mamio-specific review risks and output format
+- `AI-OPS/QA_CHECKLIST.md` — local, API, and VPS smoke-test checklist
+- `AI-OPS/FEATURE_SPEC_TEMPLATE.md` — template for feature specs before implementation
+- `AI-OPS/ROADMAP.md` — staged roadmap from stability to learning loop to productization
+
+Operating rule: do not add features just because they are possible. First decide whether the change improves the learning loop, reliability, or productization.
+
 ## Tech Stack
 - **Frontend:** Vue 3 + Vite + Pinia + Vue Router
 - **Backend:** Express.js + better-sqlite3
@@ -119,6 +131,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | /speaking | Yes+quota | Score speaking response |
+| POST | /speaking-conversation | Yes+quota | Multi-turn speaking follow-up + final scoring |
 | POST | /writing | Yes+quota | Grade essay |
 | POST | /vocab | Yes+quota | Generate vocabulary |
 | POST | /listening | Yes+quota | Generate listening material |

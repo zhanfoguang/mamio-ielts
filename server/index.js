@@ -7,9 +7,16 @@ dotenv.config({ path: path.join(__dirname, '.env') })
 
 import express from 'express'
 import cors from 'cors'
-import authRoutes from './routes/auth.js'
-import aiRoutes from './routes/ai.js'
-import progressRoutes from './routes/progress.js'
+
+const [
+  { default: authRoutes },
+  { default: aiRoutes },
+  { default: progressRoutes }
+] = await Promise.all([
+  import('./routes/auth.js'),
+  import('./routes/ai.js'),
+  import('./routes/progress.js')
+])
 
 const app = express()
 const PORT = process.env.PORT || 3000

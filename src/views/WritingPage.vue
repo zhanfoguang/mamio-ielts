@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { writingTasks } from '../data/ielts/writing'
 import { batchWriting } from '../services/ai'
 import { getWritingHistory, addWritingRecord } from '../services/progress'
+import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const activeTask = ref(1)
@@ -15,6 +16,9 @@ const loading = ref(false)
 const showResult = ref(false)
 const showModel = ref(false)
 const showComparison = ref(false)
+const rewriteDraft = ref('')
+const rewriteSaved = ref(false)
+const currentHistoryId = ref(null)
 
 // Timer
 const timerRunning = ref(false)
@@ -29,10 +33,10 @@ const showHistory = ref(false)
 onMounted(async () => {
   try {
     const data = await getWritingHistory()
-    history.value = data
-    localStorage.setItem('mamio-writing-history', JSON.stringify(data))
+    history.value = data.map(normalizeHistoryEntry)
+    localStorage.setItem('mamio-writing-history', JSON.stringify(history.value))
   } catch {
-    history.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+    history.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]').map(normalizeHistoryEntry)
   }
 })
 
@@ -66,9 +70,39 @@ const sharedWords = computed(() => {
 })
 
 function highlightText(text, highlightWords, cssClass) {
-  if (!highlightWords.length) return text
-  const regex = new RegExp(`\\b(${highlightWords.join('|')})\\b`, 'gi')
-  return text.replace(regex, `<span class="${cssClass}">$1</span>`)
+  const safeText = escapeHtml(text)
+  if (!highlightWords.length) return safeText
+  const escapedWords = highlightWords.map(escapeRegExp)
+  const regex = new RegExp(`\\b(${escapedWords.join('|')})\\b`, 'gi')
+  return safeText.replace(regex, `<span class="${cssClass}">$1</span>`)
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeHistoryEntry(entry) {
+  const details = entry.details || {}
+  const essayText = entry.essay || ''
+  const taskText = entry.task || ''
+
+  return {
+    ...entry,
+    taskType: entry.taskType ?? entry.task_type ?? activeTask.value,
+    promptType: entry.promptType ?? details.promptType ?? `Task ${entry.task_type || activeTask.value}`,
+    promptPreview: entry.promptPreview ?? taskText.substring(0, 80),
+    wordCount: entry.wordCount ?? details.wordCount ?? essayText.trim().split(/\s+/).filter(Boolean).length,
+    timeSpent: entry.timeSpent ?? details.timeSpent ?? 0
+  }
 }
 
 function formatTime(seconds) {
@@ -82,6 +116,9 @@ function selectPrompt(prompt) {
   showResult.value = false
   aiResult.value = null
   showModel.value = false
+  rewriteDraft.value = ''
+  rewriteSaved.value = false
+  currentHistoryId.value = null
   stopTimer()
   // Load draft
   const savedDraft = localStorage.getItem(`mamio-writing-draft-${prompt.id}`)
@@ -128,6 +165,8 @@ async function submitEssay() {
   try {
     aiResult.value = await batchWriting(selectedPrompt.value.prompt, essay.value, activeTask.value, themeStore.lang)
     showResult.value = true
+    rewriteDraft.value = ''
+    rewriteSaved.value = false
     saveToHistory()
   } catch (e) {
     aiResult.value = { error: e.response?.data?.error || '批改失败，请稍后重试' }
@@ -143,7 +182,12 @@ async function saveToHistory() {
     task: selectedPrompt.value.prompt,
     essay: essay.value,
     score: aiResult.value?.overall || null,
-    details: aiResult.value?.error ? null : aiResult.value
+    details: aiResult.value?.error ? null : {
+      ...aiResult.value,
+      promptType: selectedPrompt.value.type,
+      wordCount: wordCount.value,
+      timeSpent: timerSeconds.value
+    }
   }
   try {
     const result = await addWritingRecord(entry)
@@ -153,18 +197,35 @@ async function saveToHistory() {
     entry.id = Date.now()
     entry.date = new Date().toISOString()
   }
+  currentHistoryId.value = entry.id
   entry.promptId = selectedPrompt.value.id
   entry.promptType = selectedPrompt.value.type
   entry.promptPreview = selectedPrompt.value.prompt.substring(0, 80)
   entry.wordCount = wordCount.value
   entry.timeSpent = timerSeconds.value
-  history.value.unshift(entry)
+  history.value.unshift(normalizeHistoryEntry(entry))
   if (history.value.length > 30) history.value = history.value.slice(0, 30)
   localStorage.setItem('mamio-writing-history', JSON.stringify(history.value))
+  addReviewItemsFromFeedback(aiResult.value, { module: 'writing', source: 'writing-feedback' })
   // Clear draft after successful submission
   if (selectedPrompt.value) {
     localStorage.removeItem(draftKey.value)
   }
+}
+
+function saveRewriteDraft() {
+  if (!rewriteDraft.value.trim() || !aiResult.value?.rewriteMission) return
+  const key = `mamio-writing-rewrite-${currentHistoryId.value || selectedPrompt.value?.id || Date.now()}`
+  const payload = {
+    promptId: selectedPrompt.value?.id,
+    taskType: activeTask.value,
+    originalEssay: essay.value,
+    rewrite: rewriteDraft.value,
+    mission: aiResult.value.rewriteMission,
+    savedAt: new Date().toISOString()
+  }
+  localStorage.setItem(key, JSON.stringify(payload))
+  rewriteSaved.value = true
 }
 
 function deleteHistory(id) {
@@ -329,6 +390,29 @@ onUnmounted(() => {
                   <div v-if="aiResult.actionPlan?.length" class="feedback-section">
                     <h4>{{ themeStore.lang === 'zh' ? '行动计划' : 'Action Plan' }}</h4>
                     <ol><li v-for="a in aiResult.actionPlan" :key="a">{{ a }}</li></ol>
+                  </div>
+
+                  <div v-if="aiResult.rewriteMission" class="rewrite-mission">
+                    <div class="rewrite-head">
+                      <span class="rewrite-icon">↻</span>
+                      <div>
+                        <h4>{{ themeStore.lang === 'zh' ? '重写任务' : 'Rewrite Mission' }}</h4>
+                        <p>{{ aiResult.rewriteMission.instruction }}</p>
+                      </div>
+                    </div>
+                    <div class="rewrite-target">
+                      {{ themeStore.lang === 'zh' ? '目标' : 'Target' }}: {{ aiResult.rewriteMission.target }}
+                    </div>
+                    <ul v-if="aiResult.rewriteMission.checklist?.length" class="rewrite-checklist">
+                      <li v-for="item in aiResult.rewriteMission.checklist" :key="item">{{ item }}</li>
+                    </ul>
+                    <textarea v-model="rewriteDraft" class="rewrite-textarea" :placeholder="themeStore.lang === 'zh' ? '在这里只重写这一段，不用重写全文...' : 'Rewrite only this focused section here, not the full essay...'" rows="6"></textarea>
+                    <div class="rewrite-actions">
+                      <button class="rewrite-save" @click="saveRewriteDraft" :disabled="!rewriteDraft.trim()">
+                        {{ themeStore.lang === 'zh' ? '保存重写稿' : 'Save Rewrite' }}
+                      </button>
+                      <span v-if="rewriteSaved" class="rewrite-saved">{{ themeStore.lang === 'zh' ? '已保存' : 'Saved' }}</span>
+                    </div>
                   </div>
                 </template>
               </div>
@@ -779,6 +863,97 @@ onUnmounted(() => {
 .weakness-item { color: var(--red); }
 
 .result-error { color: var(--red); text-align: center; }
+
+.rewrite-mission {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--blue-soft);
+  text-align: left;
+}
+
+.rewrite-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: var(--space-sm);
+}
+
+.rewrite-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.rewrite-head h4 {
+  font-size: var(--font-size-base);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.rewrite-head p,
+.rewrite-target,
+.rewrite-checklist li {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.rewrite-target {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.rewrite-checklist {
+  padding-left: 20px;
+  margin-bottom: var(--space-md);
+}
+
+.rewrite-textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.rewrite-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--space-sm);
+}
+
+.rewrite-save {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: var(--blue);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.rewrite-save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rewrite-saved {
+  font-size: var(--font-size-xs);
+  color: var(--green);
+  font-weight: 700;
+}
 
 /* Model Essay */
 .model-section { text-align: center; }

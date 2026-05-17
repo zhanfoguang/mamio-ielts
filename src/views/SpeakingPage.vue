@@ -5,6 +5,7 @@ import { speakingTopics } from '../data/ielts/speaking'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { scoreSpeaking, speakingConversation } from '../services/ai'
 import { getSpeakingHistory, addSpeakingRecord } from '../services/progress'
+import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const {
@@ -251,6 +252,7 @@ async function saveToHistory() {
   history.value.unshift(entry)
   if (history.value.length > 50) history.value = history.value.slice(0, 50)
   localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
+  addReviewItemsFromFeedback(aiResult.value, { module: 'speaking', source: 'speaking-practice' })
 }
 
 async function saveConvToHistory(scoreData) {
@@ -279,6 +281,7 @@ async function saveConvToHistory(scoreData) {
   history.value.unshift(entry)
   if (history.value.length > 50) history.value = history.value.slice(0, 50)
   localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
+  addReviewItemsFromFeedback(scoreData, { module: 'speaking', source: 'speaking-conversation' })
 }
 
 function deleteHistory(id) {
