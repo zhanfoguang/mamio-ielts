@@ -21,7 +21,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('mamio-token')
       if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/login'
+        const current = window.location.pathname + window.location.search
+        window.location.href = `/login?redirect=${encodeURIComponent(current)}`
       }
     }
     return Promise.reject(error)
