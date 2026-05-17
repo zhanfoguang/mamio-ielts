@@ -18,6 +18,20 @@ const inviteCode = ref('')
 const error = ref('')
 const success = ref('')
 
+function setMode(nextMode, extraQuery = {}) {
+  if (!validModes.includes(nextMode)) return
+  mode.value = nextMode
+  error.value = ''
+  success.value = ''
+  router.replace({ path: '/login', query: { ...route.query, ...extraQuery, mode: nextMode } })
+}
+
+function postAuthTarget() {
+  if (route.query.after === 'activate') return '/login?mode=activate'
+  if (typeof route.query.redirect === 'string') return route.query.redirect
+  return '/dashboard'
+}
+
 watch(
   () => route.query.mode,
   (nextMode) => {
@@ -33,7 +47,7 @@ async function handleLogin() {
   error.value = ''
   try {
     await authStore.login(email.value, password.value)
-    router.push('/dashboard')
+    router.push(postAuthTarget())
   } catch (e) {
     error.value = e.response?.data?.error || '登录失败'
   }
@@ -43,7 +57,7 @@ async function handleRegister() {
   error.value = ''
   try {
     await authStore.register(email.value, password.value, nickname.value)
-    router.push('/dashboard')
+    router.push(postAuthTarget())
   } catch (e) {
     error.value = e.response?.data?.error || '注册失败'
   }
@@ -75,13 +89,13 @@ async function handleActivate() {
 
       <!-- Mode tabs -->
       <div class="mode-tabs">
-        <button class="mode-tab" :class="{ active: mode === 'login' }" @click="mode = 'login'; error = ''">
+        <button class="mode-tab" :class="{ active: mode === 'login' }" @click="setMode('login')">
           {{ themeStore.lang === 'zh' ? '登录' : 'Login' }}
         </button>
-        <button class="mode-tab" :class="{ active: mode === 'register' }" @click="mode = 'register'; error = ''">
+        <button class="mode-tab" :class="{ active: mode === 'register' }" @click="setMode('register')">
           {{ themeStore.lang === 'zh' ? '注册' : 'Register' }}
         </button>
-        <button class="mode-tab" :class="{ active: mode === 'activate' }" @click="mode = 'activate'; error = ''">
+        <button class="mode-tab" :class="{ active: mode === 'activate' }" @click="setMode('activate')">
           {{ themeStore.lang === 'zh' ? '激活码' : 'Activate' }}
         </button>
       </div>
@@ -138,6 +152,12 @@ async function handleActivate() {
         </template>
         <template v-else>
           <p class="login-hint">{{ themeStore.lang === 'zh' ? '请先登录后再输入激活码' : 'Please login first to use an invite code' }}</p>
+          <button class="submit-btn" @click="setMode('login', { after: 'activate' })">
+            {{ themeStore.lang === 'zh' ? '登录后激活' : 'Login to Activate' }}
+          </button>
+          <button class="secondary-btn" @click="setMode('register', { after: 'activate' })">
+            {{ themeStore.lang === 'zh' ? '还没有账号，先注册' : 'No account yet? Register first' }}
+          </button>
         </template>
       </div>
 
@@ -282,6 +302,20 @@ async function handleActivate() {
 
 .submit-btn:hover { opacity: 0.85; }
 .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.secondary-btn {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.secondary-btn:hover {
+  background: var(--bg-tertiary);
+}
 
 .link-btn {
   background: none;

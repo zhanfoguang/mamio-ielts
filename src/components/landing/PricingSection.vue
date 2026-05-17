@@ -54,7 +54,7 @@ function goToPlan(plan) {
     router.push(authStore.isLoggedIn ? '/dashboard' : '/login?mode=register')
     return
   }
-  router.push(authStore.isLoggedIn ? '/login?mode=activate' : '/login?mode=register')
+  router.push(authStore.isLoggedIn ? '/login?mode=activate' : '/login?mode=register&after=activate')
 }
 </script>
 

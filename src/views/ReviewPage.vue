@@ -99,16 +99,23 @@ function formatDate(ts) {
 
       <!-- Empty state -->
       <div v-if="filteredItems.length === 0" class="empty">
-        <p class="empty-icon">✅</p>
+        <p class="empty-icon">{{ stats.total === 0 ? '🎯' : '✅' }}</p>
         <p class="empty-text">
-          {{ filter === 'due'
-            ? (themeStore.lang === 'zh' ? '没有待复习的项目，去做练习吧！' : 'No due items — go practice!')
-            : (themeStore.lang === 'zh' ? '暂无记录' : 'No items yet')
+          {{ stats.total === 0
+            ? (themeStore.lang === 'zh' ? '这里会自动收集 AI 批改发现的薄弱点。先完成一次口语或写作，系统会把值得复练的表达放进来。' : 'AI feedback will collect weak spots here. Complete one speaking or writing session and Mamio will turn useful feedback into review items.')
+            : filter === 'due'
+              ? (themeStore.lang === 'zh' ? '当前没有到期复习项，可以继续做新练习。' : 'No due items right now. Continue with fresh practice.')
+              : (themeStore.lang === 'zh' ? '这个筛选下暂无记录' : 'No items under this filter')
           }}
         </p>
-        <button v-if="filter === 'due'" class="primary-btn" @click="router.push('/speaking')">
-          {{ themeStore.lang === 'zh' ? '开始练习' : 'Start Practicing' }}
-        </button>
+        <div class="empty-actions">
+          <button class="primary-btn" @click="router.push('/speaking')">
+            {{ themeStore.lang === 'zh' ? '做一次口语' : 'Do Speaking' }}
+          </button>
+          <button class="secondary-btn" @click="router.push('/writing')">
+            {{ themeStore.lang === 'zh' ? '写一篇作文' : 'Write an Essay' }}
+          </button>
+        </div>
       </div>
 
       <!-- Grouped items -->
@@ -194,7 +201,18 @@ function formatDate(ts) {
 }
 
 .empty-icon { font-size: 3rem; margin-bottom: var(--space-md); }
-.empty-text { color: var(--text-tertiary); margin-bottom: var(--space-lg); }
+.empty-text {
+  color: var(--text-tertiary);
+  margin: 0 auto var(--space-lg);
+  max-width: 560px;
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
 .primary-btn {
   padding: 10px 24px;
@@ -205,6 +223,19 @@ function formatDate(ts) {
   font-size: var(--font-size-sm);
 }
 [data-theme="dark"] .primary-btn { background: var(--white); color: var(--black); }
+
+.secondary-btn {
+  padding: 10px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.secondary-btn:hover {
+  background: var(--bg-tertiary);
+}
 
 .module-group {
   margin-bottom: var(--space-xl);

@@ -93,7 +93,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('mamio-token')
   if (to.meta.requiresAuth && !token) {
-    next('/login')
+    next({ path: '/login', query: { redirect: to.fullPath } })
   } else if (to.meta.requiresAdmin) {
     // Check admin by decoding JWT payload
     try {
