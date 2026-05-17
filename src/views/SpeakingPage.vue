@@ -253,6 +253,16 @@ async function saveToHistory() {
   if (history.value.length > 50) history.value = history.value.slice(0, 50)
   localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
   addReviewItemsFromFeedback(aiResult.value, { module: 'speaking', source: 'speaking-practice' })
+  // Also save pronunciation words as review items
+  if (aiResult.value?.pronunciationWords?.length) {
+    addReviewItemsFromFeedback({
+      reviewItems: aiResult.value.pronunciationWords.map(pw => ({
+        type: 'pronunciation',
+        text: pw.word,
+        reason: pw.issue || pw.tip || ''
+      }))
+    }, { module: 'speaking', source: 'pronunciation' })
+  }
 }
 
 async function saveConvToHistory(scoreData) {
@@ -282,6 +292,15 @@ async function saveConvToHistory(scoreData) {
   if (history.value.length > 50) history.value = history.value.slice(0, 50)
   localStorage.setItem('mamio-speaking-history', JSON.stringify(history.value))
   addReviewItemsFromFeedback(scoreData, { module: 'speaking', source: 'speaking-conversation' })
+  if (scoreData?.pronunciationWords?.length) {
+    addReviewItemsFromFeedback({
+      reviewItems: scoreData.pronunciationWords.map(pw => ({
+        type: 'pronunciation',
+        text: pw.word,
+        reason: pw.issue || pw.tip || ''
+      }))
+    }, { module: 'speaking', source: 'pronunciation' })
+  }
 }
 
 function deleteHistory(id) {

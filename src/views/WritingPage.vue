@@ -6,6 +6,9 @@ import { batchWriting } from '../services/ai'
 import { getWritingHistory, addWritingRecord } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
+const rewriteChecking = ref(false)
+const rewriteCheckResult = ref(null)
+
 const themeStore = useThemeStore()
 const activeTask = ref(1)
 const selectedPrompt = ref(null)
@@ -217,7 +220,9 @@ function saveRewriteDraft() {
   if (!rewriteDraft.value.trim() || !aiResult.value?.rewriteMission) return
   const key = `mamio-writing-rewrite-${currentHistoryId.value || selectedPrompt.value?.id || Date.now()}`
   const payload = {
+    id: Date.now(),
     promptId: selectedPrompt.value?.id,
+    promptPreview: selectedPrompt.value?.prompt?.substring(0, 60),
     taskType: activeTask.value,
     originalEssay: essay.value,
     rewrite: rewriteDraft.value,
@@ -225,7 +230,34 @@ function saveRewriteDraft() {
     savedAt: new Date().toISOString()
   }
   localStorage.setItem(key, JSON.stringify(payload))
+  // Also append to rewrite history list
+  const rewrites = JSON.parse(localStorage.getItem('mamio-writing-rewrites') || '[]')
+  rewrites.unshift(payload)
+  if (rewrites.length > 20) rewrites.length = 20
+  localStorage.setItem('mamio-writing-rewrites', JSON.stringify(rewrites))
   rewriteSaved.value = true
+}
+
+const rewriteHistory = ref(JSON.parse(localStorage.getItem('mamio-writing-rewrites') || '[]'))
+
+async function checkRewrite() {
+  if (!rewriteDraft.value.trim() || !aiResult.value?.rewriteMission) return
+  rewriteChecking.value = true
+  rewriteCheckResult.value = null
+  try {
+    const prompt = selectedPrompt.value?.prompt || ''
+    const mission = aiResult.value.rewriteMission
+    const res = await batchWriting(
+      `请对比考生的原文和重写段落，评估重写是否改善了原问题。\n\n原任务：${prompt}\n\n目标：${mission.target}\n要求：${mission.instruction}\n检查项：${(mission.checklist || []).join('、')}\n\n原文：\n${essay.value}\n\n重写：\n${rewriteDraft.value}`,
+      activeTask.value,
+      themeStore.lang
+    )
+    rewriteCheckResult.value = res
+  } catch (err) {
+    rewriteCheckResult.value = { error: err.message || '检查失败' }
+  } finally {
+    rewriteChecking.value = false
+  }
 }
 
 function deleteHistory(id) {
@@ -268,21 +300,44 @@ onUnmounted(() => {
 
       <!-- History Panel -->
       <div v-if="showHistory" class="history-panel">
-        <div v-if="history.length === 0" class="empty-history">
+        <div v-if="history.length === 0 && rewriteHistory.length === 0" class="empty-history">
           <p>{{ themeStore.lang === 'zh' ? '还没有批改记录，开始写作吧！' : 'No grading history yet. Start writing!' }}</p>
         </div>
-        <div v-else class="history-list">
-          <div v-for="h in history" :key="h.id" class="history-item">
-            <div class="history-top">
-              <span class="history-badge">Task {{ h.taskType }}</span>
-              <span class="history-type">{{ h.promptType }}</span>
-              <span class="history-words">{{ h.wordCount }} {{ themeStore.lang === 'zh' ? '词' : 'words' }}</span>
-              <span v-if="h.timeSpent" class="history-time">{{ formatTime(h.timeSpent) }}</span>
-              <span v-if="h.score" class="history-score" :style="{ color: getScoreColor(h.score) }">Band {{ h.score }}</span>
-              <span class="history-date">{{ formatDate(h.date) }}</span>
-              <button class="history-delete" @click="deleteHistory(h.id)">×</button>
+
+        <!-- Grading History -->
+        <div v-if="history.length" class="history-section">
+          <h3 class="history-section-title">{{ themeStore.lang === 'zh' ? '批改记录' : 'Grading History' }}</h3>
+          <div class="history-list">
+            <div v-for="h in history" :key="h.id" class="history-item">
+              <div class="history-top">
+                <span class="history-badge">Task {{ h.taskType }}</span>
+                <span class="history-type">{{ h.promptType }}</span>
+                <span class="history-words">{{ h.wordCount }} {{ themeStore.lang === 'zh' ? '词' : 'words' }}</span>
+                <span v-if="h.timeSpent" class="history-time">{{ formatTime(h.timeSpent) }}</span>
+                <span v-if="h.score" class="history-score" :style="{ color: getScoreColor(h.score) }">Band {{ h.score }}</span>
+                <span class="history-date">{{ formatDate(h.date) }}</span>
+                <button class="history-delete" @click="deleteHistory(h.id)">×</button>
+              </div>
+              <p class="history-preview">{{ h.essay.substring(0, 120) }}...</p>
             </div>
-            <p class="history-preview">{{ h.essay.substring(0, 120) }}...</p>
+          </div>
+        </div>
+
+        <!-- Rewrite History -->
+        <div v-if="rewriteHistory.length" class="history-section">
+          <h3 class="history-section-title">{{ themeStore.lang === 'zh' ? '重写记录' : 'Rewrite History' }} ({{ rewriteHistory.length }})</h3>
+          <div class="history-list">
+            <div v-for="r in rewriteHistory" :key="r.id" class="history-item rewrite-item">
+              <div class="history-top">
+                <span class="history-badge rewrite-badge">{{ themeStore.lang === 'zh' ? '重写' : 'Rewrite' }}</span>
+                <span class="history-type">{{ r.promptPreview || '' }}</span>
+                <span class="history-date">{{ formatDate(r.savedAt) }}</span>
+              </div>
+              <p class="rewrite-preview">{{ r.rewrite.substring(0, 100) }}...</p>
+              <p class="rewrite-target-label" v-if="r.mission?.target">
+                {{ themeStore.lang === 'zh' ? '目标' : 'Target' }}: {{ r.mission.target }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -411,7 +466,33 @@ onUnmounted(() => {
                       <button class="rewrite-save" @click="saveRewriteDraft" :disabled="!rewriteDraft.trim()">
                         {{ themeStore.lang === 'zh' ? '保存重写稿' : 'Save Rewrite' }}
                       </button>
+                      <button class="rewrite-check" @click="checkRewrite" :disabled="!rewriteDraft.trim() || rewriteChecking">
+                        {{ rewriteChecking ? (themeStore.lang === 'zh' ? '检查中...' : 'Checking...') : (themeStore.lang === 'zh' ? 'AI 检查重写' : 'Check with AI') }}
+                      </button>
                       <span v-if="rewriteSaved" class="rewrite-saved">{{ themeStore.lang === 'zh' ? '已保存' : 'Saved' }}</span>
+                    </div>
+
+                    <!-- Rewrite Check Result -->
+                    <div v-if="rewriteCheckResult && !rewriteCheckResult.error" class="rewrite-check-result">
+                      <h4>{{ themeStore.lang === 'zh' ? '重写评估' : 'Rewrite Assessment' }}</h4>
+                      <div v-if="rewriteCheckResult.overall" class="rewrite-score">
+                        {{ themeStore.lang === 'zh' ? '评分' : 'Score' }}: <strong :style="{ color: getScoreColor(rewriteCheckResult.overall) }">Band {{ rewriteCheckResult.overall }}</strong>
+                      </div>
+                      <div v-if="rewriteCheckResult.strengths?.length" class="rewrite-feedback">
+                        <span class="rf-label">{{ themeStore.lang === 'zh' ? '改善点' : 'Improvements' }}:</span>
+                        <ul><li v-for="s in rewriteCheckResult.strengths" :key="s">{{ s }}</li></ul>
+                      </div>
+                      <div v-if="rewriteCheckResult.weaknesses?.length" class="rewrite-feedback">
+                        <span class="rf-label">{{ themeStore.lang === 'zh' ? '仍需改进' : 'Still needs work' }}:</span>
+                        <ul><li v-for="w in rewriteCheckResult.weaknesses" :key="w">{{ w }}</li></ul>
+                      </div>
+                      <div v-if="rewriteCheckResult.actionPlan?.length" class="rewrite-feedback">
+                        <span class="rf-label">{{ themeStore.lang === 'zh' ? '建议' : 'Suggestions' }}:</span>
+                        <ol><li v-for="a in rewriteCheckResult.actionPlan" :key="a">{{ a }}</li></ol>
+                      </div>
+                    </div>
+                    <div v-if="rewriteCheckResult?.error" class="rewrite-check-error">
+                      {{ rewriteCheckResult.error }}
                     </div>
                   </div>
                 </template>
@@ -953,6 +1034,87 @@ onUnmounted(() => {
   font-size: var(--font-size-xs);
   color: var(--green);
   font-weight: 700;
+}
+
+.rewrite-check {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--blue);
+  color: white;
+}
+.rewrite-check:disabled { opacity: 0.5; }
+
+.rewrite-check-result {
+  margin-top: var(--space-md);
+  padding: 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.rewrite-check-result h4 {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.rewrite-score {
+  font-size: var(--font-size-sm);
+  margin-bottom: 8px;
+}
+
+.rewrite-feedback {
+  margin-bottom: 8px;
+}
+
+.rf-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.rewrite-feedback ul,
+.rewrite-feedback ol {
+  margin: 4px 0 0 16px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.rewrite-check-error {
+  margin-top: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--red);
+}
+
+.history-section {
+  margin-bottom: var(--space-xl);
+}
+
+.history-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.rewrite-badge {
+  background: var(--blue-soft) !important;
+  color: var(--blue) !important;
+}
+
+.rewrite-preview {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.rewrite-target-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 /* Model Essay */

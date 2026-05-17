@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { readingPassages } from '../data/ielts/reading'
 import { incrementDailyStats } from '../services/progress'
+import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 
@@ -133,6 +134,30 @@ function submitAnswers() {
   localStorage.setItem('mamio-reading-history', JSON.stringify(history))
 
   incrementDailyStats(new Date().toISOString().split('T')[0], 'reading')
+
+  // Extract wrong answers as review items
+  const wrongItems = []
+  for (const q of selectedPassage.value.questions) {
+    const answers = userAnswers.value[q.id] || {}
+    if (q.type === 'true-false-ng') {
+      q.statements.forEach((s, i) => {
+        if (answers[i] && answers[i] !== s.answer) {
+          wrongItems.push({ type: 'reading', text: s.text, reason: `正确答案: ${s.answer}，你的答案: ${answers[i]}` })
+        }
+      })
+    } else if (q.type === 'short-answer') {
+      q.items.forEach((item, i) => {
+        const userAns = (answers[i] || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
+        const correctAns = item.answer.toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
+        if (userAns && userAns !== correctAns) {
+          wrongItems.push({ type: 'reading', text: item.question, reason: `正确答案: ${item.answer}，你的答案: ${answers[i]}` })
+        }
+      })
+    }
+  }
+  if (wrongItems.length) {
+    addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'reading', source: 'reading-mistake' })
+  }
 }
 
 function getScoreColor(pct) {

@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { listeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { incrementDailyStats } from '../services/progress'
+import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const { isListening, transcript, interimTranscript, isSupported, start, stop, reset } = useSpeechRecognition()
@@ -114,6 +115,21 @@ function stopDictation() {
   }
 
   incrementDailyStats(new Date().toISOString().split('T')[0], 'listening')
+
+  // Extract wrong words as review items
+  if (transcript.value.trim()) {
+    const diff = getWordDiff(currentSentence.value.en, transcript.value)
+    const wrongWords = diff.filter(w => !w.match)
+    if (wrongWords.length) {
+      addReviewItemsFromFeedback({
+        reviewItems: wrongWords.map(w => ({
+          type: 'listening',
+          text: w.word,
+          reason: `听力跟读中未正确识别的词`
+        }))
+      }, { module: 'listening', source: 'listening-dictation' })
+    }
+  }
 }
 
 function getWordDiff(original, spoken) {
