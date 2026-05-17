@@ -1,20 +1,33 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
 
-const mode = ref('login') // login, register, activate
+const validModes = ['login', 'register', 'activate']
+const mode = ref(validModes.includes(route.query.mode) ? route.query.mode : 'login') // login, register, activate
 const email = ref('')
 const password = ref('')
 const nickname = ref('')
 const inviteCode = ref('')
 const error = ref('')
 const success = ref('')
+
+watch(
+  () => route.query.mode,
+  (nextMode) => {
+    if (validModes.includes(nextMode)) {
+      mode.value = nextMode
+      error.value = ''
+      success.value = ''
+    }
+  }
+)
 
 async function handleLogin() {
   error.value = ''
@@ -53,7 +66,12 @@ async function handleActivate() {
   <div class="login-page">
     <div class="login-card">
       <h1 class="login-title">Mamio IELTS</h1>
-      <p class="login-subtitle">{{ themeStore.lang === 'zh' ? 'AI 驱动的雅思备考平台' : 'AI-Powered IELTS Prep' }}</p>
+      <p class="login-subtitle">
+        {{ mode === 'activate'
+          ? (themeStore.lang === 'zh' ? '输入激活码，恢复无限 AI 练习' : 'Enter your code to restore unlimited AI practice')
+          : (themeStore.lang === 'zh' ? '先获得今天的学习计划，再开始练习' : 'Get today’s study plan before you practice')
+        }}
+      </p>
 
       <!-- Mode tabs -->
       <div class="mode-tabs">

@@ -71,7 +71,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="header" :class="{ scrolled: isScrolled }">
+  <header class="header" :class="{ scrolled: isScrolled, landing: isLanding }">
     <div class="header-inner">
       <div class="logo" @click="goTo('/')">
         <span class="logo-icon">M</span>
@@ -127,7 +127,7 @@ onUnmounted(() => {
                 {{ themeStore.lang === 'zh' ? '到期：' : 'Expires: ' }}{{ new Date(authStore.user.expires_at).toLocaleDateString() }}
               </span>
             </div>
-            <button class="dropdown-item" @click="goTo('/login')">
+            <button class="dropdown-item" @click="goTo('/login?mode=activate')">
               {{ themeStore.lang === 'zh' ? '激活码' : 'Activate Code' }}
             </button>
             <button v-if="authStore.isAdmin" class="dropdown-item" @click="goTo('/admin')">
@@ -212,6 +212,19 @@ onUnmounted(() => {
 [data-theme="dark"] .logo-icon {
   background: var(--white);
   color: var(--black);
+}
+
+.header.landing:not(.scrolled) .logo-text,
+.header.landing:not(.scrolled) .nav-links a {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.header.landing:not(.scrolled) .nav-links a:hover {
+  color: var(--white);
+}
+
+.header.landing:not(.scrolled) .mobile-menu-btn span {
+  background: var(--white);
 }
 
 .nav-links {
@@ -399,6 +412,10 @@ onUnmounted(() => {
     padding: 16px 24px;
     gap: 16px;
     border-bottom: 1px solid var(--border-color);
+  }
+
+  .header.landing:not(.scrolled) .nav-links.open a {
+    color: var(--text-secondary);
   }
 
   .nav-links.open { display: flex; }

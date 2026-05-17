@@ -48,6 +48,14 @@ const plans = [
     highlight: false
   }
 ]
+
+function goToPlan(plan) {
+  if (plan.key === 'trial') {
+    router.push(authStore.isLoggedIn ? '/dashboard' : '/login?mode=register')
+    return
+  }
+  router.push(authStore.isLoggedIn ? '/login?mode=activate' : '/login?mode=register')
+}
 </script>
 
 <template>
@@ -72,7 +80,7 @@ const plans = [
           <button
             class="pricing-cta"
             :class="{ primary: plan.highlight }"
-            @click="authStore.isLoggedIn ? router.push('/dashboard') : router.push('/login')"
+            @click="goToPlan(plan)"
           >
             {{ themeStore.lang === 'zh' ? plan.ctaZh : plan.ctaEn }}
           </button>
@@ -92,7 +100,7 @@ const plans = [
           </div>
           <div class="activation-step">
             <span class="step-num">3</span>
-            <p>{{ themeStore.lang === 'zh' ? '在登录页的激活码标签输入，解锁全部功能' : 'Enter the code on the activation tab to unlock all features' }}</p>
+            <p>{{ themeStore.lang === 'zh' ? '登录后打开激活码标签输入，立即解锁全部功能' : 'Log in, open the activation tab, and unlock all features' }}</p>
           </div>
         </div>
       </div>

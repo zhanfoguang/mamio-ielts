@@ -2,6 +2,7 @@
 import { useThemeStore } from '../../stores/theme'
 import { useAuthStore } from '../../stores/auth'
 import { useRouter } from 'vue-router'
+import heroImage from '../../assets/hero.png'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -10,43 +11,47 @@ const router = useRouter()
 
 <template>
   <section class="hero">
+    <img class="hero-bg" :src="heroImage" alt="" aria-hidden="true" />
+    <div class="hero-scrim"></div>
     <div class="hero-content container">
+      <p class="hero-kicker fade-up visible">
+        {{ themeStore.lang === 'zh' ? '给目标分和考试日期，Mamio 每天告诉你先练什么' : 'Set your target band and exam date. Mamio tells you what to practice first.' }}
+      </p>
       <h1 class="hero-title fade-up visible">
-        {{ themeStore.lang === 'zh' ? '雅思备考' : 'IELTS Prep' }}<br />
-        <span class="title-highlight">{{ themeStore.lang === 'zh' ? '听说读写一站式训练' : 'All-in-One Speaking, Listening, Writing & Vocab' }}</span>
+        {{ themeStore.lang === 'zh' ? '雅思备考，不再瞎练' : 'IELTS prep without guessing' }}<br />
+        <span class="title-highlight">{{ themeStore.lang === 'zh' ? '从 AI 反馈到下一步行动' : 'From AI feedback to your next action' }}</span>
       </h1>
       <p class="hero-subtitle fade-up visible">
-        {{ themeStore.lang === 'zh' ? 'AI 评分 · 语音识别 · 间隔重复 · 打卡追踪' : 'AI Scoring · Speech Recognition · Spaced Repetition · Check-in Tracking' }}
+        {{ themeStore.lang === 'zh' ? '口语和写作给出评分、弱点和复习项；词汇用间隔重复；Dashboard 自动排出今天最该做的一件事。' : 'Speaking and writing produce scores, weak spots, and review items. Vocabulary uses spaced repetition. The dashboard picks today’s next best task.' }}
       </p>
       <div class="hero-actions fade-up visible">
-        <button v-if="authStore.isLoggedIn" class="btn-primary-lg" @click="router.push('/speaking')">
-          {{ themeStore.lang === 'zh' ? '开始学习' : 'Start Learning' }}
+        <button v-if="authStore.isLoggedIn" class="btn-primary-lg" @click="router.push('/dashboard')">
+          {{ themeStore.lang === 'zh' ? '查看今日计划' : 'View Today’s Plan' }}
         </button>
         <button v-else class="btn-primary-lg" @click="router.push('/login')">
-          {{ themeStore.lang === 'zh' ? '免费注册' : 'Sign Up Free' }}
+          {{ themeStore.lang === 'zh' ? '免费试用 3 天' : 'Start 3-Day Trial' }}
         </button>
-        <a href="#features" class="btn-outline-lg">
-          {{ themeStore.lang === 'zh' ? '了解功能' : 'Explore Features' }}
+        <a href="#pricing" class="btn-outline-lg">
+          {{ themeStore.lang === 'zh' ? '查看激活方式' : 'See Activation' }}
         </a>
       </div>
       <div class="hero-stats fade-up visible">
         <div class="stat">
+          <span class="stat-value">1</span>
+          <span class="stat-label">{{ themeStore.lang === 'zh' ? '今日主任务' : 'Daily priority' }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
           <span class="stat-value">4</span>
-          <span class="stat-label">{{ themeStore.lang === 'zh' ? '练习模块' : 'Practice Modules' }}</span>
+          <span class="stat-label">{{ themeStore.lang === 'zh' ? '评分维度' : 'Rubric scores' }}</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat">
-          <span class="stat-value">AI</span>
-          <span class="stat-label">{{ themeStore.lang === 'zh' ? '智能评分' : 'Smart Scoring' }}</span>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-value">100%</span>
-          <span class="stat-label">{{ themeStore.lang === 'zh' ? '网页端' : 'Web-based' }}</span>
+          <span class="stat-value">SRS</span>
+          <span class="stat-label">{{ themeStore.lang === 'zh' ? '复习系统' : 'Review system' }}</span>
         </div>
       </div>
     </div>
-    <div class="hero-gradient"></div>
   </section>
 </template>
 
@@ -59,35 +64,63 @@ const router = useRouter()
   position: relative;
   overflow: hidden;
   padding-top: var(--header-height);
+  background: #0b0f14;
 }
 
 .hero-content {
   text-align: center;
   position: relative;
+  z-index: 2;
+  color: var(--white);
+  padding-top: var(--space-2xl);
+  padding-bottom: var(--space-2xl);
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.42;
+  image-rendering: auto;
+}
+
+.hero-scrim {
+  position: absolute;
+  inset: 0;
   z-index: 1;
+  background: rgba(5, 8, 12, 0.62);
+}
+
+.hero-kicker {
+  max-width: 720px;
+  margin: 0 auto var(--space-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .hero-title {
   font-size: clamp(3rem, 6vw, 6rem);
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   line-height: 1.05;
   margin-bottom: var(--space-lg);
 }
 
 .title-highlight {
-  color: var(--gray-500);
-}
-
-[data-theme="dark"] .title-highlight {
-  color: var(--gray-400);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .hero-subtitle {
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+  color: rgba(255, 255, 255, 0.78);
   margin-bottom: var(--space-2xl);
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .hero-actions {
@@ -100,8 +133,8 @@ const router = useRouter()
 
 .btn-primary-lg {
   padding: 14px 36px;
-  background: var(--black);
-  color: var(--white);
+  background: var(--white);
+  color: var(--black);
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: var(--font-size-base);
@@ -112,15 +145,10 @@ const router = useRouter()
 
 .btn-primary-lg:hover { opacity: 0.85; }
 
-[data-theme="dark"] .btn-primary-lg {
-  background: var(--white);
-  color: var(--black);
-}
-
 .btn-outline-lg {
   padding: 14px 36px;
-  border: 1.5px solid var(--border-color);
-  color: var(--text-primary);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  color: var(--white);
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: var(--font-size-base);
@@ -129,7 +157,7 @@ const router = useRouter()
   align-items: center;
 }
 
-.btn-outline-lg:hover { background: var(--bg-tertiary); }
+.btn-outline-lg:hover { background: rgba(255, 255, 255, 0.12); }
 
 .hero-stats {
   display: flex;
@@ -152,30 +180,20 @@ const router = useRouter()
 
 .stat-label {
   font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
+  color: rgba(255, 255, 255, 0.66);
   margin-top: 4px;
 }
 
 .stat-divider {
   width: 1px;
   height: 40px;
-  background: var(--border-color);
-}
-
-.hero-gradient {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
-  background: radial-gradient(ellipse, rgba(96, 165, 250, 0.08), transparent 70%);
-  pointer-events: none;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 @media (max-width: 768px) {
   .hero {
     min-height: 80vh;
+    align-items: flex-end;
   }
 
   .hero-stats {
@@ -184,6 +202,10 @@ const router = useRouter()
 
   .stat-divider {
     height: 30px;
+  }
+
+  .hero-title {
+    font-size: 2.7rem;
   }
 }
 </style>

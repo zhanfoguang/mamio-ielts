@@ -696,7 +696,7 @@ onMounted(async () => {
             <p>{{ themeStore.lang === 'zh' ? '激活码升级可解锁无限使用' : 'Activate with a code to unlock unlimited access' }}</p>
           </div>
         </div>
-        <button class="trial-btn" @click="router.push('/login')">
+        <button class="trial-btn" @click="router.push('/login?mode=activate')">
           {{ themeStore.lang === 'zh' ? '激活' : 'Activate' }}
         </button>
       </div>
@@ -708,7 +708,7 @@ onMounted(async () => {
             <p>{{ themeStore.lang === 'zh' ? '请使用激活码解锁完整功能' : 'Use an activation code to unlock full access' }}</p>
           </div>
         </div>
-        <button class="trial-btn" @click="router.push('/login')">
+        <button class="trial-btn" @click="router.push('/login?mode=activate')">
           {{ themeStore.lang === 'zh' ? '激活' : 'Activate' }}
         </button>
       </div>
