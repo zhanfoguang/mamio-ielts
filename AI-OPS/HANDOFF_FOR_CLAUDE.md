@@ -182,35 +182,15 @@ Do not assume these are production-ready until checked.
 5. ~~Speaking Mock Enhancement~~ — Done: Part 2 timer, score trends, transcript replay
 6. ~~Dashboard Target Score~~ — Done: target band, exam date, goal-aware study plan
 
+## Completed Tasks (from previous recommendations)
+
+1. ~~SQLite Backup + Server-Side Review Items~~ — Done: `review_items` table, API endpoints, frontend service with API-first + localStorage fallback, backup script
+2. ~~Admin Usage Dashboard~~ — Done: `/auth/admin/stats` endpoint, Usage tab with stat cards, role breakdown, top users, expiring soon
+3. ~~Trial Countdown~~ — Done: trial/expired banner on Dashboard with activate CTA
+
 ## Recommended Next Tasks
 
-### 1. SQLite Backup + Server-Side Review Items
-
-First: add a daily cron job to back up the VPS SQLite database.
-Then: create `review_items` table and migrate localStorage review items to server.
-
-Candidate schema:
-
-- `id`, `user_id`, `module`, `type`, `text`, `reason`, `source`, `due`, `reviewed_at`, `created_at`
-
-Files involved:
-- `server/db.js` — new table + prepared statements
-- `server/routes/progress.js` — new CRUD endpoints
-- `src/services/reviewItems.js` — switch to API-first with localStorage fallback
-
-### 2. Productization — Admin Usage Dashboard
-
-Admin page should show:
-- Active users (last 7 days, last 30 days)
-- AI calls per user per day
-- Trial conversion rate (trial → paid)
-- Expiring soon list
-
-Files involved:
-- `server/routes/auth.js` — new admin stats endpoint
-- `src/views/AdminPage.vue` — usage dashboard UI
-
-### 3. Operational Logging
+### 1. Operational Logging
 
 Add basic request logging for AI endpoints:
 - User ID, endpoint, timestamp, response status, latency
@@ -221,16 +201,21 @@ Files involved:
 - `server/routes/ai.js` — log after each call
 - `server/routes/auth.js` — admin endpoint to query logs
 
-### 4. Trial-to-Paid Flow Cleanup
+### 2. VPS Setup
 
-- Improve pricing/activation explanation on landing page
-- Add trial countdown on Dashboard when user is trial
-- Show clear messaging when trial expires
+After pushing these changes:
+- SSH to VPS and run `deploy/backup-db.sh` setup (add to crontab)
+- Verify review_items table was auto-created on server restart
+- Test the admin stats endpoint on live site
+
+### 3. Landing Page Improvement
+
+- Add pricing/activation explanation
+- Show trial benefits clearly
+- Add testimonials or feature highlights
 
 Files involved:
 - `src/views/LandingPage.vue`
-- `src/views/DashboardPage.vue`
-- `src/views/LoginPage.vue`
 
 ## Product Direction After This
 

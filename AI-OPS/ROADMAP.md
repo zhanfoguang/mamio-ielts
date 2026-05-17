@@ -42,12 +42,13 @@ Success signal: AI feedback is actionable, comparable over time, and safe to sto
 
 Goal: make Mamio viable as a small paid product.
 
-- [ ] Add daily SQLite backup cron on VPS.
-- [ ] Add server-side `review_items` table (migrate from localStorage).
-- [ ] Add admin visibility into usage and active users.
+- [x] Create SQLite backup script (`deploy/backup-db.sh`).
+- [ ] Add backup cron to VPS (manual step after deploy).
+- [x] Add server-side `review_items` table with API endpoints.
+- [x] Add admin visibility into usage and active users (Usage tab).
+- [x] Add trial countdown banner on Dashboard.
 - [ ] Add basic operational logs for AI endpoints.
-- [ ] Clean trial-to-paid activation flow.
-- [ ] Improve pricing/activation explanation.
+- [ ] Improve pricing/activation explanation on landing page.
 
 Success signal: It is clear who is using Mamio, how often, and why they convert or stop.
 
