@@ -93,6 +93,7 @@ onUnmounted(() => {
           <a @click.prevent="goTo('/reading')" :class="{ active: route.path === '/reading' }">{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</a>
           <a @click.prevent="goTo('/writing')" :class="{ active: route.path === '/writing' }">{{ themeStore.lang === 'zh' ? '写作' : 'Writing' }}</a>
           <a @click.prevent="goTo('/vocabulary')" :class="{ active: route.path === '/vocabulary' }">{{ themeStore.lang === 'zh' ? '词汇' : 'Vocab' }}</a>
+          <a @click.prevent="goTo('/review')" :class="{ active: route.path === '/review' }">{{ themeStore.lang === 'zh' ? '复习' : 'Review' }}</a>
           <a @click.prevent="goTo('/mock')" :class="{ active: route.path === '/mock', mockLink: true }">{{ themeStore.lang === 'zh' ? '模考' : 'Mock' }}</a>
         </template>
       </nav>

@@ -16,6 +16,72 @@ function parseJSON(text) {
   throw new Error('Failed to parse AI response as JSON')
 }
 
+function clampScore(val) {
+  const n = Number(val)
+  if (isNaN(n)) return null
+  return Math.max(1, Math.min(9, Math.round(n * 2) / 2))
+}
+
+function normalizeReviewItems(items) {
+  if (!Array.isArray(items)) return []
+  return items.filter(i => i && typeof i.text === 'string').map(i => ({
+    type: String(i.type || 'note'),
+    text: String(i.text).slice(0, 500),
+    reason: String(i.reason || '').slice(0, 300)
+  }))
+}
+
+function normalizeSpeakingResult(parsed) {
+  return {
+    fluency: parsed.fluency && typeof parsed.fluency === 'object' ? { score: clampScore(parsed.fluency.score), comment: String(parsed.fluency.comment || '') } : null,
+    lexical: parsed.lexical && typeof parsed.lexical === 'object' ? { score: clampScore(parsed.lexical.score), comment: String(parsed.lexical.comment || '') } : null,
+    grammar: parsed.grammar && typeof parsed.grammar === 'object' ? { score: clampScore(parsed.grammar.score), comment: String(parsed.grammar.comment || '') } : null,
+    pronunciation: parsed.pronunciation && typeof parsed.pronunciation === 'object' ? { score: clampScore(parsed.pronunciation.score), comment: String(parsed.pronunciation.comment || '') } : null,
+    overall: clampScore(parsed.overall),
+    suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5).map(String) : [],
+    improvedAnswer: parsed.improvedAnswer ? String(parsed.improvedAnswer).slice(0, 2000) : null,
+    weakestArea: parsed.weakestArea ? String(parsed.weakestArea).slice(0, 100) : null,
+    nextAction: parsed.nextAction ? String(parsed.nextAction).slice(0, 300) : null,
+    suggestedPractice: parsed.suggestedPractice && typeof parsed.suggestedPractice === 'object' ? {
+      module: String(parsed.suggestedPractice.module || 'speaking'),
+      part: parsed.suggestedPractice.part || null,
+      task: String(parsed.suggestedPractice.task || '').slice(0, 300)
+    } : null,
+    reviewItems: normalizeReviewItems(parsed.reviewItems),
+    pronunciationWords: Array.isArray(parsed.pronunciationWords) ? parsed.pronunciationWords.map(w => ({
+      word: String(w.word || ''),
+      issue: String(w.issue || ''),
+      tip: String(w.tip || '')
+    })) : []
+  }
+}
+
+function normalizeWritingResult(parsed) {
+  return {
+    taskResponse: parsed.taskResponse && typeof parsed.taskResponse === 'object' ? { score: clampScore(parsed.taskResponse.score), comment: String(parsed.taskResponse.comment || ''), direction: String(parsed.taskResponse.direction || '') } : null,
+    coherence: parsed.coherence && typeof parsed.coherence === 'object' ? { score: clampScore(parsed.coherence.score), comment: String(parsed.coherence.comment || ''), direction: String(parsed.coherence.direction || '') } : null,
+    lexical: parsed.lexical && typeof parsed.lexical === 'object' ? { score: clampScore(parsed.lexical.score), comment: String(parsed.lexical.comment || ''), direction: String(parsed.lexical.direction || '') } : null,
+    grammar: parsed.grammar && typeof parsed.grammar === 'object' ? { score: clampScore(parsed.grammar.score), comment: String(parsed.grammar.comment || ''), direction: String(parsed.grammar.direction || '') } : null,
+    overall: clampScore(parsed.overall),
+    strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0, 5).map(String) : [],
+    weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses.slice(0, 5).map(String) : [],
+    actionPlan: Array.isArray(parsed.actionPlan) ? parsed.actionPlan.slice(0, 5).map(String) : [],
+    weakestArea: parsed.weakestArea ? String(parsed.weakestArea).slice(0, 100) : null,
+    nextAction: parsed.nextAction ? String(parsed.nextAction).slice(0, 300) : null,
+    suggestedPractice: parsed.suggestedPractice && typeof parsed.suggestedPractice === 'object' ? {
+      module: String(parsed.suggestedPractice.module || 'writing'),
+      taskType: parsed.suggestedPractice.taskType || null,
+      task: String(parsed.suggestedPractice.task || '').slice(0, 300)
+    } : null,
+    rewriteMission: parsed.rewriteMission && typeof parsed.rewriteMission === 'object' ? {
+      target: String(parsed.rewriteMission.target || '').slice(0, 200),
+      instruction: String(parsed.rewriteMission.instruction || '').slice(0, 500),
+      checklist: Array.isArray(parsed.rewriteMission.checklist) ? parsed.rewriteMission.checklist.slice(0, 6).map(String) : []
+    } : null,
+    reviewItems: normalizeReviewItems(parsed.reviewItems)
+  }
+}
+
 async function callDeepSeek(systemPrompt, userPrompt) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
@@ -183,8 +249,9 @@ Reply in JSON format only, no other content:
 
       const data = await response.json()
       const result = parseJSON(data.choices[0].message.content)
+      const normalized = result.type === 'score' ? normalizeSpeakingResult(result) : result
       incrementCalls(req.user.id)
-      res.json({ ...result, quota: req.quota })
+      res.json({ ...normalized, quota: req.quota })
     } finally {
       clearTimeout(timeout)
     }
@@ -265,8 +332,9 @@ Reply in JSON format only, no other content:
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
+    const normalized = normalizeSpeakingResult(parsed)
     incrementCalls(req.user.id)
-    res.json({ ...parsed, quota: req.quota })
+    res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI speaking error:', err.message)
     res.status(500).json({ error: 'AI 评分失败，请稍后重试' })
@@ -347,8 +415,9 @@ Reply in JSON format only, no other content:
 
     const result = await callDeepSeek(systemPrompt, userPrompt)
     const parsed = parseJSON(result)
+    const normalized = normalizeWritingResult(parsed)
     incrementCalls(req.user.id)
-    res.json({ ...parsed, quota: req.quota })
+    res.json({ ...normalized, quota: req.quota })
   } catch (err) {
     console.error('AI writing error:', err.message)
     res.status(500).json({ error: 'AI 批改失败，请稍后重试' })
