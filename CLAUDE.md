@@ -1,0 +1,146 @@
+# Mamio IELTS — Project Context
+
+## What is this?
+AI-powered IELTS preparation web app. Speaking, Listening, Reading, Writing, Vocabulary practice with AI scoring via DeepSeek API.
+
+**Live:** http://47.88.87.116:8080
+**Repo:** https://github.com/zhanfoguang/mamio-ielts
+
+## Tech Stack
+- **Frontend:** Vue 3 + Vite + Pinia + Vue Router
+- **Backend:** Express.js + better-sqlite3
+- **AI:** DeepSeek API (chat completions)
+- **Speech:** Web Speech API (SpeechRecognition + SpeechSynthesis)
+- **Auth:** JWT (7-day expiry) + bcryptjs
+- **Deploy:** VPS (Alibaba Cloud) + PM2 + nginx (port 8080) + auto-deploy via cron
+
+## Architecture
+
+```
+Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
+┌─────────────────────────┐             ┌──────────────────────────┐
+│ src/views/*.vue         │──axios────▶│ server/routes/ai.js      │
+│ src/services/ai.js      │            │ server/routes/auth.js    │
+│ src/services/progress.js│            │ server/routes/progress.js│
+│ src/stores/auth.js      │            │ server/db.js (SQLite)    │
+│ src/stores/theme.js     │            │ server/middleware/auth.js │
+└─────────────────────────┘             └──────────────────────────┘
+```
+
+## Key Files
+
+### Frontend
+- `src/views/SpeakingPage.vue` — Speaking practice (Part 1/2/3), AI scoring, conversation mode
+- `src/views/ListeningPage.vue` — TTS audio playback, dictation practice, word comparison
+- `src/views/ReadingPage.vue` — Reading passages with TFNG/matching/short-answer/multiple-choice
+- `src/views/WritingPage.vue` — Task 1 & 2 essays, AI grading, model essays
+- `src/views/VocabPage.vue` — Flashcards, SM-2 SRS, quiz mode, AI word generation
+- `src/views/DashboardPage.vue` — Progress dashboard, heatmap, module stats
+- `src/views/MockExamPage.vue` — Full mock exam flow
+- `src/views/AdminPage.vue` — Admin panel (user management, invite codes)
+- `src/views/LoginPage.vue` — Login/register
+- `src/views/LandingPage.vue` — Marketing landing page
+- `src/services/ai.js` — AI API calls (speaking, writing, vocab, listening)
+- `src/services/progress.js` — Progress API calls (history, SRS, daily stats)
+- `src/services/api.js` — Axios instance with JWT interceptor
+- `src/stores/auth.js` — Auth state (user, token, login/logout)
+- `src/stores/theme.js` — Dark/light theme + language (zh/en)
+- `src/composables/useSpeechRecognition.js` — Web Speech API wrapper
+- `src/data/ielts/` — Static content (speaking topics, reading passages, writing prompts, vocab, listening sections)
+- `src/router/index.js` — Route definitions with auth guards
+
+### Backend
+- `server/index.js` — Express entry, CORS, route mounting
+- `server/db.js` — SQLite schema, prepared statements, admin auto-creation
+- `server/routes/ai.js` — DeepSeek API integration (speaking/writing/vocab/listening scoring)
+- `server/routes/auth.js` — Register, login, JWT, forgot password, admin endpoints
+- `server/routes/progress.js` — Speaking/writing history, vocab SRS, daily stats, dashboard aggregate
+- `server/middleware/auth.js` — JWT verification middleware
+- `server/mail.js` — SMTP email for password reset
+
+### Deploy
+- `deploy/ecosystem.config.cjs` — PM2 config (reads .env and injects as env vars)
+- `deploy/deploy.sh` — Manual deploy script (rsync to VPS)
+- VPS auto-deploy: cron runs `/var/www/mimio/auto-deploy.sh` every 5 min (git pull + build + pm2 restart)
+
+## Database Schema (SQLite)
+- `users` — email, password_hash, nickname, role (trial/paid/expired/admin), ai_calls_today, trial_start, expires_at
+- `invite_codes` — code, duration_days, used_by, used_at
+- `reset_codes` — email, code, expires_at, used
+- `speaking_history` — user_id, mode, part, topic, question, answer, score, details (JSON), exchanges
+- `writing_history` — user_id, task_type, task, essay, score, details (JSON)
+- `vocab_progress` — user_id, word, ease, interval, reps, due, last_review (SM-2 fields)
+- `daily_stats` — user_id, date, speaking, writing, listening, reading, vocab counts
+
+## User Roles
+- `trial` — 10 AI calls/day, 3-day window, auto-expires
+- `paid` — Unlimited, activated via invite code, has expiry date
+- `expired` — Locked out
+- `admin` — Unlimited, can manage users and generate invite codes
+
+## API Endpoints
+
+### Auth (`/api/auth`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /register | No | Create account (auto trial) |
+| POST | /login | No | Login, returns JWT |
+| GET | /me | Yes | Current user info |
+| POST | /activate | Yes | Activate invite code |
+| POST | /forgot-password | No | Send reset code via email |
+| POST | /verify-reset-code | No | Verify reset code |
+| POST | /reset-password | No | Reset password |
+| GET | /admin/users | Admin | List all users |
+| POST | /admin/codes | Admin | Generate invite codes |
+| GET | /admin/codes | Admin | List all codes |
+
+### AI (`/api/ai`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /speaking | Yes+quota | Score speaking response |
+| POST | /writing | Yes+quota | Grade essay |
+| POST | /vocab | Yes+quota | Generate vocabulary |
+| POST | /listening | Yes+quota | Generate listening material |
+
+### Progress (`/api/progress`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /speaking | Yes | Speaking history (last 50) |
+| POST | /speaking | Yes | Add speaking record |
+| GET | /writing | Yes | Writing history (last 50) |
+| POST | /writing | Yes | Add writing record |
+| GET | /vocab | Yes | All SRS data |
+| POST | /vocab | Yes | Upsert SRS data |
+| GET | /daily-stats?date= | Yes | Get daily stats |
+| POST | /daily-stats/increment | Yes | Increment module count |
+| GET | /dashboard | Yes | Aggregate dashboard data |
+
+## Development
+
+```bash
+# Frontend
+npm install && npm run dev    # localhost:5173
+
+# Backend
+cd server
+cp .env.example .env          # fill in DEEPSEEK_API_KEY
+npm install && node index.js  # localhost:3000
+```
+
+## Environment Variables (server/.env)
+- `JWT_SECRET` — Required, no fallback
+- `ADMIN_PASSWORD` — Required, no fallback
+- `DEEPSEEK_API_KEY` — Required for AI features
+- `DEEPSEEK_BASE_URL` — Default: https://api.deepseek.com
+- `ADMIN_EMAIL` — Default: admin@mamio.com
+- `CORS_ORIGIN` — Default: http://localhost:5173
+- `SMTP_HOST/PORT/USER/PASS` — Optional, for password reset emails
+
+## Known Issues / Tech Debt
+- No refresh token mechanism (JWT valid for 7 days)
+- No request logging/audit trail
+- LLM prompt injection possible via user input in AI endpoints
+- `incrementDailyModule` uses pre-compiled queries (was SQL injection, now fixed)
+- Some old components in `src/components/` may be unused (PhonemeDemo, VideoPlayer, etc.)
+- `src/data/flashcards.js`, `src/data/phonemes.js`, `src/data/sentences.js` may be legacy
+- i18n is partial — some pages hardcoded in Chinese
