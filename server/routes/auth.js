@@ -31,6 +31,25 @@ function generateToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' })
 }
 
+function syncExpiredUserRole(user) {
+  if (!user || user.role === 'admin' || user.role === 'expired') return user
+  let shouldExpire = false
+
+  if (user.role === 'paid' && user.expires_at && new Date(user.expires_at) < new Date()) {
+    shouldExpire = true
+  }
+
+  if (user.role === 'trial') {
+    const trialStart = user.trial_start ? new Date(user.trial_start) : null
+    const daysSinceTrial = trialStart ? Math.floor((new Date() - trialStart) / (1000 * 60 * 60 * 24)) : 0
+    shouldExpire = daysSinceTrial >= 3
+  }
+
+  if (!shouldExpire) return user
+  userQueries.updateRole.run('expired', user.id)
+  return { ...user, role: 'expired' }
+}
+
 // Register
 router.post('/register', authLimiter, (req, res) => {
   try {
@@ -103,17 +122,18 @@ router.post('/login', authLimiter, (req, res) => {
       return res.status(400).json({ error: '邮箱或密码错误' })
     }
 
-    const token = generateToken(user)
+    const currentUser = syncExpiredUserRole(user)
+    const token = generateToken(currentUser)
     res.json({
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        role: user.role,
-        ai_calls_today: user.ai_calls_today,
-        trial_start: user.trial_start,
-        expires_at: user.expires_at
+        id: currentUser.id,
+        email: currentUser.email,
+        nickname: currentUser.nickname,
+        role: currentUser.role,
+        ai_calls_today: currentUser.ai_calls_today,
+        trial_start: currentUser.trial_start,
+        expires_at: currentUser.expires_at
       }
     })
   } catch (err) {
@@ -124,7 +144,7 @@ router.post('/login', authLimiter, (req, res) => {
 
 // Get current user
 router.get('/me', authMiddleware, (req, res) => {
-  const user = req.user
+  const user = syncExpiredUserRole(req.user)
   res.json({
     id: user.id,
     email: user.email,
