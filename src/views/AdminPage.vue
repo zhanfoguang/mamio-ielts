@@ -12,6 +12,7 @@ const authStore = useAuthStore()
 const tab = ref('codes')
 const codes = ref([])
 const users = ref([])
+const stats = ref(null)
 const loading = ref(false)
 const generating = ref(false)
 const newCodes = ref([])
@@ -92,6 +93,15 @@ function copyCode(code) {
   navigator.clipboard.writeText(code)
 }
 
+async function fetchStats() {
+  try {
+    const { data } = await api.get('/auth/admin/stats')
+    stats.value = data
+  } catch (e) {
+    console.error('Failed to fetch stats:', e)
+  }
+}
+
 function copyAllNew() {
   navigator.clipboard.writeText(newCodes.value.join('\n'))
 }
@@ -104,6 +114,7 @@ function closeGenerate() {
 onMounted(() => {
   fetchCodes()
   fetchUsers()
+  fetchStats()
 })
 </script>
 
@@ -117,12 +128,124 @@ onMounted(() => {
 
       <!-- Tabs -->
       <div class="tabs">
+        <button class="tab" :class="{ active: tab === 'stats' }" @click="tab = 'stats'; fetchStats()">
+          {{ themeStore.lang === 'zh' ? '使用统计' : 'Usage' }}
+        </button>
         <button class="tab" :class="{ active: tab === 'codes' }" @click="tab = 'codes'; fetchCodes()">
           {{ themeStore.lang === 'zh' ? '激活码管理' : 'Invite Codes' }}
         </button>
         <button class="tab" :class="{ active: tab === 'users' }" @click="tab = 'users'; fetchUsers()">
           {{ themeStore.lang === 'zh' ? '用户列表' : 'Users' }}
         </button>
+      </div>
+
+      <!-- Stats Tab -->
+      <div v-if="tab === 'stats'" class="tab-content">
+        <div v-if="stats" class="stats-grid">
+          <!-- Overview cards -->
+          <div class="stat-card">
+            <span class="stat-icon">👥</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ (stats.roleCounts.trial || 0) + (stats.roleCounts.paid || 0) + (stats.roleCounts.expired || 0) }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '总用户' : 'Total Users' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🔥</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.activeUsers7d }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '7天活跃' : '7d Active' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">📊</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.activeUsers30d }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '30天活跃' : '30d Active' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🤖</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.callsToday }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '今日AI调用' : 'AI Calls Today' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">💰</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.trialConversion.rate }}%</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '试用转化率' : 'Trial Conversion' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">⏰</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.expiringSoon.length }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '即将到期' : 'Expiring Soon' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role breakdown -->
+        <div v-if="stats" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '用户角色分布' : 'User Role Breakdown' }}</h3>
+          <div class="role-bars">
+            <div v-for="(count, role) in stats.roleCounts" :key="role" class="role-bar-row">
+              <span class="role-label">{{ { admin: themeStore.lang === 'zh' ? '管理员' : 'Admin', paid: themeStore.lang === 'zh' ? '已激活' : 'Active', trial: themeStore.lang === 'zh' ? '试用' : 'Trial', expired: themeStore.lang === 'zh' ? '已过期' : 'Expired' }[role] || role }}</span>
+              <div class="role-bar-track">
+                <div class="role-bar-fill" :class="role" :style="{ width: Math.max(4, count / Math.max(...Object.values(stats.roleCounts)) * 100) + '%' }"></div>
+              </div>
+              <span class="role-count">{{ count }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top users -->
+        <div v-if="stats?.topUsers?.length" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '今日活跃用户' : 'Top Users Today' }}</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ themeStore.lang === 'zh' ? '邮箱' : 'Email' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '角色' : 'Role' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '今日调用' : 'Calls' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="u in stats.topUsers" :key="u.id">
+                  <td class="email-cell">{{ u.nickname || u.email }}</td>
+                  <td><span class="role-badge" :class="u.role">{{ u.role }}</span></td>
+                  <td>{{ u.ai_calls_today }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Expiring soon -->
+        <div v-if="stats?.expiringSoon?.length" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '即将到期用户' : 'Expiring Soon' }}</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ themeStore.lang === 'zh' ? '邮箱' : 'Email' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '到期时间' : 'Expires' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="u in stats.expiringSoon" :key="u.id">
+                  <td class="email-cell">{{ u.nickname || u.email }}</td>
+                  <td class="time-cell">{{ new Date(u.expires_at).toLocaleDateString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p v-if="!stats" class="empty-hint">{{ themeStore.lang === 'zh' ? '加载中...' : 'Loading...' }}</p>
       </div>
 
       <!-- Codes Tab -->
@@ -638,6 +761,89 @@ onMounted(() => {
 .role-badge.trial { color: var(--blue); background: var(--blue-soft); }
 .role-badge.expired { color: var(--red); background: var(--red-soft); }
 
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.stat-icon { font-size: 1.5rem; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.detail-section {
+  margin-bottom: var(--space-2xl);
+}
+
+.role-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.role-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.role-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  min-width: 60px;
+}
+
+.role-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.role-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.role-bar-fill.admin { background: var(--purple); }
+.role-bar-fill.paid { background: var(--green); }
+.role-bar-fill.trial { background: var(--blue); }
+.role-bar-fill.expired { background: var(--red); }
+
+.role-count {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  min-width: 30px;
+  text-align: right;
+}
+
 .empty-hint {
   text-align: center;
   padding: var(--space-2xl);
@@ -652,6 +858,10 @@ onMounted(() => {
 
   .preset-btn {
     min-width: auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

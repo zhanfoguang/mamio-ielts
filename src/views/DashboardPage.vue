@@ -670,6 +670,32 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- Trial status banner -->
+      <div v-if="authStore.isTrial" class="trial-banner">
+        <div class="trial-info">
+          <span class="trial-icon">⏳</span>
+          <div>
+            <strong>{{ themeStore.lang === 'zh' ? `试用剩余 ${authStore.trialDaysLeft} 天` : `${authStore.trialDaysLeft} days left in trial` }}</strong>
+            <p>{{ themeStore.lang === 'zh' ? '激活码升级可解锁无限使用' : 'Activate with a code to unlock unlimited access' }}</p>
+          </div>
+        </div>
+        <button class="trial-btn" @click="router.push('/login')">
+          {{ themeStore.lang === 'zh' ? '激活' : 'Activate' }}
+        </button>
+      </div>
+      <div v-else-if="authStore.isExpired" class="trial-banner expired">
+        <div class="trial-info">
+          <span class="trial-icon">🔒</span>
+          <div>
+            <strong>{{ themeStore.lang === 'zh' ? '试用已过期' : 'Trial Expired' }}</strong>
+            <p>{{ themeStore.lang === 'zh' ? '请使用激活码解锁完整功能' : 'Use an activation code to unlock full access' }}</p>
+          </div>
+        </div>
+        <button class="trial-btn" @click="router.push('/login')">
+          {{ themeStore.lang === 'zh' ? '激活' : 'Activate' }}
+        </button>
+      </div>
+
       <!-- Today's progress -->
       <div class="today-card">
         <div class="today-header">
@@ -976,6 +1002,55 @@ onMounted(async () => {
   opacity: 0.5;
   border-top: 1px dashed var(--red);
 }
+
+/* Trial banner */
+.trial-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--blue-soft);
+  border: 1px solid var(--blue);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.trial-banner.expired {
+  background: var(--red-soft);
+  border-color: var(--red);
+}
+
+.trial-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.trial-icon { font-size: 1.3rem; }
+
+.trial-info strong {
+  font-size: var(--font-size-sm);
+  display: block;
+}
+
+.trial-info p {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.trial-btn {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .trial-btn { background: var(--white); color: var(--black); }
 
 /* Today card */
 .today-card {

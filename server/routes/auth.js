@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import rateLimit from 'express-rate-limit'
-import { userQueries, codeQueries, resetCodeQueries } from '../db.js'
+import db, { userQueries, codeQueries, resetCodeQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 
@@ -287,6 +287,70 @@ router.post('/admin/codes', authMiddleware, adminMiddleware, (req, res) => {
 router.get('/admin/codes', authMiddleware, adminMiddleware, (req, res) => {
   const codes = codeQueries.getAll.all()
   res.json(codes)
+})
+
+// Admin: usage stats
+router.get('/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    const sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().split('T')[0]
+    const thirtyDaysAgo = new Date(now - 30 * 86400000).toISOString().split('T')[0]
+
+    // User counts by role
+    const roleCounts = db.prepare(`
+      SELECT role, COUNT(*) as count FROM users GROUP BY role
+    `).all()
+
+    // Active users (those who have AI calls)
+    const activeUsers7d = db.prepare(`
+      SELECT COUNT(*) as count FROM users WHERE ai_calls_date >= ?
+    `).get(sevenDaysAgo)
+
+    const activeUsers30d = db.prepare(`
+      SELECT COUNT(*) as count FROM users WHERE ai_calls_date >= ?
+    `).get(thirtyDaysAgo)
+
+    // Total AI calls today
+    const callsToday = db.prepare(`
+      SELECT SUM(ai_calls_today) as total FROM users WHERE ai_calls_date = ?
+    `).get(today)
+
+    // Top users by AI calls
+    const topUsers = db.prepare(`
+      SELECT id, email, nickname, role, ai_calls_today, ai_calls_date, created_at
+      FROM users WHERE ai_calls_today > 0
+      ORDER BY ai_calls_today DESC LIMIT 10
+    `).all()
+
+    // Trial conversion: users who were trial and became paid
+    const trialTotal = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role IN ('trial','expired','paid') AND created_at IS NOT NULL`).get()
+    const paidTotal = db.prepare(`SELECT COUNT(*) as count FROM users WHERE role = 'paid'`).get()
+
+    // Expiring soon (next 7 days)
+    const expiringSoon = db.prepare(`
+      SELECT id, email, nickname, role, expires_at FROM users
+      WHERE role = 'paid' AND expires_at IS NOT NULL AND expires_at <= datetime('now', '+7 days')
+      ORDER BY expires_at
+    `).all()
+
+    res.json({
+      roleCounts: Object.fromEntries(roleCounts.map(r => [r.role, r.count])),
+      activeUsers7d: activeUsers7d.count,
+      activeUsers30d: activeUsers30d.count,
+      callsToday: callsToday.total || 0,
+      topUsers,
+      trialConversion: {
+        total: trialTotal.count,
+        converted: paidTotal.count,
+        rate: trialTotal.count > 0 ? Math.round(paidTotal.count / trialTotal.count * 100) : 0
+      },
+      expiringSoon
+    })
+  } catch (err) {
+    console.error('Admin stats error:', err.message)
+    res.status(500).json({ error: '获取统计数据失败' })
+  }
 })
 
 export default router

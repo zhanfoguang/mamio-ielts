@@ -93,3 +93,9 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Update `src/views/DashboardPage.vue` to use sync stats + migration on mount.
 - [x] Create `deploy/backup-db.sh` for daily VPS SQLite backup.
 - [ ] Add backup cron to VPS (manual step — user needs to run on VPS).
+
+## Phase 14: Productization — Admin Usage & Trial Flow
+
+- [x] Add admin stats API endpoint (`GET /auth/admin/stats`): role counts, active users (7d/30d), AI calls today, top users, trial conversion rate, expiring soon list.
+- [x] Add Usage tab to AdminPage with overview cards, role breakdown bars, top users table, expiring soon list.
+- [x] Add trial countdown banner on Dashboard for trial/expired users with activate CTA.
