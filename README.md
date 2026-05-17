@@ -84,11 +84,17 @@ node index.js
 
 Push to GitHub. VPS auto-deploys every 5 minutes via cron.
 
+Auto-deploy cron on VPS:
+```bash
+*/5 * * * * /var/www/mimio/deploy/auto-deploy.sh >> /var/www/mimio/deploy.log 2>&1
+```
+Install it in root crontab if PM2 is managed by root.
+
 Manual deploy:
 ```bash
 ssh root@47.88.87.116
 cd /var/www/mimio
-bash deploy.sh
+bash deploy/auto-deploy.sh
 ```
 
 ## Project Structure

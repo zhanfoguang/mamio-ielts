@@ -74,6 +74,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 ### Deploy
 - `deploy/ecosystem.config.cjs` — PM2 config (reads .env and injects as env vars)
 - `deploy/deploy.sh` — Manual deploy script (rsync to VPS)
+- `deploy/auto-deploy.sh` — VPS cron deploy script (GitHub pull, build, PM2 restart, health check)
 - `deploy/nginx.conf` — nginx config template
 - `deploy/setup-vps.sh` — VPS initial setup script
 - `deploy/backup-db.sh` — Daily SQLite backup script (gzip, 7-day retention)
@@ -85,7 +86,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - **数据库:** `/var/www/mimio/server/mamio.db` (SQLite)
 - **环境变量:** `/var/www/mimio/server/.env`
 - **PM2 配置:** `/var/www/mimio/deploy/ecosystem.config.cjs`
-- **自动部署脚本:** `/var/www/mimio/auto-deploy.sh` (cron 每 5 分钟)
+- **自动部署脚本:** `/var/www/mimio/deploy/auto-deploy.sh` (cron 每 5 分钟)
 - **部署日志:** `/var/www/mimio/deploy.log`
 - **nginx 配置:** `/etc/nginx/conf.d/mimio.conf`
 - **nginx 监听端口:** 8080
@@ -96,13 +97,22 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 
 ### 部署流程
 1. 本地 `git push origin main`
-2. VPS cron 每 5 分钟执行 `auto-deploy.sh`
-3. 脚本执行: `git fetch` → 比较 commit → `git pull` → `npm install` → `npm run build` → `pm2 restart`
+2. VPS cron 每 5 分钟执行 `deploy/auto-deploy.sh`
+3. 脚本执行: `git fetch` → 比较 commit → `git pull --ff-only` → `npm ci` → `npm run build` → `pm2 restart` → local health check
 4. nginx 自动 serve 新的 `dist/` 产物
 
 ### VPS 手动部署命令（admin 用户）
 ```bash
 cd /var/www/mimio && sudo git pull && sudo npm install && sudo npm run build && sudo /root/.npm/_npx/5f7878ce38f1eb13/node_modules/pm2/bin/pm2 restart mamio-server
+```
+
+### VPS 自动部署安装/修复命令
+```bash
+cd /var/www/mimio
+git pull --ff-only origin main
+chmod +x deploy/auto-deploy.sh
+sudo bash -lc '(crontab -l 2>/dev/null | grep -v "deploy/auto-deploy.sh"; echo "*/5 * * * * /var/www/mimio/deploy/auto-deploy.sh >> /var/www/mimio/deploy.log 2>&1") | crontab -'
+tail -n 80 /var/www/mimio/deploy.log
 ```
 
 ### VPS git safe.directory 问题
