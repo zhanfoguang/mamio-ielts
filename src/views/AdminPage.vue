@@ -21,6 +21,8 @@ const newCodes = ref([])
 const showGenerate = ref(false)
 const generateType = ref('month')
 const generateCount = ref(1)
+const copiedCode = ref('')
+const copyMessage = ref('')
 
 const presets = [
   { key: 'month', label: '月卡', labelEn: 'Monthly', days: 30, color: 'var(--blue)' },
@@ -91,8 +93,29 @@ async function doGenerate() {
   }
 }
 
-function copyCode(code) {
-  navigator.clipboard.writeText(code)
+async function writeClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
+
+async function copyCode(code) {
+  await writeClipboard(code)
+  copiedCode.value = code
+  copyMessage.value = themeStore.lang === 'zh' ? '已复制' : 'Copied'
+  setTimeout(() => {
+    if (copiedCode.value === code) copiedCode.value = ''
+  }, 1800)
 }
 
 async function fetchStats() {
@@ -114,8 +137,10 @@ async function fetchLogs() {
   }
 }
 
-function copyAllNew() {
-  navigator.clipboard.writeText(newCodes.value.join('\n'))
+async function copyAllNew() {
+  await writeClipboard(newCodes.value.join('\n'))
+  copiedCode.value = '__all__'
+  copyMessage.value = themeStore.lang === 'zh' ? `已复制 ${newCodes.value.length} 个激活码` : `Copied ${newCodes.value.length} codes`
 }
 
 function closeGenerate() {
@@ -311,9 +336,10 @@ onMounted(() => {
               <div class="codes-list">
                 <div v-for="code in newCodes" :key="code" class="code-item" @click="copyCode(code)">
                   <span class="code-text">{{ code }}</span>
-                  <span class="copy-hint">{{ themeStore.lang === 'zh' ? '点击复制' : 'Click to copy' }}</span>
+                  <span class="copy-hint">{{ copiedCode === code ? copyMessage : (themeStore.lang === 'zh' ? '点击复制' : 'Click to copy') }}</span>
                 </div>
               </div>
+              <p v-if="copiedCode === '__all__'" class="copy-message">{{ copyMessage }}</p>
               <div class="modal-actions">
                 <button class="submit-btn" @click="copyAllNew">
                   {{ themeStore.lang === 'zh' ? '复制全部' : 'Copy All' }}
@@ -347,7 +373,10 @@ onMounted(() => {
               <tbody>
                 <tr v-for="c in codes" :key="c.id" :class="{ unused: !c.used_by }">
                   <td class="code-cell">
-                    <span class="code-tag" @click="copyCode(c.code)">{{ c.code }}</span>
+                    <button class="code-tag" @click="copyCode(c.code)">
+                      {{ c.code }}
+                      <span v-if="copiedCode === c.code" class="inline-copied">{{ copyMessage }}</span>
+                    </button>
                   </td>
                   <td>
                     <span class="duration-badge" :style="{ color: getDurationColor(c.duration_days), background: getDurationColor(c.duration_days) + '18' }">
@@ -698,6 +727,13 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
+.copy-message {
+  font-size: var(--font-size-xs);
+  color: var(--green);
+  text-align: center;
+  margin: calc(-1 * var(--space-md)) 0 var(--space-md);
+}
+
 .modal-actions {
   display: flex;
   gap: var(--space-md);
@@ -775,10 +811,19 @@ onMounted(() => {
   padding: 2px 6px;
   border-radius: 4px;
   transition: background var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .code-cell .code-tag:hover {
   background: var(--bg-tertiary);
+}
+
+.inline-copied {
+  font-family: var(--font-family);
+  font-size: 10px;
+  color: var(--green);
 }
 
 .email-cell {
