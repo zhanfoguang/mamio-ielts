@@ -92,7 +92,7 @@ const plans = [
           </div>
           <div class="activation-step">
             <span class="step-num">3</span>
-            <p>{{ themeStore.lang === 'zh' ? '在"我的"页面输入激活码，解锁全部功能' : 'Enter the code on your profile page to unlock all features' }}</p>
+            <p>{{ themeStore.lang === 'zh' ? '在登录页的激活码标签输入，解锁全部功能' : 'Enter the code on the activation tab to unlock all features' }}</p>
           </div>
         </div>
       </div>

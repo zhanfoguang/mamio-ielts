@@ -5,6 +5,28 @@ import { progressQueries, reviewItemQueries } from '../db.js'
 const router = Router()
 router.use(authMiddleware)
 
+const REVIEW_ITEM_BATCH_LIMIT = 100
+
+function sanitizeReviewItem(item, fallbackSource = '') {
+  if (!item?.text || typeof item.text !== 'string') return null
+  const text = item.text.trim().slice(0, 500)
+  if (!text) return null
+  return {
+    text,
+    reason: String(item.reason || '').trim().slice(0, 300),
+    module: String(item.module || 'general').trim().slice(0, 50) || 'general',
+    type: String(item.type || 'note').trim().slice(0, 50) || 'note',
+    source: String(item.source || fallbackSource).trim().slice(0, 100)
+  }
+}
+
+function addReviewItemIfNew(userId, item) {
+  const duplicate = reviewItemQueries.findActiveDuplicate.get(userId, item.module, item.type, item.text)
+  if (duplicate) return { id: duplicate.id, created: false }
+  const result = reviewItemQueries.add.run(userId, item.module, item.type, item.text, item.reason, item.source)
+  return { id: result.lastInsertRowid, created: true }
+}
+
 // === Speaking History ===
 router.get('/speaking', (req, res) => {
   try {
@@ -135,19 +157,17 @@ router.get('/review-items/due', (req, res) => {
 
 router.post('/review-items', (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : [req.body]
+    const items = (Array.isArray(req.body) ? req.body : [req.body]).slice(0, REVIEW_ITEM_BATCH_LIMIT)
     const added = []
+    const ids = []
     for (const item of items) {
-      if (!item.text || typeof item.text !== 'string') continue
-      const text = item.text.slice(0, 500)
-      const reason = String(item.reason || '').slice(0, 300)
-      const module = String(item.module || 'general').slice(0, 50)
-      const type = String(item.type || 'note').slice(0, 50)
-      const source = String(item.source || '').slice(0, 100)
-      const result = reviewItemQueries.add.run(req.user.id, module, type, text, reason, source)
-      added.push(result.lastInsertRowid)
+      const clean = sanitizeReviewItem(item)
+      if (!clean) continue
+      const result = addReviewItemIfNew(req.user.id, clean)
+      ids.push(result.id)
+      if (result.created) added.push(result.id)
     }
-    res.json({ added: added.length, ids: added })
+    res.json({ added: added.length, ids })
   } catch (err) {
     console.error('Add review items error:', err.message)
     res.status(500).json({ error: '保存复习项失败' })
@@ -176,20 +196,14 @@ router.delete('/review-items/:id', (req, res) => {
 
 router.post('/review-items/migrate', (req, res) => {
   try {
-    const items = Array.isArray(req.body) ? req.body : []
+    const items = (Array.isArray(req.body) ? req.body : []).slice(0, REVIEW_ITEM_BATCH_LIMIT)
     if (!items.length) return res.json({ migrated: 0 })
     let count = 0
     for (const item of items) {
-      if (!item.text || typeof item.text !== 'string') continue
-      reviewItemQueries.add.run(
-        req.user.id,
-        String(item.module || 'general').slice(0, 50),
-        String(item.type || 'note').slice(0, 50),
-        String(item.text).slice(0, 500),
-        String(item.reason || '').slice(0, 300),
-        String(item.source || 'local-migration').slice(0, 100)
-      )
-      count++
+      const clean = sanitizeReviewItem(item, 'local-migration')
+      if (!clean) continue
+      const result = addReviewItemIfNew(req.user.id, clean)
+      if (result.created) count++
     }
     res.json({ migrated: count })
   } catch (err) {

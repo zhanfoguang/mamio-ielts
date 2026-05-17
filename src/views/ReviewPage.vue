@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { useRouter } from 'vue-router'
-import { getReviewItems, getReviewItemStatsSync, markReviewItemReviewed, deleteReviewItem } from '../services/reviewItems'
+import { getReviewItems, markReviewItemReviewed, deleteReviewItem } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const router = useRouter()

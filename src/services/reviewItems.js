@@ -26,6 +26,26 @@ function makeLocalId(item) {
   ].join(':')
 }
 
+function normalizeApiItem(item) {
+  const createdAt = new Date(item.created_at).getTime()
+  return {
+    id: item.id,
+    localKey: makeLocalId(item),
+    module: item.module,
+    type: item.type,
+    text: item.text,
+    reason: item.reason,
+    source: item.source,
+    due: createdAt,
+    createdAt,
+    reviewedAt: item.reviewed_at
+  }
+}
+
+function getItemKey(item) {
+  return item.localKey || makeLocalId(item)
+}
+
 // Local methods (fallback)
 function getLocalItems() {
   return safeRead()
@@ -88,19 +108,10 @@ async function migrateToApi(items) {
 export async function getReviewItems() {
   const apiItems = await fetchFromApi()
   if (apiItems) {
+    const normalized = apiItems.map(normalizeApiItem)
     // Sync to localStorage as cache
-    safeWrite(apiItems.map(i => ({ ...i, id: i.id, due: new Date(i.created_at).getTime(), reviewedAt: i.reviewed_at, createdAt: new Date(i.created_at).getTime() })))
-    return apiItems.map(i => ({
-      id: i.id,
-      module: i.module,
-      type: i.type,
-      text: i.text,
-      reason: i.reason,
-      source: i.source,
-      due: new Date(i.created_at).getTime(),
-      createdAt: new Date(i.created_at).getTime(),
-      reviewedAt: i.reviewed_at
-    }))
+    safeWrite(normalized)
+    return normalized
   }
   return getLocalItems()
 }
@@ -136,8 +147,14 @@ export async function addReviewItemsFromFeedback(feedback, context = {}) {
 
   // Deduplicate against local cache
   const existing = getLocalItems()
-  const existingIds = new Set(existing.map(item => item.id))
-  const deduped = newItems.filter(item => !existingIds.has(makeLocalId(item)))
+  const existingKeys = new Set(existing.map(getItemKey))
+  const seenKeys = new Set()
+  const deduped = newItems.filter(item => {
+    const key = makeLocalId(item)
+    if (existingKeys.has(key) || seenKeys.has(key)) return false
+    seenKeys.add(key)
+    return true
+  })
 
   if (!deduped.length) return []
 
@@ -147,6 +164,7 @@ export async function addReviewItemsFromFeedback(feedback, context = {}) {
   // Save to localStorage (as cache)
   const localItems = deduped.map(item => ({
     id: apiResult?.ids?.[deduped.indexOf(item)] || makeLocalId(item),
+    localKey: makeLocalId(item),
     ...item,
     due: createdAt,
     createdAt,

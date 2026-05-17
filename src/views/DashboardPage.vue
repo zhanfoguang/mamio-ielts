@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCheckinStore } from '../stores/checkin'
 import { useRouter } from 'vue-router'
 import { getDashboardData } from '../services/progress'
-import { getReviewItemStatsSync, migrateLocalToServer } from '../services/reviewItems'
+import { getReviewItemStats, getReviewItemStatsSync, migrateLocalToServer } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -43,7 +43,11 @@ const vocabReviewStats = computed(() => {
   return { total: rows.length, due }
 })
 
-const reviewItemStats = computed(() => getReviewItemStatsSync())
+const reviewItemCacheVersion = ref(0)
+const reviewItemStats = computed(() => {
+  reviewItemCacheVersion.value
+  return getReviewItemStatsSync()
+})
 const dueReviewItemsPreview = computed(() => reviewItemStats.value.dueItems.slice(0, 3))
 
 // Score trends (last 10 entries per module)
@@ -297,7 +301,7 @@ const studyPlan = computed(() => {
       icon: '🎯',
       zh: `先处理 ${Math.min(dueReviewItems, 5)} 个 AI 复习项`,
       en: `Clear ${Math.min(dueReviewItems, 5)} AI review items first`,
-      path: '/dashboard',
+      path: '/review',
       reasonZh: '这些是从你自己的口语/写作反馈里提取的弱点',
       reasonEn: 'These came from your own speaking and writing feedback',
       tone: 'amber'
@@ -433,7 +437,7 @@ const studyPlan = computed(() => {
       icon: '🎯',
       zh: `复练 ${Math.min(dueReviewItems, 5)} 个 AI 弱点`,
       en: `Review ${Math.min(dueReviewItems, 5)} AI weak spots`,
-      path: '/dashboard',
+      path: '/review',
       reasonZh: '来自最近口语/写作反馈',
       reasonEn: 'From recent speaking and writing feedback'
     })
@@ -549,6 +553,11 @@ function getScoreColor(score) {
   return 'var(--red)'
 }
 
+async function refreshReviewItems() {
+  await getReviewItemStats()
+  reviewItemCacheVersion.value += 1
+}
+
 onMounted(async () => {
   // Try loading from API first
   try {
@@ -572,7 +581,15 @@ onMounted(async () => {
   }
 
   // Migrate localStorage review items to server
-  migrateLocalToServer().catch(() => {})
+  try {
+    await migrateLocalToServer()
+  } catch {
+    // Keep local cache if migration is unavailable.
+  }
+
+  refreshReviewItems().catch(() => {
+    reviewItemCacheVersion.value += 1
+  })
 })
 </script>
 

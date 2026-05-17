@@ -210,6 +210,7 @@ export const progressQueries = {
 export const reviewItemQueries = {
   getByUser: db.prepare('SELECT * FROM review_items WHERE user_id = ? ORDER BY created_at DESC LIMIT 200'),
   getDueByUser: db.prepare('SELECT * FROM review_items WHERE user_id = ? AND reviewed_at IS NULL ORDER BY created_at DESC LIMIT 50'),
+  findActiveDuplicate: db.prepare('SELECT id FROM review_items WHERE user_id = ? AND module = ? AND type = ? AND lower(text) = lower(?) AND reviewed_at IS NULL LIMIT 1'),
   add: db.prepare('INSERT INTO review_items (user_id, module, type, text, reason, source) VALUES (?, ?, ?, ?, ?, ?)'),
   markReviewed: db.prepare('UPDATE review_items SET reviewed_at = datetime(\'now\') WHERE id = ? AND user_id = ?'),
   delete: db.prepare('DELETE FROM review_items WHERE id = ? AND user_id = ?'),
