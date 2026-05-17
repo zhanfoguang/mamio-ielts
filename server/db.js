@@ -126,7 +126,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_api_logs_user ON api_logs(user_id);
   CREATE INDEX IF NOT EXISTS idx_api_logs_time ON api_logs(created_at);
 `)
-`)
 
 // Auto-create admin account
 function ensureAdmin() {
