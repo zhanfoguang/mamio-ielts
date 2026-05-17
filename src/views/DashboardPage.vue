@@ -533,6 +533,16 @@ function closeOnboarding() {
   localStorage.setItem('mamio-onboarded', '1')
 }
 
+function openGoalFromOnboarding() {
+  closeOnboarding()
+  showGoalSettings.value = true
+}
+
+function startSpeakingFromOnboarding() {
+  closeOnboarding()
+  router.push('/speaking')
+}
+
 // Score chart (simple SVG sparkline)
 function getSparklinePath(scores) {
   if (scores.length < 2) return ''
@@ -637,9 +647,14 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-        <button class="onboarding-btn" @click="closeOnboarding">
-          {{ themeStore.lang === 'zh' ? '开始学习' : 'Start Learning' }}
-        </button>
+        <div class="onboarding-actions">
+          <button class="onboarding-btn" @click="openGoalFromOnboarding">
+            {{ themeStore.lang === 'zh' ? '先设置目标' : 'Set Goal First' }}
+          </button>
+          <button class="onboarding-secondary" @click="startSpeakingFromOnboarding">
+            {{ themeStore.lang === 'zh' ? '直接做口语' : 'Start Speaking' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1658,6 +1673,12 @@ button.support-card:hover {
 .ob-step strong { font-size: var(--font-size-sm); display: block; margin-bottom: 2px; }
 .ob-step p { font-size: var(--font-size-xs); color: var(--text-secondary); margin: 0; }
 
+.onboarding-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .onboarding-btn {
   width: 100%;
   padding: 14px;
@@ -1671,5 +1692,25 @@ button.support-card:hover {
 [data-theme="dark"] .onboarding-btn {
   background: var(--white);
   color: var(--black);
+}
+
+.onboarding-secondary {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-base);
+}
+
+.onboarding-secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+@media (max-width: 520px) {
+  .onboarding-actions {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
