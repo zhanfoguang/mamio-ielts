@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCheckinStore } from '../stores/checkin'
 import { useRouter } from 'vue-router'
 import { getDashboardData } from '../services/progress'
-import { getReviewItemStats } from '../services/reviewItems'
+import { getReviewItemStatsSync, migrateLocalToServer } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -43,7 +43,7 @@ const vocabReviewStats = computed(() => {
   return { total: rows.length, due }
 })
 
-const reviewItemStats = computed(() => getReviewItemStats())
+const reviewItemStats = computed(() => getReviewItemStatsSync())
 const dueReviewItemsPreview = computed(() => reviewItemStats.value.dueItems.slice(0, 3))
 
 // Score trends (last 10 entries per module)
@@ -570,6 +570,9 @@ onMounted(async () => {
   if (!localStorage.getItem('mamio-onboarded')) {
     showOnboarding.value = true
   }
+
+  // Migrate localStorage review items to server
+  migrateLocalToServer().catch(() => {})
 })
 </script>
 

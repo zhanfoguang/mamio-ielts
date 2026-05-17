@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/auth.js'
-import { progressQueries } from '../db.js'
+import { progressQueries, reviewItemQueries } from '../db.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -109,6 +109,92 @@ router.post('/daily-stats/increment', (req, res) => {
   } catch (err) {
     console.error('Increment daily error:', err.message)
     res.status(500).json({ error: '更新每日统计失败' })
+  }
+})
+
+// === Review Items ===
+router.get('/review-items', (req, res) => {
+  try {
+    const rows = reviewItemQueries.getByUser.all(req.user.id)
+    res.json(rows)
+  } catch (err) {
+    console.error('Get review items error:', err.message)
+    res.status(500).json({ error: '获取复习项失败' })
+  }
+})
+
+router.get('/review-items/due', (req, res) => {
+  try {
+    const rows = reviewItemQueries.getDueByUser.all(req.user.id)
+    res.json(rows)
+  } catch (err) {
+    console.error('Get due review items error:', err.message)
+    res.status(500).json({ error: '获取待复习项失败' })
+  }
+})
+
+router.post('/review-items', (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : [req.body]
+    const added = []
+    for (const item of items) {
+      if (!item.text || typeof item.text !== 'string') continue
+      const text = item.text.slice(0, 500)
+      const reason = String(item.reason || '').slice(0, 300)
+      const module = String(item.module || 'general').slice(0, 50)
+      const type = String(item.type || 'note').slice(0, 50)
+      const source = String(item.source || '').slice(0, 100)
+      const result = reviewItemQueries.add.run(req.user.id, module, type, text, reason, source)
+      added.push(result.lastInsertRowid)
+    }
+    res.json({ added: added.length, ids: added })
+  } catch (err) {
+    console.error('Add review items error:', err.message)
+    res.status(500).json({ error: '保存复习项失败' })
+  }
+})
+
+router.patch('/review-items/:id/review', (req, res) => {
+  try {
+    const result = reviewItemQueries.markReviewed.run(req.params.id, req.user.id)
+    res.json({ ok: result.changes > 0 })
+  } catch (err) {
+    console.error('Mark reviewed error:', err.message)
+    res.status(500).json({ error: '标记复习完成失败' })
+  }
+})
+
+router.delete('/review-items/:id', (req, res) => {
+  try {
+    const result = reviewItemQueries.delete.run(req.params.id, req.user.id)
+    res.json({ ok: result.changes > 0 })
+  } catch (err) {
+    console.error('Delete review item error:', err.message)
+    res.status(500).json({ error: '删除复习项失败' })
+  }
+})
+
+router.post('/review-items/migrate', (req, res) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : []
+    if (!items.length) return res.json({ migrated: 0 })
+    let count = 0
+    for (const item of items) {
+      if (!item.text || typeof item.text !== 'string') continue
+      reviewItemQueries.add.run(
+        req.user.id,
+        String(item.module || 'general').slice(0, 50),
+        String(item.type || 'note').slice(0, 50),
+        String(item.text).slice(0, 500),
+        String(item.reason || '').slice(0, 300),
+        String(item.source || 'local-migration').slice(0, 100)
+      )
+      count++
+    }
+    res.json({ migrated: count })
+  } catch (err) {
+    console.error('Migrate review items error:', err.message)
+    res.status(500).json({ error: '迁移复习项失败' })
   }
 })
 

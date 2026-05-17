@@ -1,14 +1,24 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { useRouter } from 'vue-router'
-import { getReviewItems, getReviewItemStats } from '../services/reviewItems'
+import { getReviewItems, getReviewItemStatsSync, markReviewItemReviewed, deleteReviewItem } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
 const router = useRouter()
 
 const filter = ref('due') // 'due' | 'all' | 'reviewed'
-const stats = computed(() => getReviewItemStats())
+const allItems = ref([])
+
+onMounted(async () => {
+  allItems.value = await getReviewItems()
+})
+
+const stats = computed(() => {
+  const now = Date.now()
+  const due = allItems.value.filter(i => !i.reviewedAt && Number(i.due || 0) <= now)
+  return { total: allItems.value.length, due: due.length, items: allItems.value, dueItems: due }
+})
 
 const filteredItems = computed(() => {
   const now = Date.now()
@@ -41,18 +51,14 @@ function getModuleLabel(mod) {
   return moduleLabels[mod] || moduleLabels.general
 }
 
-function markReviewed(item) {
-  const items = getReviewItems()
-  const idx = items.findIndex(i => i.id === item.id)
-  if (idx >= 0) {
-    items[idx].reviewedAt = Date.now()
-    localStorage.setItem('mamio-review-items', JSON.stringify(items))
-  }
+async function markReviewed(item) {
+  await markReviewItemReviewed(item.id)
+  item.reviewedAt = new Date().toISOString()
 }
 
-function deleteItem(item) {
-  const items = getReviewItems().filter(i => i.id !== item.id)
-  localStorage.setItem('mamio-review-items', JSON.stringify(items))
+async function deleteItem(item) {
+  await deleteReviewItem(item.id)
+  allItems.value = allItems.value.filter(i => i.id !== item.id)
 }
 
 function goToModule(mod) {

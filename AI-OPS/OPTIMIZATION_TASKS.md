@@ -82,3 +82,14 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Score gap visualization (current vs target).
 - [x] Target reference line on score trend sparklines.
 - [x] Study plan becomes target-aware: exam urgency and gap drive recommendations.
+
+## Phase 13: SQLite Backup + Server-Side Review Items
+
+- [x] Add `review_items` table in `server/db.js` with indexes.
+- [x] Add `reviewItemQueries` prepared statements (CRUD + stats).
+- [x] Add review_items API endpoints in `server/routes/progress.js` (GET, POST, PATCH, DELETE, migrate).
+- [x] Update `src/services/reviewItems.js` to use API-first with localStorage fallback.
+- [x] Update `src/views/ReviewPage.vue` to use async API calls.
+- [x] Update `src/views/DashboardPage.vue` to use sync stats + migration on mount.
+- [x] Create `deploy/backup-db.sh` for daily VPS SQLite backup.
+- [ ] Add backup cron to VPS (manual step — user needs to run on VPS).

@@ -96,6 +96,22 @@ db.exec(`
     UNIQUE(user_id, date),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS review_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    module TEXT NOT NULL DEFAULT 'general',
+    type TEXT NOT NULL DEFAULT 'note',
+    text TEXT NOT NULL,
+    reason TEXT DEFAULT '',
+    source TEXT DEFAULT '',
+    reviewed_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_review_items_user ON review_items(user_id);
+  CREATE INDEX IF NOT EXISTS idx_review_items_due ON review_items(user_id, reviewed_at);
 `)
 
 // Auto-create admin account
@@ -175,6 +191,17 @@ export const progressQueries = {
     reading: db.prepare('UPDATE daily_stats SET reading = reading + 1 WHERE user_id = ? AND date = ?'),
     vocab: db.prepare('UPDATE daily_stats SET vocab = vocab + 1 WHERE user_id = ? AND date = ?')
   }
+}
+
+// Review items queries
+export const reviewItemQueries = {
+  getByUser: db.prepare('SELECT * FROM review_items WHERE user_id = ? ORDER BY created_at DESC LIMIT 200'),
+  getDueByUser: db.prepare('SELECT * FROM review_items WHERE user_id = ? AND reviewed_at IS NULL ORDER BY created_at DESC LIMIT 50'),
+  add: db.prepare('INSERT INTO review_items (user_id, module, type, text, reason, source) VALUES (?, ?, ?, ?, ?, ?)'),
+  markReviewed: db.prepare('UPDATE review_items SET reviewed_at = datetime(\'now\') WHERE id = ? AND user_id = ?'),
+  delete: db.prepare('DELETE FROM review_items WHERE id = ? AND user_id = ?'),
+  deleteAll: db.prepare('DELETE FROM review_items WHERE user_id = ?'),
+  countByUser: db.prepare('SELECT COUNT(*) as total, SUM(CASE WHEN reviewed_at IS NULL THEN 1 ELSE 0 END) as due FROM review_items WHERE user_id = ?')
 }
 
 // Check and update user quota

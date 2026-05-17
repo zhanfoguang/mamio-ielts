@@ -75,6 +75,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `deploy/deploy.sh` — Manual deploy script (rsync to VPS)
 - `deploy/nginx.conf` — nginx config template
 - `deploy/setup-vps.sh` — VPS initial setup script
+- `deploy/backup-db.sh` — Daily SQLite backup script (gzip, 7-day retention)
 
 ### VPS Paths (Alibaba Cloud, 47.88.87.116)
 - **项目目录:** `/var/www/mimio/`
@@ -104,6 +105,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `writing_history` — user_id, task_type, task, essay, score, details (JSON)
 - `vocab_progress` — user_id, word, ease, interval, reps, due, last_review (SM-2 fields)
 - `daily_stats` — user_id, date, speaking, writing, listening, reading, vocab counts
+- `review_items` — user_id, module, type, text, reason, source, reviewed_at, created_at
 
 ## User Roles
 - `trial` — 10 AI calls/day, 3-day window, auto-expires
@@ -147,6 +149,12 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 | POST | /vocab | Yes | Upsert SRS data |
 | GET | /daily-stats?date= | Yes | Get daily stats |
 | POST | /daily-stats/increment | Yes | Increment module count |
+| GET | /review-items | Yes | All review items |
+| GET | /review-items/due | Yes | Unreviewed items |
+| POST | /review-items | Yes | Add review items (array) |
+| PATCH | /review-items/:id/review | Yes | Mark item reviewed |
+| DELETE | /review-items/:id | Yes | Delete review item |
+| POST | /review-items/migrate | Yes | Migrate localStorage items |
 | GET | /dashboard | Yes | Aggregate dashboard data |
 
 ## Development
