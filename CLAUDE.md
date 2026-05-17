@@ -91,12 +91,25 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - **nginx 监听端口:** 8080
 - **后端端口:** 3000 (nginx 反代 → /api)
 - **PM2 进程名:** `mamio-server` (以 root 运行)
+- **PM2 路径:** `/root/.npm/_npx/5f7878ce38f1eb13/node_modules/pm2/bin/pm2` (需 sudo)
+- **PM2 快捷方式:** `alias pm2="sudo /root/.npm/_npx/5f7878ce38f1eb13/node_modules/pm2/bin/pm2"` (已加到 admin 的 .bashrc)
 
 ### 部署流程
 1. 本地 `git push origin main`
 2. VPS cron 每 5 分钟执行 `auto-deploy.sh`
 3. 脚本执行: `git fetch` → 比较 commit → `git pull` → `npm install` → `npm run build` → `pm2 restart`
 4. nginx 自动 serve 新的 `dist/` 产物
+
+### VPS 手动部署命令（admin 用户）
+```bash
+cd /var/www/mimio && sudo git pull && sudo npm install && sudo npm run build && sudo /root/.npm/_npx/5f7878ce38f1eb13/node_modules/pm2/bin/pm2 restart mamio-server
+```
+
+### VPS git safe.directory 问题
+如果遇到 `dubious ownership` 错误，先跑：
+```bash
+sudo git config --global --add safe.directory /var/www/mimio
+```
 
 ## Database Schema (SQLite)
 - `users` — email, password_hash, nickname, role (trial/paid/expired/admin), ai_calls_today, trial_start, expires_at
