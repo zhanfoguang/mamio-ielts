@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { speakingTopics } from '../data/ielts/speaking'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
@@ -8,6 +9,7 @@ import { getSpeakingHistory, addSpeakingRecord } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
+const router = useRouter()
 const {
   isListening, transcript, interimTranscript, error: speechError, isSupported,
   isRecording, audioUrl, recordingDuration,
@@ -504,6 +506,15 @@ watch(mode, () => {
                       </div>
                       <span class="confidence-value">{{ Math.round(overallConfidence * 100) }}%</span>
                     </div>
+
+                    <div class="next-actions">
+                      <button class="next-primary" @click="router.push('/review')">
+                        {{ themeStore.lang === 'zh' ? '复习本次弱点' : 'Review Weak Spots' }}
+                      </button>
+                      <button class="next-secondary" @click="router.push('/dashboard')">
+                        {{ themeStore.lang === 'zh' ? '回到今日计划' : 'Back to Today’s Plan' }}
+                      </button>
+                    </div>
                   </template>
                 </div>
               </template>
@@ -552,6 +563,14 @@ watch(mode, () => {
                             <div v-if="msg.scoreData.improvedAnswer" class="conv-improved">
                               <strong>{{ themeStore.lang === 'zh' ? '示范：' : 'Model: ' }}</strong>{{ msg.scoreData.improvedAnswer }}
                             </div>
+                            <div class="next-actions compact">
+                              <button class="next-primary" @click="router.push('/review')">
+                                {{ themeStore.lang === 'zh' ? '复习弱点' : 'Review' }}
+                              </button>
+                              <button class="next-secondary" @click="router.push('/dashboard')">
+                                {{ themeStore.lang === 'zh' ? '今日计划' : 'Plan' }}
+                              </button>
+                            </div>
                           </div>
                         </template>
                         <template v-else>
@@ -597,6 +616,14 @@ watch(mode, () => {
                       <div v-if="aiResult.improvedAnswer" class="improved-answer">
                         <h4>{{ themeStore.lang === 'zh' ? '示范回答' : 'Improved Answer' }}</h4>
                         <p>{{ aiResult.improvedAnswer }}</p>
+                      </div>
+                      <div class="next-actions">
+                        <button class="next-primary" @click="router.push('/review')">
+                          {{ themeStore.lang === 'zh' ? '复习本次弱点' : 'Review Weak Spots' }}
+                        </button>
+                        <button class="next-secondary" @click="router.push('/dashboard')">
+                          {{ themeStore.lang === 'zh' ? '回到今日计划' : 'Back to Today’s Plan' }}
+                        </button>
                       </div>
                     </template>
                   </div>
@@ -1170,6 +1197,50 @@ watch(mode, () => {
 }
 
 .result-error { color: var(--red); text-align: center; }
+
+.next-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: var(--space-lg);
+}
+
+.next-actions.compact {
+  margin-top: var(--space-sm);
+}
+
+.next-primary,
+.next-secondary {
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.next-actions.compact .next-primary,
+.next-actions.compact .next-secondary {
+  padding: 7px 12px;
+  font-size: var(--font-size-xs);
+}
+
+.next-primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .next-primary {
+  background: var(--white);
+  color: var(--black);
+}
+
+.next-secondary {
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.next-secondary:hover {
+  background: var(--bg-tertiary);
+}
 
 .pronunciation-section {
   margin-top: var(--space-lg);

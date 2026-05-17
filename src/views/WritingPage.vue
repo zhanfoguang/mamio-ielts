@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { writingTasks } from '../data/ielts/writing'
 import { batchWriting } from '../services/ai'
@@ -10,6 +11,7 @@ const rewriteChecking = ref(false)
 const rewriteCheckResult = ref(null)
 
 const themeStore = useThemeStore()
+const router = useRouter()
 const activeTask = ref(1)
 const selectedPrompt = ref(null)
 const essay = ref('')
@@ -445,6 +447,15 @@ onUnmounted(() => {
                   <div v-if="aiResult.actionPlan?.length" class="feedback-section">
                     <h4>{{ themeStore.lang === 'zh' ? '行动计划' : 'Action Plan' }}</h4>
                     <ol><li v-for="a in aiResult.actionPlan" :key="a">{{ a }}</li></ol>
+                  </div>
+
+                  <div class="next-actions">
+                    <button class="next-primary" @click="router.push('/review')">
+                      {{ themeStore.lang === 'zh' ? '复习本次弱点' : 'Review Weak Spots' }}
+                    </button>
+                    <button class="next-secondary" @click="router.push('/dashboard')">
+                      {{ themeStore.lang === 'zh' ? '回到今日计划' : 'Back to Today’s Plan' }}
+                    </button>
                   </div>
 
                   <div v-if="aiResult.rewriteMission" class="rewrite-mission">
@@ -942,6 +953,40 @@ onUnmounted(() => {
 .feedback-section li { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: 4px; }
 .strength-item { color: var(--green); }
 .weakness-item { color: var(--red); }
+
+.next-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: var(--space-lg) 0;
+}
+
+.next-primary,
+.next-secondary {
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.next-primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .next-primary {
+  background: var(--white);
+  color: var(--black);
+}
+
+.next-secondary {
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.next-secondary:hover {
+  background: var(--bg-tertiary);
+}
 
 .result-error { color: var(--red); text-align: center; }
 
