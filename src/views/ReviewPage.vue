@@ -159,7 +159,7 @@ function formatDate(ts) {
 .page-header h1 {
   font-size: var(--font-size-2xl);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .subtitle {

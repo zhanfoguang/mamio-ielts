@@ -175,7 +175,7 @@ const router = useRouter()
 .stat-value {
   font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .stat-label {

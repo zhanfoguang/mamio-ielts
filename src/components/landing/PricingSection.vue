@@ -126,7 +126,7 @@ function goToPlan(plan) {
 .section-title {
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   margin-bottom: var(--space-sm);
 }
 

@@ -207,7 +207,7 @@ async function handleActivate() {
   font-size: var(--font-size-2xl);
   font-weight: 800;
   text-align: center;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   margin-bottom: 4px;
 }
 

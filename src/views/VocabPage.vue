@@ -612,7 +612,7 @@ watch(activeTopic, () => {
 .vocab-page h1 {
   font-size: var(--font-size-2xl);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   margin-bottom: var(--space-lg);
 }
 
@@ -799,7 +799,7 @@ watch(activeTopic, () => {
 .card-word {
   font-size: var(--font-size-xl);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .card-phonetic {

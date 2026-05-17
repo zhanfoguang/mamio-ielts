@@ -185,7 +185,7 @@ onUnmounted(() => {
 .demo-word {
   font-size: var(--font-size-2xl);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .phonetic {

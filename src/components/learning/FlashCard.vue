@@ -127,7 +127,7 @@ const totalCards = computed(() => flashcards.length)
 .card-word {
   font-size: var(--font-size-3xl);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   margin-bottom: var(--space-xs);
 }
 
