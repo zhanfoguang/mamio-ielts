@@ -34,3 +34,28 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Browser-test Dashboard and Writing smoke paths.
 - [ ] Browser-test Speaking after a real microphone/AI scoring pass.
 - [ ] Decide which changes are product-code-ready for GitHub/VPS deployment.
+
+## Phase 6: Review Items UI
+
+- [x] Create ReviewPage.vue with due/all/reviewed filters.
+- [x] Group review items by module with mark-reviewed and delete actions.
+- [x] Add /review route and nav link in header.
+
+## Phase 7: AI Response Normalization
+
+- [x] Add normalizeSpeakingResult and normalizeWritingResult in server/routes/ai.js.
+- [x] Clamp scores to 1-9 range.
+- [x] Ensure reviewItems is always an array.
+- [x] Truncate long strings to safe lengths.
+
+## Phase 8: Writing Rewrite Loop Enhancement
+
+- [x] Show saved rewrite attempts in history panel.
+- [x] Add "Check with AI" button for targeted rewrite scoring.
+- [x] Display rewrite assessment result.
+
+## Phase 9: Cross-Module Weak Word Connection
+
+- [x] Speaking pronunciationWords saved as review items.
+- [x] Reading wrong answers saved as review items.
+- [x] Listening unrecognized dictation words saved as review items.
