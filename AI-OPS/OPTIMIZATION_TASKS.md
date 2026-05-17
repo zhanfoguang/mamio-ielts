@@ -74,3 +74,11 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Part 2 proper IELTS timer: 1min prep (no recording) + 2min speaking (auto-record).
 - [x] Score trend tracking: mock scores saved and displayed as bar chart on results page.
 - [x] Transcript replay: recorded audio playback alongside transcript in results.
+
+## Phase 12: Dashboard Target Score & Exam Date
+
+- [x] Users can set target band score and exam date via Dashboard settings.
+- [x] Days-until-exam countdown displayed.
+- [x] Score gap visualization (current vs target).
+- [x] Target reference line on score trend sparklines.
+- [x] Study plan becomes target-aware: exam urgency and gap drive recommendations.

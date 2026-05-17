@@ -63,6 +63,42 @@ const writingScores = computed(() => {
     .map((h, i) => ({ index: i + 1, score: h.score, date: h.date }))
 })
 
+// Target score and exam date
+const targetScore = ref(parseFloat(localStorage.getItem('mamio-target-score') || '0'))
+const examDate = ref(localStorage.getItem('mamio-exam-date') || '')
+const showGoalSettings = ref(false)
+
+function saveTargetScore() {
+  localStorage.setItem('mamio-target-score', targetScore.value.toString())
+}
+
+function saveExamDate() {
+  localStorage.setItem('mamio-exam-date', examDate.value)
+}
+
+const daysUntilExam = computed(() => {
+  if (!examDate.value) return null
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const exam = new Date(examDate.value)
+  const diff = Math.ceil((exam - now) / (1000 * 60 * 60 * 24))
+  return diff >= 0 ? diff : null
+})
+
+const targetGap = computed(() => {
+  if (!targetScore.value) return null
+  const avgSpk = avgSpeakingScore.value ? parseFloat(avgSpeakingScore.value) : null
+  const avgWrt = avgWritingScore.value ? parseFloat(avgWritingScore.value) : null
+  if (!avgSpk && !avgWrt) return null
+  const bestAvg = Math.max(avgSpk || 0, avgWrt || 0)
+  return {
+    current: bestAvg.toFixed(1),
+    target: targetScore.value,
+    gap: (targetScore.value - bestAvg).toFixed(1),
+    close: targetScore.value - bestAvg <= 0.5
+  }
+})
+
 const avgSpeakingScore = computed(() => {
   const scores = speakingHistory.value.filter(h => h.score).map(h => h.score)
   if (scores.length === 0) return null
@@ -223,11 +259,40 @@ const studyPlan = computed(() => {
   const avgSpk = avgSpeakingScore.value ? parseFloat(avgSpeakingScore.value) : 0
   const avgWrt = avgWritingScore.value ? parseFloat(avgWritingScore.value) : 0
   const practicedToday = todayStats.value.total > 0
+  const hasTarget = targetScore.value > 0
+  const isExamSoon = daysUntilExam.value !== null && daysUntilExam.value <= 14
 
   let primary
   let insight
 
-  if (!practicedToday && dueReviewItems > 0) {
+  // Target-aware priority: if exam is soon, push harder
+  if (hasTarget && isExamSoon && !practicedToday) {
+    const gapSpk = targetScore.value - avgSpk
+    const gapWrt = targetScore.value - avgWrt
+    if (gapWrt > gapSpk && avgWrt > 0) {
+      primary = buildPlanTask({
+        icon: '✍️',
+        zh: `考前冲刺：写作还差 ${gapWrt.toFixed(1)} 分`,
+        en: `Exam push: writing gap is ${gapWrt.toFixed(1)}`,
+        path: '/writing',
+        reasonZh: `距考试 ${daysUntilExam.value} 天，写作离目标最远`,
+        reasonEn: `${daysUntilExam.value} days to exam, writing is furthest from target`,
+        tone: 'amber'
+      })
+    } else if (avgSpk > 0) {
+      primary = buildPlanTask({
+        icon: '🎤',
+        zh: `考前冲刺：口语还差 ${gapSpk.toFixed(1)} 分`,
+        en: `Exam push: speaking gap is ${gapSpk.toFixed(1)}`,
+        path: '/speaking',
+        reasonZh: `距考试 ${daysUntilExam.value} 天，口语离目标最远`,
+        reasonEn: `${daysUntilExam.value} days to exam, speaking is furthest from target`,
+        tone: 'amber'
+      })
+    }
+  }
+
+  if (!primary && !practicedToday && dueReviewItems > 0) {
     primary = buildPlanTask({
       icon: '🎯',
       zh: `先处理 ${Math.min(dueReviewItems, 5)} 个 AI 复习项`,
@@ -309,7 +374,22 @@ const studyPlan = computed(() => {
     })
   }
 
-  if (aiWeaknessSummary.value?.nextAction) {
+  if (hasTarget && daysUntilExam.value !== null && daysUntilExam.value <= 7) {
+    const gapSpk = avgSpk > 0 ? targetScore.value - avgSpk : 0
+    const gapWrt = avgWrt > 0 ? targetScore.value - avgWrt : 0
+    const maxGap = Math.max(gapSpk, gapWrt)
+    insight = {
+      icon: '🔥',
+      zh: `还有 ${daysUntilExam.value} 天考试！${maxGap > 0.5 ? `还差 ${maxGap.toFixed(1)} 分，每天至少练 2 轮` : '差距不大，保持手感'}`,
+      en: `${daysUntilExam.value} days to exam! ${maxGap > 0.5 ? `Gap is ${maxGap.toFixed(1)}, practice at least 2 rounds daily` : 'Gap is small, maintain your rhythm'}`
+    }
+  } else if (hasTarget && targetGap.value && !targetGap.value.close) {
+    insight = {
+      icon: '🎯',
+      zh: `目标 Band ${targetScore.value}，当前 ${targetGap.value.current}，还差 ${targetGap.value.gap} 分。`,
+      en: `Target Band ${targetScore.value}, currently ${targetGap.value.current}, gap is ${targetGap.value.gap}.`
+    }
+  } else if (aiWeaknessSummary.value?.nextAction) {
     const weak = aiWeaknessSummary.value
     insight = {
       icon: weak.module === 'writing' ? '✍️' : '🎤',
@@ -555,6 +635,36 @@ onMounted(async () => {
             }}
           </p>
         </div>
+        <button class="goal-btn" @click="showGoalSettings = !showGoalSettings">
+          {{ targetScore.value > 0 ? (themeStore.lang === 'zh' ? '目标: ' + targetScore.value + ' 分' : 'Target: ' + targetScore.value) : (themeStore.lang === 'zh' ? '设置目标' : 'Set Goal') }}
+        </button>
+      </div>
+
+      <!-- Goal settings -->
+      <div v-if="showGoalSettings" class="goal-settings">
+        <div class="goal-row">
+          <label>{{ themeStore.lang === 'zh' ? '目标 Band 分' : 'Target Band Score' }}</label>
+          <select v-model.number="targetScore" @change="saveTargetScore" class="goal-select">
+            <option :value="0">{{ themeStore.lang === 'zh' ? '未设置' : 'Not set' }}</option>
+            <option v-for="s in [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9]" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+        <div class="goal-row">
+          <label>{{ themeStore.lang === 'zh' ? '考试日期' : 'Exam Date' }}</label>
+          <input type="date" v-model="examDate" @change="saveExamDate" class="goal-input" />
+        </div>
+        <div v-if="daysUntilExam !== null" class="goal-countdown">
+          <span class="countdown-num">{{ daysUntilExam }}</span>
+          <span class="countdown-label">{{ themeStore.lang === 'zh' ? '天后考试' : 'days until exam' }}</span>
+        </div>
+        <div v-if="targetGap" class="goal-gap">
+          <span :class="targetGap.close ? 'gap-ok' : 'gap-warn'">
+            {{ themeStore.lang === 'zh'
+              ? `当前 ${targetGap.current}，目标 ${targetGap.target}，差 ${targetGap.gap} 分`
+              : `Current ${targetGap.current}, Target ${targetGap.target}, Gap ${targetGap.gap}`
+            }}
+          </span>
+        </div>
       </div>
 
       <!-- Today's progress -->
@@ -690,6 +800,7 @@ onMounted(async () => {
                 <span class="trend-avg" :style="{ color: getScoreColor(parseFloat(avgSpeakingScore)) }">{{ avgSpeakingScore }}</span>
               </div>
               <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+                <line v-if="targetScore > 0" x1="0" :y1="40 - (targetScore / 9) * 40" x2="200" :y2="40 - (targetScore / 9) * 40" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 2" opacity="0.5" />
                 <path :d="getSparklinePath(speakingScores)" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
@@ -700,8 +811,14 @@ onMounted(async () => {
                 <span class="trend-avg" :style="{ color: getScoreColor(parseFloat(avgWritingScore)) }">{{ avgWritingScore }}</span>
               </div>
               <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+                <line v-if="targetScore > 0" x1="0" :y1="40 - (targetScore / 9) * 40" x2="200" :y2="40 - (targetScore / 9) * 40" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 2" opacity="0.5" />
                 <path :d="getSparklinePath(writingScores)" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
+            </div>
+
+            <div v-if="targetScore > 0" class="target-legend">
+              <span class="target-line-icon"></span>
+              <span>{{ themeStore.lang === 'zh' ? '目标线' : 'Target line' }}: Band {{ targetScore }}</span>
             </div>
 
             <div v-if="speakingScores.length === 0 && writingScores.length === 0" class="empty-trend">
@@ -753,7 +870,11 @@ onMounted(async () => {
 }
 
 .dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--space-xl);
+  gap: var(--space-md);
 }
 
 .dashboard-header h1 {
@@ -765,6 +886,92 @@ onMounted(async () => {
 .welcome {
   color: var(--text-secondary);
   margin-top: 4px;
+}
+
+.goal-btn {
+  flex-shrink: 0;
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Goal settings */
+.goal-settings {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.goal-row label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.goal-select, .goal-input {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.goal-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.countdown-num {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  color: var(--red);
+}
+
+.countdown-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.goal-gap {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.gap-ok { color: var(--green); }
+.gap-warn { color: var(--amber); }
+
+.target-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.target-line-icon {
+  width: 16px;
+  height: 2px;
+  background: var(--red);
+  opacity: 0.5;
+  border-top: 1px dashed var(--red);
 }
 
 /* Today card */
