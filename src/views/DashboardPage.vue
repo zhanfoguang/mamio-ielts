@@ -656,7 +656,7 @@ onMounted(async () => {
           </p>
         </div>
         <button class="goal-btn" @click="showGoalSettings = !showGoalSettings">
-          {{ targetScore.value > 0 ? (themeStore.lang === 'zh' ? '目标: ' + targetScore.value + ' 分' : 'Target: ' + targetScore.value) : (themeStore.lang === 'zh' ? '设置目标' : 'Set Goal') }}
+          {{ targetScore > 0 ? (themeStore.lang === 'zh' ? '目标: ' + targetScore + ' 分' : 'Target: ' + targetScore) : (themeStore.lang === 'zh' ? '设置目标' : 'Set Goal') }}
         </button>
       </div>
 
