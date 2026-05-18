@@ -237,6 +237,7 @@ function saveRewriteDraft() {
   rewrites.unshift(payload)
   if (rewrites.length > 20) rewrites.length = 20
   localStorage.setItem('mamio-writing-rewrites', JSON.stringify(rewrites))
+  rewriteHistory.value = rewrites
   rewriteSaved.value = true
 }
 
@@ -251,6 +252,7 @@ async function checkRewrite() {
     const mission = aiResult.value.rewriteMission
     const res = await batchWriting(
       `请对比考生的原文和重写段落，评估重写是否改善了原问题。\n\n原任务：${prompt}\n\n目标：${mission.target}\n要求：${mission.instruction}\n检查项：${(mission.checklist || []).join('、')}\n\n原文：\n${essay.value}\n\n重写：\n${rewriteDraft.value}`,
+      rewriteDraft.value,
       activeTask.value,
       themeStore.lang
     )
