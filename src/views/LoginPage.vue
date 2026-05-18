@@ -18,6 +18,21 @@ const inviteCode = ref('')
 const error = ref('')
 const success = ref('')
 
+const activationBenefits = [
+  {
+    zh: '无限 AI 口语/写作反馈',
+    en: 'Unlimited AI speaking and writing feedback'
+  },
+  {
+    zh: '保留学习记录、错题和复习项',
+    en: 'Keep practice history, mistakes, and review items'
+  },
+  {
+    zh: '适合考前连续冲刺',
+    en: 'Built for continuous pre-exam practice'
+  }
+]
+
 function setMode(nextMode, extraQuery = {}) {
   if (!validModes.includes(nextMode)) return
   mode.value = nextMode
@@ -162,6 +177,21 @@ async function handleActivate() {
       </div>
 
       <p v-if="error" class="error-msg">{{ error }}</p>
+
+      <div class="conversion-panel">
+        <div class="conversion-head">
+          <strong>{{ themeStore.lang === 'zh' ? '试用到期后怎么办？' : 'What happens after trial?' }}</strong>
+          <span>{{ themeStore.lang === 'zh' ? '激活码解锁完整练习' : 'Use a code to unlock full practice' }}</span>
+        </div>
+        <ul>
+          <li v-for="benefit in activationBenefits" :key="benefit.en">
+            {{ themeStore.lang === 'zh' ? benefit.zh : benefit.en }}
+          </li>
+        </ul>
+        <button v-if="mode !== 'activate'" class="conversion-btn" @click="setMode('activate')">
+          {{ themeStore.lang === 'zh' ? '我有激活码' : 'I have an activation code' }}
+        </button>
+      </div>
 
       <!-- Status info -->
       <div v-if="authStore.isLoggedIn && authStore.user" class="status-info">
@@ -345,6 +375,61 @@ async function handleActivate() {
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   text-align: center;
+}
+
+.conversion-panel {
+  margin-top: var(--space-xl);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.conversion-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.conversion-head strong {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.conversion-head span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.conversion-panel ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conversion-panel li {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.conversion-panel li::before {
+  content: "✓";
+  color: var(--green);
+  font-weight: 900;
+  margin-right: 6px;
+}
+
+.conversion-btn {
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: 9px 12px;
+  border-radius: var(--radius-full);
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
 }
 
 .login-hint {
