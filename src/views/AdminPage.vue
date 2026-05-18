@@ -532,6 +532,10 @@ onMounted(() => {
             <strong>{{ contentDrafts.filter(d => d.status === 'rejected').length }}</strong>
             <span>{{ themeStore.lang === 'zh' ? '已驳回' : 'Rejected' }}</span>
           </div>
+          <div class="draft-stat">
+            <strong>{{ contentDrafts.filter(d => d.quality?.canMerge).length }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '可合并' : 'Merge Ready' }}</span>
+          </div>
         </div>
 
         <div v-if="contentDrafts.length" class="draft-layout">
@@ -548,7 +552,12 @@ onMounted(() => {
                 <span class="draft-status" :class="draft.status">{{ draft.status }}</span>
               </div>
               <p>{{ draft.readingCount }} reading · {{ draft.listeningCount }} listening</p>
-              <small>{{ draft.generatedAt ? new Date(draft.generatedAt).toLocaleString() : '—' }}</small>
+              <div class="draft-card-meta">
+                <small>{{ draft.generatedAt ? new Date(draft.generatedAt).toLocaleString() : '—' }}</small>
+                <span class="quality-pill" :class="{ weak: (draft.quality?.score || 0) < 70, good: draft.quality?.canMerge }">
+                  Q{{ draft.quality?.score ?? 0 }}
+                </span>
+              </div>
             </button>
           </div>
 
@@ -558,7 +567,26 @@ onMounted(() => {
                 <h3>{{ selectedDraft.fileName }}</h3>
                 <p>{{ selectedDraft.sourceSeedFile || 'No seed file' }}</p>
               </div>
-              <span class="draft-status" :class="selectedDraft.status">{{ selectedDraft.status }}</span>
+              <div class="draft-detail-badges">
+                <span v-if="selectedDraft.mergedAt" class="draft-status merged">merged</span>
+                <span class="quality-pill" :class="{ weak: (selectedDraft.quality?.score || 0) < 70, good: selectedDraft.quality?.canMerge }">
+                  Quality {{ selectedDraft.quality?.score ?? 0 }}
+                </span>
+                <span class="draft-status" :class="selectedDraft.status">{{ selectedDraft.status }}</span>
+              </div>
+            </div>
+
+            <div v-if="selectedDraft.quality?.flags?.length" class="quality-panel">
+              <h4>{{ themeStore.lang === 'zh' ? '质检问题' : 'Quality Flags' }}</h4>
+              <ul>
+                <li v-for="flag in selectedDraft.quality.flags" :key="flag.message" :class="flag.severity">
+                  <strong>{{ flag.severity }}</strong>
+                  <span>{{ flag.message }}</span>
+                </li>
+              </ul>
+            </div>
+            <div v-else class="quality-panel clean">
+              {{ themeStore.lang === 'zh' ? '结构质检通过，可以进入人工内容审核。' : 'Structure checks passed. Ready for editorial review.' }}
             </div>
 
             <div class="draft-columns">
@@ -584,7 +612,7 @@ onMounted(() => {
             </label>
 
             <div class="draft-actions">
-              <button class="approve-btn" @click="updateDraftStatus(selectedDraft, 'approved')">
+              <button class="approve-btn" :disabled="!selectedDraft.quality?.canMerge" @click="updateDraftStatus(selectedDraft, 'approved')">
                 {{ themeStore.lang === 'zh' ? '通过' : 'Approve' }}
               </button>
               <button class="reject-btn" @click="updateDraftStatus(selectedDraft, 'rejected')">
@@ -1161,7 +1189,7 @@ onMounted(() => {
 /* Content drafts */
 .draft-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
 }
@@ -1240,6 +1268,15 @@ onMounted(() => {
   margin-top: 6px;
 }
 
+.draft-card-meta,
+.draft-detail-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 .draft-status {
   padding: 2px 8px;
   border-radius: var(--radius-full);
@@ -1261,6 +1298,30 @@ onMounted(() => {
   background: var(--red-soft);
 }
 
+.draft-status.merged {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.quality-pill {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.quality-pill.good {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.quality-pill.weak {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
 .draft-detail,
 .draft-empty-detail {
   padding: var(--space-xl);
@@ -1269,6 +1330,57 @@ onMounted(() => {
 .draft-empty-detail {
   color: var(--text-tertiary);
   text-align: center;
+}
+
+.quality-panel {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.quality-panel.clean {
+  color: var(--green);
+  background: var(--green-soft);
+  border-color: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.quality-panel h4 {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.quality-panel ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quality-panel li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.quality-panel li strong {
+  min-width: 48px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.quality-panel li.high strong {
+  color: var(--red);
+}
+
+.quality-panel li.medium strong {
+  color: var(--blue);
 }
 
 .draft-columns {
@@ -1332,6 +1444,13 @@ onMounted(() => {
 .approve-btn {
   color: var(--green);
   background: var(--green-soft);
+}
+
+.approve-btn:disabled {
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .reject-btn {

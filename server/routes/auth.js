@@ -10,10 +10,13 @@ import db, { userQueries, codeQueries, resetCodeQueries, logQueries, contentDraf
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date.js'
+import { readingPassages } from '../../src/data/ielts/reading.js'
+import { listeningSections } from '../../src/data/ielts/listening.js'
 
 const router = Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const contentDraftDir = path.resolve(__dirname, '../../AI-OPS/content-drafts')
+const allowedReadingTypes = new Set(['true-false-ng', 'matching', 'matching-headings', 'short-answer', 'multiple-choice'])
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is required')
@@ -56,6 +59,67 @@ function syncExpiredUserRole(user) {
   return { ...user, role: 'expired' }
 }
 
+function normalizeDraftStatus(payload, review) {
+  if (review?.status) return review.status
+  if (payload?.review?.status) return payload.review.status
+  if (payload?.status === 'approved' || payload?.status === 'rejected') return payload.status
+  return 'draft'
+}
+
+function normalizeTitle(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function countReadingQuestionItems(question) {
+  if (question.type === 'true-false-ng') return question.statements?.length || 0
+  if (question.type === 'multiple-choice') return question.items?.length || 0
+  if (question.type === 'short-answer') return question.items?.length || 0
+  if (question.type === 'matching') return question.items?.length || 0
+  if (question.type === 'matching-headings') return question.answers?.length || 0
+  return 0
+}
+
+function assessContentDraft(payload) {
+  const flags = []
+  const existingReadingTitles = new Set(readingPassages.map(item => normalizeTitle(item.title)))
+  const existingListeningTitles = new Set(listeningSections.map(item => normalizeTitle(item.title)))
+  const readingItems = Array.isArray(payload?.readingPassages) ? payload.readingPassages : []
+  const listeningItems = Array.isArray(payload?.listeningSections) ? payload.listeningSections : []
+
+  if (!readingItems.length) flags.push({ severity: 'high', message: 'No reading passages in this draft.' })
+  if (!listeningItems.length) flags.push({ severity: 'high', message: 'No listening sections in this draft.' })
+
+  for (const item of readingItems) {
+    const label = item?.title || '(untitled reading)'
+    if (existingReadingTitles.has(normalizeTitle(label))) flags.push({ severity: 'medium', message: `Duplicate reading title: ${label}` })
+    if (!['easy', 'medium', 'hard'].includes(item?.level)) flags.push({ severity: 'high', message: `Reading "${label}" has invalid level.` })
+    if (String(item?.passage || '').length < 500) flags.push({ severity: 'high', message: `Reading "${label}" passage is too short.` })
+    if (!Array.isArray(item?.questions) || item.questions.length < 3) flags.push({ severity: 'high', message: `Reading "${label}" needs at least 3 question groups.` })
+    for (const question of item?.questions || []) {
+      if (!allowedReadingTypes.has(question?.type)) flags.push({ severity: 'high', message: `Reading "${label}" has unsupported question type: ${question?.type || '(empty)'}.` })
+      if (countReadingQuestionItems(question) === 0) flags.push({ severity: 'medium', message: `Reading "${label}" has an empty question group.` })
+    }
+  }
+
+  for (const item of listeningItems) {
+    const label = item?.title || '(untitled listening)'
+    if (existingListeningTitles.has(normalizeTitle(label))) flags.push({ severity: 'medium', message: `Duplicate listening title: ${label}` })
+    if (!Number.isInteger(Number(item?.section)) || Number(item?.section) < 1 || Number(item?.section) > 4) flags.push({ severity: 'high', message: `Listening "${label}" has invalid section.` })
+    if (!Array.isArray(item?.sentences) || item.sentences.length < 5) flags.push({ severity: 'high', message: `Listening "${label}" needs at least 5 sentences.` })
+    for (const [index, sentence] of (item?.sentences || []).entries()) {
+      if (!sentence?.en || !sentence?.cn) flags.push({ severity: 'high', message: `Listening "${label}" sentence ${index + 1} is missing en/cn text.` })
+      if (!Number.isFinite(Number(sentence?.duration)) || Number(sentence?.duration) < 2500) flags.push({ severity: 'medium', message: `Listening "${label}" sentence ${index + 1} has weak duration data.` })
+    }
+  }
+
+  const score = Math.max(0, 100 - flags.reduce((sum, flag) => sum + (flag.severity === 'high' ? 20 : 8), 0))
+  return {
+    score,
+    flags,
+    canMerge: score >= 70 && !flags.some(flag => flag.severity === 'high')
+  }
+}
+
 async function readContentDraftFiles() {
   let fileNames = []
   try {
@@ -71,11 +135,14 @@ async function readContentDraftFiles() {
       const fullPath = path.join(contentDraftDir, fileName)
       const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))
       const review = reviews.get(fileName)
+      const quality = assessContentDraft(payload)
       drafts.push({
         fileName,
-        status: review?.status || payload.status || 'draft',
-        notes: review?.notes || '',
-        reviewedAt: review?.reviewed_at || null,
+        status: normalizeDraftStatus(payload, review),
+        notes: review?.notes || payload.review?.notes || '',
+        reviewedAt: review?.reviewed_at || payload.review?.reviewedAt || null,
+        mergedAt: payload.mergedAt || null,
+        quality,
         generatedAt: payload.generatedAt || null,
         sourceSeedFile: payload.sourceSeedFile || null,
         readingCount: Array.isArray(payload.readingPassages) ? payload.readingPassages.length : 0,
@@ -449,8 +516,23 @@ router.get('/admin/content-drafts', authMiddleware, adminMiddleware, async (req,
   }
 })
 
+async function writeDraftReviewToFile(fileName, status, notes, userId) {
+  const fullPath = path.join(contentDraftDir, fileName)
+  const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))
+  await fs.writeFile(fullPath, `${JSON.stringify({
+    ...payload,
+    status,
+    review: {
+      status,
+      notes: String(notes).slice(0, 500),
+      reviewedBy: userId,
+      reviewedAt: new Date().toISOString()
+    }
+  }, null, 2)}\n`)
+}
+
 // Admin: review generated content draft
-router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware, (req, res) => {
+router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const fileName = path.basename(req.params.fileName || '')
     const { status, notes = '' } = req.body
@@ -462,6 +544,7 @@ router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware,
       return res.status(400).json({ error: '状态无效' })
     }
     contentDraftQueries.upsertStatus.run(fileName, status, String(notes).slice(0, 500), req.user.id)
+    await writeDraftReviewToFile(fileName, status, notes, req.user.id)
     res.json({ fileName, status, notes })
   } catch (err) {
     console.error('Update content draft error:', err.message)

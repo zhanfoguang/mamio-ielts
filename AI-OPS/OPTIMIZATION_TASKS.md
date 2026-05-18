@@ -123,5 +123,8 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add `npm run content:generate` to create AI-generated draft content from seeds.
 - [x] Add `npm run content:validate` to catch schema and bank-size regressions.
 - [x] Add admin review UI for approving generated content.
+- [x] Add admin-side draft quality flags: schema, duplicate titles, weak listening durations, and merge readiness.
+- [x] Persist admin draft review status back into generated JSON files.
+- [x] Add `npm run content:merge-approved` to merge approved, unmerged drafts into reading/listening banks with duplicate protection.
 - [ ] Move approved content from static files into server-side content tables.
 - [ ] Add weekly VPS cron for draft generation only, never direct publishing.
