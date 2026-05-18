@@ -126,6 +126,19 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_api_logs_user ON api_logs(user_id);
   CREATE INDEX IF NOT EXISTS idx_api_logs_time ON api_logs(created_at);
+
+  CREATE TABLE IF NOT EXISTS content_draft_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_name TEXT UNIQUE NOT NULL,
+    status TEXT DEFAULT 'draft',
+    notes TEXT DEFAULT '',
+    reviewed_by INTEGER,
+    reviewed_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_content_draft_reviews_status ON content_draft_reviews(status);
 `)
 
 // Auto-create admin account
@@ -226,6 +239,15 @@ export const logQueries = {
   getRecent: db.prepare('SELECT al.*, u.email, u.nickname FROM api_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT 200'),
   prune: db.prepare("DELETE FROM api_logs WHERE created_at < datetime('now', '-30 days')"),
   statsByDay: db.prepare("SELECT date(created_at) as day, COUNT(*) as calls, AVG(latency_ms) as avg_latency FROM api_logs WHERE created_at >= datetime('now', '-7 days') GROUP BY date(created_at) ORDER BY day DESC")
+}
+
+// Content draft review queries
+export const contentDraftQueries = {
+  getAll: db.prepare('SELECT * FROM content_draft_reviews ORDER BY created_at DESC'),
+  getByFile: db.prepare('SELECT * FROM content_draft_reviews WHERE file_name = ?'),
+  upsertStatus: db.prepare(`INSERT INTO content_draft_reviews (file_name, status, notes, reviewed_by, reviewed_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(file_name) DO UPDATE SET status=excluded.status, notes=excluded.notes, reviewed_by=excluded.reviewed_by, reviewed_at=datetime('now')`)
 }
 
 // Prune old logs on startup

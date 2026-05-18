@@ -122,6 +122,6 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add `npm run content:seed` to fetch public topic seeds into `AI-OPS/content-drafts/`.
 - [x] Add `npm run content:generate` to create AI-generated draft content from seeds.
 - [x] Add `npm run content:validate` to catch schema and bank-size regressions.
-- [ ] Add admin review UI for approving generated content.
+- [x] Add admin review UI for approving generated content.
 - [ ] Move approved content from static files into server-side content tables.
 - [ ] Add weekly VPS cron for draft generation only, never direct publishing.

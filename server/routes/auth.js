@@ -3,12 +3,17 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import rateLimit from 'express-rate-limit'
-import db, { userQueries, codeQueries, resetCodeQueries, logQueries } from '../db.js'
+import fs from 'fs/promises'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import db, { userQueries, codeQueries, resetCodeQueries, logQueries, contentDraftQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date.js'
 
 const router = Router()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const contentDraftDir = path.resolve(__dirname, '../../AI-OPS/content-drafts')
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is required')
@@ -49,6 +54,53 @@ function syncExpiredUserRole(user) {
   if (!shouldExpire) return user
   userQueries.updateRole.run('expired', user.id)
   return { ...user, role: 'expired' }
+}
+
+async function readContentDraftFiles() {
+  let fileNames = []
+  try {
+    fileNames = await fs.readdir(contentDraftDir)
+  } catch {
+    return []
+  }
+
+  const reviews = new Map(contentDraftQueries.getAll.all().map(row => [row.file_name, row]))
+  const drafts = []
+  for (const fileName of fileNames.filter(name => name.endsWith('.json') && name.startsWith('generated-content-'))) {
+    try {
+      const fullPath = path.join(contentDraftDir, fileName)
+      const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))
+      const review = reviews.get(fileName)
+      drafts.push({
+        fileName,
+        status: review?.status || payload.status || 'draft',
+        notes: review?.notes || '',
+        reviewedAt: review?.reviewed_at || null,
+        generatedAt: payload.generatedAt || null,
+        sourceSeedFile: payload.sourceSeedFile || null,
+        readingCount: Array.isArray(payload.readingPassages) ? payload.readingPassages.length : 0,
+        listeningCount: Array.isArray(payload.listeningSections) ? payload.listeningSections.length : 0,
+        readingTitles: (payload.readingPassages || []).map(item => item.title).filter(Boolean).slice(0, 6),
+        listeningTitles: (payload.listeningSections || []).map(item => item.title).filter(Boolean).slice(0, 6),
+        payload
+      })
+    } catch (err) {
+      drafts.push({
+        fileName,
+        status: 'invalid',
+        notes: err.message,
+        reviewedAt: null,
+        generatedAt: null,
+        sourceSeedFile: null,
+        readingCount: 0,
+        listeningCount: 0,
+        readingTitles: [],
+        listeningTitles: [],
+        payload: null
+      })
+    }
+  }
+  return drafts.sort((a, b) => String(b.generatedAt || b.fileName).localeCompare(String(a.generatedAt || a.fileName)))
 }
 
 // Register
@@ -383,6 +435,37 @@ router.get('/admin/logs', authMiddleware, adminMiddleware, (req, res) => {
   } catch (err) {
     console.error('Admin logs error:', err.message)
     res.status(500).json({ error: '获取日志失败' })
+  }
+})
+
+// Admin: generated content drafts
+router.get('/admin/content-drafts', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const drafts = await readContentDraftFiles()
+    res.json({ drafts })
+  } catch (err) {
+    console.error('Content drafts error:', err.message)
+    res.status(500).json({ error: '获取内容草稿失败' })
+  }
+})
+
+// Admin: review generated content draft
+router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const fileName = path.basename(req.params.fileName || '')
+    const { status, notes = '' } = req.body
+    const allowed = new Set(['draft', 'approved', 'rejected'])
+    if (!fileName.endsWith('.json') || !fileName.startsWith('generated-content-')) {
+      return res.status(400).json({ error: '草稿文件名无效' })
+    }
+    if (!allowed.has(status)) {
+      return res.status(400).json({ error: '状态无效' })
+    }
+    contentDraftQueries.upsertStatus.run(fileName, status, String(notes).slice(0, 500), req.user.id)
+    res.json({ fileName, status, notes })
+  } catch (err) {
+    console.error('Update content draft error:', err.message)
+    res.status(500).json({ error: '更新草稿状态失败' })
   }
 })
 

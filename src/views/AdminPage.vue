@@ -15,6 +15,7 @@ const users = ref([])
 const stats = ref(null)
 const logs = ref([])
 const logStats = ref([])
+const contentDrafts = ref([])
 const loading = ref(false)
 const generating = ref(false)
 const newCodes = ref([])
@@ -23,6 +24,7 @@ const generateType = ref('month')
 const generateCount = ref(1)
 const copiedCode = ref('')
 const copyMessage = ref('')
+const selectedDraft = ref(null)
 
 const presets = [
   { key: 'month', label: '月卡', labelEn: 'Monthly', days: 30, color: 'var(--blue)' },
@@ -137,6 +139,29 @@ async function fetchLogs() {
   }
 }
 
+async function fetchContentDrafts() {
+  loading.value = true
+  try {
+    const { data } = await api.get('/auth/admin/content-drafts')
+    contentDrafts.value = data.drafts || []
+    if (selectedDraft.value) {
+      selectedDraft.value = contentDrafts.value.find(d => d.fileName === selectedDraft.value.fileName) || null
+    }
+  } catch (e) {
+    console.error('Failed to fetch content drafts:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function updateDraftStatus(draft, status) {
+  await api.patch(`/auth/admin/content-drafts/${encodeURIComponent(draft.fileName)}`, {
+    status,
+    notes: draft.notes || ''
+  })
+  await fetchContentDrafts()
+}
+
 async function copyAllNew() {
   await writeClipboard(newCodes.value.join('\n'))
   copiedCode.value = '__all__'
@@ -153,6 +178,7 @@ onMounted(() => {
   fetchUsers()
   fetchStats()
   fetchLogs()
+  fetchContentDrafts()
 })
 </script>
 
@@ -177,6 +203,9 @@ onMounted(() => {
         </button>
         <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'; fetchLogs()">
           {{ themeStore.lang === 'zh' ? 'API日志' : 'API Logs' }}
+        </button>
+        <button class="tab" :class="{ active: tab === 'content' }" @click="tab = 'content'; fetchContentDrafts()">
+          {{ themeStore.lang === 'zh' ? '内容草稿' : 'Content Drafts' }}
         </button>
       </div>
 
@@ -486,6 +515,100 @@ onMounted(() => {
           </div>
           <p v-else class="empty-hint">{{ themeStore.lang === 'zh' ? '暂无日志' : 'No logs yet' }}</p>
         </div>
+      </div>
+
+      <!-- Content Drafts Tab -->
+      <div v-if="tab === 'content'" class="tab-content">
+        <div class="draft-summary">
+          <div class="draft-stat">
+            <strong>{{ contentDrafts.length }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '草稿文件' : 'Draft Files' }}</span>
+          </div>
+          <div class="draft-stat">
+            <strong>{{ contentDrafts.filter(d => d.status === 'approved').length }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '已通过' : 'Approved' }}</span>
+          </div>
+          <div class="draft-stat">
+            <strong>{{ contentDrafts.filter(d => d.status === 'rejected').length }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '已驳回' : 'Rejected' }}</span>
+          </div>
+        </div>
+
+        <div v-if="contentDrafts.length" class="draft-layout">
+          <div class="draft-list">
+            <button
+              v-for="draft in contentDrafts"
+              :key="draft.fileName"
+              class="draft-card"
+              :class="{ active: selectedDraft?.fileName === draft.fileName }"
+              @click="selectedDraft = draft"
+            >
+              <div class="draft-card-top">
+                <strong>{{ draft.fileName }}</strong>
+                <span class="draft-status" :class="draft.status">{{ draft.status }}</span>
+              </div>
+              <p>{{ draft.readingCount }} reading · {{ draft.listeningCount }} listening</p>
+              <small>{{ draft.generatedAt ? new Date(draft.generatedAt).toLocaleString() : '—' }}</small>
+            </button>
+          </div>
+
+          <div class="draft-detail" v-if="selectedDraft">
+            <div class="draft-detail-head">
+              <div>
+                <h3>{{ selectedDraft.fileName }}</h3>
+                <p>{{ selectedDraft.sourceSeedFile || 'No seed file' }}</p>
+              </div>
+              <span class="draft-status" :class="selectedDraft.status">{{ selectedDraft.status }}</span>
+            </div>
+
+            <div class="draft-columns">
+              <div>
+                <h4>{{ themeStore.lang === 'zh' ? '阅读草稿' : 'Reading Drafts' }}</h4>
+                <ul>
+                  <li v-for="title in selectedDraft.readingTitles" :key="title">{{ title }}</li>
+                  <li v-if="!selectedDraft.readingTitles.length" class="muted">—</li>
+                </ul>
+              </div>
+              <div>
+                <h4>{{ themeStore.lang === 'zh' ? '听力草稿' : 'Listening Drafts' }}</h4>
+                <ul>
+                  <li v-for="title in selectedDraft.listeningTitles" :key="title">{{ title }}</li>
+                  <li v-if="!selectedDraft.listeningTitles.length" class="muted">—</li>
+                </ul>
+              </div>
+            </div>
+
+            <label class="notes-label">
+              {{ themeStore.lang === 'zh' ? '审核备注' : 'Review Notes' }}
+              <textarea v-model="selectedDraft.notes" rows="3" :placeholder="themeStore.lang === 'zh' ? '记录质量问题、修改意见或通过理由' : 'Quality notes, edit requests, or approval reason'"></textarea>
+            </label>
+
+            <div class="draft-actions">
+              <button class="approve-btn" @click="updateDraftStatus(selectedDraft, 'approved')">
+                {{ themeStore.lang === 'zh' ? '通过' : 'Approve' }}
+              </button>
+              <button class="reject-btn" @click="updateDraftStatus(selectedDraft, 'rejected')">
+                {{ themeStore.lang === 'zh' ? '驳回' : 'Reject' }}
+              </button>
+              <button class="reset-btn" @click="updateDraftStatus(selectedDraft, 'draft')">
+                {{ themeStore.lang === 'zh' ? '退回草稿' : 'Back to Draft' }}
+              </button>
+            </div>
+
+            <details class="payload-preview">
+              <summary>{{ themeStore.lang === 'zh' ? '查看原始 JSON' : 'View Raw JSON' }}</summary>
+              <pre>{{ JSON.stringify(selectedDraft.payload, null, 2) }}</pre>
+            </details>
+          </div>
+
+          <div v-else class="draft-empty-detail">
+            {{ themeStore.lang === 'zh' ? '选择一个草稿查看详情' : 'Select a draft to review' }}
+          </div>
+        </div>
+
+        <p v-else class="empty-hint">
+          {{ themeStore.lang === 'zh' ? '暂无生成内容草稿。先运行 npm run content:generate。' : 'No generated content drafts yet. Run npm run content:generate first.' }}
+        </p>
       </div>
     </div>
   </div>
@@ -1035,6 +1158,214 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* Content drafts */
+.draft-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.draft-stat {
+  padding: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.draft-stat strong {
+  display: block;
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+}
+
+.draft-stat span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.draft-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.draft-card,
+.draft-detail,
+.draft-empty-detail {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.draft-card {
+  text-align: left;
+  padding: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.draft-card:hover,
+.draft-card.active {
+  border-color: var(--text-primary);
+  transform: translateX(2px);
+}
+
+.draft-card-top,
+.draft-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.draft-card strong,
+.draft-detail h3 {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.draft-card p,
+.draft-card small,
+.draft-detail-head p {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  margin-top: 6px;
+}
+
+.draft-status {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.draft-status.approved {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.draft-status.rejected,
+.draft-status.invalid {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.draft-detail,
+.draft-empty-detail {
+  padding: var(--space-xl);
+}
+
+.draft-empty-detail {
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.draft-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin: var(--space-xl) 0;
+}
+
+.draft-columns h4 {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.draft-columns ul {
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+}
+
+.muted {
+  color: var(--text-tertiary);
+}
+
+.notes-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.notes-label textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: var(--space-md);
+}
+
+.approve-btn,
+.reject-btn,
+.reset-btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.approve-btn {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.reject-btn {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.reset-btn {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.payload-preview {
+  margin-top: var(--space-xl);
+}
+
+.payload-preview summary {
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.payload-preview pre {
+  margin-top: 10px;
+  max-height: 360px;
+  overflow: auto;
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 @media (max-width: 768px) {
   .preset-buttons {
     flex-direction: column;
@@ -1046,6 +1377,12 @@ onMounted(() => {
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .draft-summary,
+  .draft-layout,
+  .draft-columns {
+    grid-template-columns: 1fr;
   }
 }
 </style>
