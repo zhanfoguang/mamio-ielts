@@ -17,6 +17,8 @@ const subtitleMode = ref('bilingual')
 const showComparison = ref(false)
 const autoPlay = ref(false)
 const selectedSectionType = ref('all')
+const questionAnswers = ref({})
+const showQuestionResults = ref(false)
 
 const section = computed(() => listeningSections[activeSection.value])
 const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
@@ -36,6 +38,29 @@ const filteredListeningSections = computed(() => {
 
 const currentWordIndex = ref(-1)
 let currentUtterance = null
+const commonListeningWords = new Set(['about', 'after', 'again', 'available', 'because', 'before', 'between', 'could', 'every', 'first', 'from', 'have', 'their', 'there', 'these', 'they', 'this', 'through', 'today', 'which', 'while', 'with', 'would', 'your'])
+
+const listeningQuestions = computed(() => {
+  return section.value.sentences
+    .map((sentence, index) => {
+      const answer = pickQuestionAnswer(sentence.en)
+      if (!answer) return null
+      return {
+        id: `${section.value.id}-${index}`,
+        sentenceIndex: index,
+        prompt: sentence.en.replace(new RegExp(`\\b${escapeRegExp(answer)}\\b`, 'i'), '_____'),
+        answer
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 6)
+})
+
+const questionScore = computed(() => {
+  const total = listeningQuestions.value.length
+  const correct = listeningQuestions.value.filter(q => normalizeAnswer(questionAnswers.value[q.id]) === normalizeAnswer(q.answer)).length
+  return { correct, total, percentage: total ? Math.round((correct / total) * 100) : 0 }
+})
 
 // Check if TTS is available
 const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -110,6 +135,8 @@ function selectSection(index) {
   activeSection.value = index
   currentSentenceIndex.value = 0
   showComparison.value = false
+  questionAnswers.value = {}
+  showQuestionResults.value = false
   reset()
   stopPlayback()
 }
@@ -118,6 +145,35 @@ function pickRandomSection() {
   const pool = filteredListeningSections.value.length ? filteredListeningSections.value : listeningSections
   const picked = pool[Math.floor(Math.random() * pool.length)]
   selectSection(listeningSections.findIndex(item => item.id === picked.id))
+}
+
+function escapeRegExp(text) {
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeAnswer(value) {
+  return String(value || '').toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/^(a|an|the)\s+/i, '')
+}
+
+function pickQuestionAnswer(text) {
+  const words = text.match(/\b[A-Za-z][A-Za-z-]{4,}\b/g) || []
+  const candidates = words.filter(word => !commonListeningWords.has(word.toLowerCase()))
+  return candidates.sort((a, b) => b.length - a.length)[0] || words[0] || ''
+}
+
+function submitListeningQuestions() {
+  showQuestionResults.value = true
+  const wrongItems = listeningQuestions.value
+    .filter(q => normalizeAnswer(questionAnswers.value[q.id]) && normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
+    .map(q => ({
+      type: 'listening',
+      text: q.answer,
+      reason: `句子填空错误：${q.prompt}`
+    }))
+  if (wrongItems.length) {
+    addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'listening', source: 'listening-questions' })
+  }
+  incrementDailyStats(toLocalDateKey(), 'listening')
 }
 
 function startDictation() {
@@ -263,6 +319,41 @@ onUnmounted(() => stopPlayback())
             <button v-for="mode in ['bilingual', 'en', 'cn', 'hidden']" :key="mode" class="mode-btn" :class="{ active: subtitleMode === mode }" @click="subtitleMode = mode">
               {{ { bilingual: themeStore.lang === 'zh' ? '双语' : 'Bi', en: 'EN', cn: 'CN', hidden: themeStore.lang === 'zh' ? '隐藏' : 'Hide' }[mode] }}
             </button>
+          </div>
+
+          <!-- IELTS-style questions -->
+          <div class="question-area">
+            <div class="question-head">
+              <div>
+                <h3>{{ themeStore.lang === 'zh' ? 'Section 填空题' : 'Section Completion' }}</h3>
+                <p>{{ themeStore.lang === 'zh' ? '先听完整段，再补全关键词' : 'Listen to the section, then complete the key words' }}</p>
+              </div>
+              <button class="listen-all-btn" @click="autoPlay = true; currentSentenceIndex = 0; playCurrentSentence()">
+                {{ themeStore.lang === 'zh' ? '播放整段' : 'Play Section' }}
+              </button>
+            </div>
+
+            <div class="question-list">
+              <div v-for="(q, i) in listeningQuestions" :key="q.id" class="question-item" :class="{ correct: showQuestionResults && normalizeAnswer(questionAnswers[q.id]) === normalizeAnswer(q.answer), wrong: showQuestionResults && normalizeAnswer(questionAnswers[q.id]) && normalizeAnswer(questionAnswers[q.id]) !== normalizeAnswer(q.answer) }">
+                <label>{{ i + 1 }}. {{ q.prompt }}</label>
+                <input v-model="questionAnswers[q.id]" :disabled="showQuestionResults" :placeholder="themeStore.lang === 'zh' ? '填写答案' : 'Answer'" />
+                <span v-if="showQuestionResults" class="question-answer">
+                  {{ themeStore.lang === 'zh' ? '答案' : 'Answer' }}: {{ q.answer }}
+                </span>
+              </div>
+            </div>
+
+            <div class="question-actions">
+              <button class="submit-questions-btn" @click="submitListeningQuestions" :disabled="showQuestionResults">
+                {{ themeStore.lang === 'zh' ? '提交填空题' : 'Submit Answers' }}
+              </button>
+              <button v-if="showQuestionResults" class="reset-questions-btn" @click="questionAnswers = {}; showQuestionResults = false">
+                {{ themeStore.lang === 'zh' ? '重做' : 'Retry' }}
+              </button>
+              <span v-if="showQuestionResults" class="question-score">
+                {{ questionScore.correct }}/{{ questionScore.total }} · {{ questionScore.percentage }}%
+              </span>
+            </div>
           </div>
 
           <!-- Dictation practice -->
@@ -552,6 +643,131 @@ onUnmounted(() => stopPlayback())
 .mode-btn.active { background: var(--black); color: var(--white); }
 [data-theme="dark"] .mode-btn.active { background: var(--white); color: var(--black); }
 
+.question-area {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+}
+
+.question-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.question-head h3 {
+  font-weight: 800;
+}
+
+.question-head p {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  margin-top: 4px;
+}
+
+.listen-all-btn,
+.submit-questions-btn,
+.reset-questions-btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.listen-all-btn {
+  background: var(--blue-soft);
+  color: var(--blue);
+  border: 1px solid var(--blue);
+}
+
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.question-item {
+  display: grid;
+  grid-template-columns: 1fr minmax(120px, 180px);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+}
+
+.question-item.correct {
+  background: var(--green-soft);
+}
+
+.question-item.wrong {
+  background: var(--red-soft);
+}
+
+.question-item label {
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+}
+
+.question-item input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.question-item input:focus {
+  border-color: var(--blue);
+}
+
+.question-answer {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.question-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.submit-questions-btn {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .submit-questions-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.submit-questions-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.reset-questions-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.question-score {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
 .dictation-area {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -641,6 +857,9 @@ onUnmounted(() => stopPlayback())
   }
 
   .listening-layout { grid-template-columns: 1fr; }
+  .question-head { align-items: flex-start; flex-direction: column; }
+  .listen-all-btn { width: 100%; }
+  .question-item { grid-template-columns: 1fr; }
   .sentence-list { max-height: 240px; }
 }
 </style>
