@@ -147,3 +147,4 @@ This is the active execution list for turning Mamio from a module collection int
 
 - [x] Add activation value explanation on LoginPage.
 - [x] Add Dashboard start checklist for target setup, first practice, and review-loop creation.
+- [x] Improve Review empty state with four-module pathways for generating review items.

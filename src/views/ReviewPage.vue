@@ -10,6 +10,45 @@ const router = useRouter()
 const filter = ref('due') // 'due' | 'all' | 'reviewed'
 const allItems = ref([])
 
+const seedActions = [
+  {
+    module: 'speaking',
+    path: '/speaking',
+    icon: '🎤',
+    zh: '口语 AI 反馈',
+    en: 'Speaking AI feedback',
+    detailZh: '弱表达和发音问题会进入复习',
+    detailEn: 'Weak expressions and pronunciation issues become review items'
+  },
+  {
+    module: 'writing',
+    path: '/writing',
+    icon: '✍️',
+    zh: '写作批改',
+    en: 'Writing feedback',
+    detailZh: '语法、结构和表达问题会被收集',
+    detailEn: 'Grammar, structure, and expression issues are collected'
+  },
+  {
+    module: 'reading',
+    path: '/reading',
+    icon: '📖',
+    zh: '阅读错题',
+    en: 'Reading mistakes',
+    detailZh: '判断、匹配、选择和简答错题都会进入复习',
+    detailEn: 'TFNG, matching, choice, and short-answer mistakes are saved'
+  },
+  {
+    module: 'listening',
+    path: '/listening',
+    icon: '🎧',
+    zh: '听力漏词',
+    en: 'Listening gaps',
+    detailZh: '填空错词和跟读漏词会沉淀下来',
+    detailEn: 'Completion errors and missed dictation words are captured'
+  }
+]
+
 onMounted(async () => {
   allItems.value = await getReviewItems()
 })
@@ -114,6 +153,15 @@ function formatDate(ts) {
           </button>
           <button class="secondary-btn" @click="router.push('/writing')">
             {{ themeStore.lang === 'zh' ? '写一篇作文' : 'Write an Essay' }}
+          </button>
+        </div>
+        <div v-if="stats.total === 0" class="seed-grid">
+          <button v-for="item in seedActions" :key="item.module" class="seed-card" @click="router.push(item.path)">
+            <span class="seed-icon">{{ item.icon }}</span>
+            <span>
+              <strong>{{ themeStore.lang === 'zh' ? item.zh : item.en }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? item.detailZh : item.detailEn }}</small>
+            </span>
           </button>
         </div>
       </div>
@@ -237,6 +285,52 @@ function formatDate(ts) {
   background: var(--bg-tertiary);
 }
 
+.seed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 720px;
+  margin: var(--space-xl) auto 0;
+}
+
+.seed-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.seed-card:hover {
+  border-color: var(--text-tertiary);
+  transform: translateY(-1px);
+}
+
+.seed-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.seed-card span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.seed-card strong {
+  font-size: var(--font-size-sm);
+}
+
+.seed-card small {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
 .module-group {
   margin-bottom: var(--space-xl);
 }
@@ -350,5 +444,6 @@ function formatDate(ts) {
 @media (max-width: 768px) {
   .stats-bar { gap: 8px; }
   .stat { padding: 10px 16px; min-width: 60px; }
+  .seed-grid { grid-template-columns: 1fr; }
 }
 </style>
