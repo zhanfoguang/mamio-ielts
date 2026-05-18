@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { vocabTopics } from '../data/ielts/vocabulary'
 import { generateVocab } from '../services/ai'
 import { getVocabProgress, updateVocabProgress } from '../services/progress'
+import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date'
 
 const themeStore = useThemeStore()
 
@@ -62,7 +63,7 @@ const savedAiWords = ref(JSON.parse(localStorage.getItem('mamio-vocab-ai') || '[
 
 // Daily words state
 const dailyGoal = 10
-const today = new Date().toISOString().split('T')[0]
+const today = toLocalDateKey()
 const dailyProgress = ref(JSON.parse(localStorage.getItem('mamio-vocab-daily') || '{}'))
 const vocabStreak = ref(JSON.parse(localStorage.getItem('mamio-vocab-streak') || '{"count":0,"lastDate":""}'))
 
@@ -105,7 +106,7 @@ function updateDailyProgress() {
 
 function updateVocabStreak() {
   if (vocabStreak.value.lastDate === today) return
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const yesterday = localDateKeyDaysAgo(1)
   if (vocabStreak.value.lastDate === yesterday) {
     vocabStreak.value.count++
   } else {

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/auth.js'
 import { checkUserQuota, userQueries, logQueries } from '../db.js'
+import { toLocalDateKey } from '../utils/date.js'
 
 const router = Router()
 
@@ -141,7 +142,7 @@ function checkQuota(req, res, next) {
 }
 
 function incrementCalls(userId) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDateKey()
   userQueries.incrementCalls.run(today, userId)
 }
 

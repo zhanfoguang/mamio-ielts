@@ -6,6 +6,7 @@ import { useCheckinStore } from '../stores/checkin'
 import { useRouter } from 'vue-router'
 import { getDashboardData } from '../services/progress'
 import { getReviewItemStats, getReviewItemStatsSync, migrateLocalToServer } from '../services/reviewItems'
+import { toLocalDateKey } from '../utils/date'
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -21,7 +22,7 @@ const listeningHistory = ref([])
 const readingHistory = ref([])
 
 // Practice stats for today
-const today = new Date().toISOString().split('T')[0]
+const today = toLocalDateKey()
 const dailyGoal = 10
 
 const todayStats = computed(() => {
@@ -197,7 +198,7 @@ const heatmapDays = computed(() => {
   for (let i = 27; i >= 0; i--) {
     const d = new Date(todayDate)
     d.setDate(todayDate.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = toLocalDateKey(d)
     const speakingCount = speakingHistory.value.filter(h => h.date?.startsWith(dateStr)).length
     const writingCount = writingHistory.value.filter(h => h.date?.startsWith(dateStr)).length
     const listeningCount = listeningHistory.value.filter(h => h.date?.startsWith(dateStr)).length

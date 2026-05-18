@@ -1,10 +1,12 @@
 <script setup>
 import { useCheckinStore } from '../../stores/checkin'
 import { useThemeStore } from '../../stores/theme'
+import { toLocalDateKey } from '../../utils/date'
 
 const checkinStore = useCheckinStore()
 const themeStore = useThemeStore()
 const weekDays = checkinStore.getWeekDays()
+const today = toLocalDateKey()
 </script>
 
 <template>
@@ -30,11 +32,11 @@ const weekDays = checkinStore.getWeekDays()
 
     <button
       class="checkin-btn"
-      :class="{ checked: checkinStore.isChecked(new Date().toISOString().split('T')[0]) }"
+      :class="{ checked: checkinStore.isChecked(today) }"
       @click="checkinStore.checkin()"
-      :disabled="checkinStore.isChecked(new Date().toISOString().split('T')[0])"
+      :disabled="checkinStore.isChecked(today)"
     >
-      {{ checkinStore.isChecked(new Date().toISOString().split('T')[0])
+      {{ checkinStore.isChecked(today)
         ? (themeStore.lang === 'zh' ? '已打卡 ✓' : 'Checked In ✓')
         : (themeStore.lang === 'zh' ? '打卡' : 'Check In')
       }}

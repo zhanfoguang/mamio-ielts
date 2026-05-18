@@ -4,6 +4,7 @@ import { useThemeStore } from '../stores/theme'
 import { readingPassages } from '../data/ielts/reading'
 import { incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
+import { toLocalDateKey } from '../utils/date'
 
 const themeStore = useThemeStore()
 
@@ -133,7 +134,7 @@ function submitAnswers() {
   if (history.length > 50) history.length = 50
   localStorage.setItem('mamio-reading-history', JSON.stringify(history))
 
-  incrementDailyStats(new Date().toISOString().split('T')[0], 'reading')
+  incrementDailyStats(toLocalDateKey(), 'reading')
 
   // Extract wrong answers as review items
   const wrongItems = []

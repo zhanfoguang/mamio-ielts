@@ -5,6 +5,7 @@ import { listeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
+import { toLocalDateKey } from '../utils/date'
 
 const themeStore = useThemeStore()
 const { isListening, transcript, interimTranscript, isSupported, start, stop, reset } = useSpeechRecognition()
@@ -114,7 +115,7 @@ function stopDictation() {
     localStorage.setItem('mamio-listening-history', JSON.stringify(history))
   }
 
-  incrementDailyStats(new Date().toISOString().split('T')[0], 'listening')
+  incrementDailyStats(toLocalDateKey(), 'listening')
 
   // Extract wrong words as review items
   if (transcript.value.trim()) {

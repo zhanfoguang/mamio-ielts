@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middleware/auth.js'
 import { progressQueries, reviewItemQueries } from '../db.js'
+import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date.js'
 
 const router = Router()
 router.use(authMiddleware)
@@ -219,8 +220,8 @@ router.get('/dashboard', (req, res) => {
     const speaking = progressQueries.getSpeaking.all(userId).map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at }))
     const writing = progressQueries.getWriting.all(userId).map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at }))
     const vocabRows = progressQueries.getVocab.all(userId)
-    const today = new Date().toISOString().split('T')[0]
-    const thirtyDaysAgo = new Date(Date.now() - 28 * 86400000).toISOString().split('T')[0]
+    const today = toLocalDateKey()
+    const thirtyDaysAgo = localDateKeyDaysAgo(28)
     progressQueries.ensureDailyStats.run(userId, today)
     const dailyStats = progressQueries.getDailyStatsRange.all(userId, thirtyDaysAgo)
 

@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit'
 import db, { userQueries, codeQueries, resetCodeQueries, logQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
+import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET
@@ -313,10 +314,9 @@ router.get('/admin/codes', authMiddleware, adminMiddleware, (req, res) => {
 // Admin: usage stats
 router.get('/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
   try {
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    const sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().split('T')[0]
-    const thirtyDaysAgo = new Date(now - 30 * 86400000).toISOString().split('T')[0]
+    const today = toLocalDateKey()
+    const sevenDaysAgo = localDateKeyDaysAgo(7)
+    const thirtyDaysAgo = localDateKeyDaysAgo(30)
 
     // User counts by role
     const roleCounts = db.prepare(`

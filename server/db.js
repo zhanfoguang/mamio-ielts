@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import bcrypt from 'bcryptjs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { toLocalDateKey } from './utils/date.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const dbPath = path.join(__dirname, 'mamio.db')
@@ -235,7 +236,7 @@ export function checkUserQuota(userId) {
   const user = userQueries.findById.get(userId)
   if (!user) return { allowed: false, reason: '用户不存在' }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDateKey()
 
   // Reset daily counter if new day
   if (user.ai_calls_date !== today) {

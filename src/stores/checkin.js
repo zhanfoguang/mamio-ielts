@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useThemeStore } from './theme'
+import { parseLocalDateKey, toLocalDateKey } from '../utils/date'
 
 export const useCheckinStore = defineStore('checkin', () => {
   const checkedDays = ref(JSON.parse(localStorage.getItem('mamio-checkin') || '[]'))
@@ -8,12 +9,11 @@ export const useCheckinStore = defineStore('checkin', () => {
   const currentStreak = computed(() => {
     if (checkedDays.value.length === 0) return 0
     const sorted = [...checkedDays.value].sort().reverse()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = parseLocalDateKey(toLocalDateKey())
     let streak = 0
     for (let i = 0; i < sorted.length; i++) {
-      const checkDate = new Date(sorted[i])
-      checkDate.setHours(0, 0, 0, 0)
+      const checkDate = parseLocalDateKey(sorted[i])
+      if (!checkDate) break
       const diff = Math.floor((today - checkDate) / (1000 * 60 * 60 * 24))
       if (diff === i) {
         streak++
@@ -25,7 +25,7 @@ export const useCheckinStore = defineStore('checkin', () => {
   })
 
   function checkin() {
-    const today = new Date().toISOString().split('T')[0]
+    const today = toLocalDateKey()
     if (!checkedDays.value.includes(today)) {
       checkedDays.value.push(today)
       localStorage.setItem('mamio-checkin', JSON.stringify(checkedDays.value))
@@ -39,6 +39,7 @@ export const useCheckinStore = defineStore('checkin', () => {
   function getWeekDays() {
     const themeStore = useThemeStore()
     const today = new Date()
+    const todayKey = toLocalDateKey(today)
     const dayOfWeek = today.getDay()
     const monday = new Date(today)
     monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
@@ -49,11 +50,11 @@ export const useCheckinStore = defineStore('checkin', () => {
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(monday)
       date.setDate(monday.getDate() + i)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = toLocalDateKey(date)
       return {
         date: dateStr,
         day: themeStore.lang === 'zh' ? daysZh[i] : daysEn[i],
-        isToday: dateStr === today.toISOString().split('T')[0],
+        isToday: dateStr === todayKey,
         isChecked: checkedDays.value.includes(dateStr)
       }
     })
