@@ -148,3 +148,12 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add activation value explanation on LoginPage.
 - [x] Add Dashboard start checklist for target setup, first practice, and review-loop creation.
 - [x] Improve Review empty state with four-module pathways for generating review items.
+
+## Phase 20: Daily Retention & Guided Study
+
+- [x] Add a Dashboard daily action queue that sequences primary task, review task, and fallback task.
+- [x] Add Review priority labels based on source/module so users know what to clear first.
+- [x] Add one-click review completion for the top three priority weak spots.
+- [x] Add lightweight stale-user prompt when there has been no practice today.
+- [ ] Tighten mobile first-screen density on Dashboard after the new checklist and action queue.
+- [ ] Update handoff notes with the next content/database migration path.

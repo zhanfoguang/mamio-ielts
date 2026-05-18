@@ -173,6 +173,27 @@ const avgListeningScore = computed(() => {
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
 })
 
+function getLatestPracticeDate() {
+  const dates = [
+    ...speakingHistory.value,
+    ...writingHistory.value,
+    ...listeningHistory.value,
+    ...readingHistory.value
+  ].map(item => item.date).filter(Boolean)
+  if (!dates.length) return null
+  return dates.sort((a, b) => new Date(b) - new Date(a))[0]
+}
+
+const daysSincePractice = computed(() => {
+  const latest = getLatestPracticeDate()
+  if (!latest) return null
+  const last = new Date(latest)
+  const now = new Date()
+  last.setHours(0, 0, 0, 0)
+  now.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.floor((now - last) / (1000 * 60 * 60 * 24)))
+})
+
 function getScoreField(details, keys) {
   for (const key of keys) {
     const value = details?.[key]
@@ -556,7 +577,34 @@ const studyPlan = computed(() => {
     })
   ]
 
-  return { primary, review, insight, tasks }
+  const actionQueue = [
+    {
+      ...primary,
+      labelZh: '先做',
+      labelEn: 'Start',
+      minutes: primary.path === '/writing' ? 35 : primary.path === '/reading' ? 20 : primary.path === '/listening' ? 15 : 10
+    },
+    {
+      ...review,
+      labelZh: '再清',
+      labelEn: 'Then',
+      minutes: review.path === '/vocabulary' ? 8 : 10
+    },
+    {
+      icon: '✅',
+      zh: '打卡并回看今日进度',
+      en: 'Check in and review today',
+      path: '/dashboard',
+      reasonZh: '形成完成感，明天更容易接着练',
+      reasonEn: 'Close the loop so tomorrow starts easier',
+      labelZh: '收尾',
+      labelEn: 'Finish',
+      minutes: 2,
+      tone: 'neutral'
+    }
+  ]
+
+  return { primary, review, insight, tasks, actionQueue }
 })
 
 // Module stats
@@ -814,6 +862,16 @@ onMounted(async () => {
         </button>
       </div>
 
+      <div v-if="daysSincePractice !== null && daysSincePractice >= 2 && todayStats.total === 0" class="return-banner">
+        <div>
+          <strong>{{ themeStore.lang === 'zh' ? `${daysSincePractice} 天没练了，今天先做一小步` : `${daysSincePractice} days away. Restart with one small step.` }}</strong>
+          <p>{{ themeStore.lang === 'zh' ? '不用补完全部计划，先完成主任务就算恢复节奏。' : 'No need to catch up everything. Complete the primary task and rebuild momentum.' }}</p>
+        </div>
+        <button @click="router.push(studyPlan.primary.path)">
+          {{ themeStore.lang === 'zh' ? '恢复练习' : 'Resume' }}
+        </button>
+      </div>
+
       <!-- Start checklist -->
       <div v-if="shouldShowStartChecklist" class="start-checklist">
         <div class="start-checklist-head">
@@ -914,6 +972,26 @@ onMounted(async () => {
           <span v-for="item in dueReviewItemsPreview" :key="item.id" class="review-pill">
             {{ item.text }}
           </span>
+        </div>
+
+        <div class="action-queue">
+          <div class="action-queue-head">
+            <strong>{{ themeStore.lang === 'zh' ? '今日行动队列' : 'Daily Action Queue' }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '按顺序做，别纠结' : 'Follow the order, no overthinking' }}</span>
+          </div>
+          <button
+            v-for="(task, index) in studyPlan.actionQueue"
+            :key="task.labelEn + task.en"
+            class="action-step"
+            @click="task.path === '/dashboard' ? checkinStore.checkin() : router.push(task.path)"
+          >
+            <span class="action-order">{{ index + 1 }}</span>
+            <span class="action-copy">
+              <strong>{{ themeStore.lang === 'zh' ? task.labelZh : task.labelEn }} · {{ themeStore.lang === 'zh' ? task.zh : task.en }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? task.reasonZh : task.reasonEn }}</small>
+            </span>
+            <span class="action-min">{{ task.minutes }}m</span>
+          </button>
         </div>
       </div>
 
@@ -1196,6 +1274,43 @@ onMounted(async () => {
 }
 
 [data-theme="dark"] .trial-btn { background: var(--white); color: var(--black); }
+
+.return-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-md);
+  background: var(--yellow-soft);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-md);
+}
+
+.return-banner strong {
+  font-size: var(--font-size-sm);
+}
+
+.return-banner p {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.return-banner button {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+[data-theme="dark"] .return-banner button {
+  background: var(--white);
+  color: var(--black);
+}
 
 /* Start checklist */
 .start-checklist {
@@ -1568,6 +1683,81 @@ button.support-card:hover {
   font-weight: 700;
 }
 
+.action-queue {
+  padding-top: var(--space-md);
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.action-queue-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: 10px;
+}
+
+.action-queue-head strong {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.action-queue-head span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.action-step {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  text-align: left;
+}
+
+.action-step + .action-step {
+  border-top: 1px solid var(--border-color);
+}
+
+.action-order {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 900;
+}
+
+.action-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-copy strong {
+  font-size: var(--font-size-sm);
+}
+
+.action-copy small {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.action-min {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
 /* Dashboard grid */
 .dashboard-grid {
   display: grid;
@@ -1818,8 +2008,11 @@ button.support-card:hover {
   .quick-links { grid-template-columns: 1fr; }
   .start-steps { grid-template-columns: 1fr; }
   .plan-support { grid-template-columns: 1fr; }
+  .return-banner { align-items: flex-start; flex-direction: column; }
+  .return-banner button { width: 100%; }
   .study-plan-header,
   .start-checklist-head { flex-direction: column; }
+  .action-queue-head { align-items: flex-start; flex-direction: column; gap: 2px; }
 }
 
 /* Onboarding */

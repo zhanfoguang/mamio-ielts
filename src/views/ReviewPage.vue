@@ -67,9 +67,13 @@ const filteredItems = computed(() => {
   return items
 })
 
+const prioritizedItems = computed(() => {
+  return [...filteredItems.value].sort((a, b) => getPriorityScore(b) - getPriorityScore(a))
+})
+
 const groupedItems = computed(() => {
   const groups = {}
-  for (const item of filteredItems.value) {
+  for (const item of prioritizedItems.value) {
     const mod = item.module || 'general'
     if (!groups[mod]) groups[mod] = []
     groups[mod].push(item)
@@ -90,6 +94,27 @@ function getModuleLabel(mod) {
   return moduleLabels[mod] || moduleLabels.general
 }
 
+function getPriorityScore(item) {
+  let score = 0
+  if (!item.reviewedAt) score += 30
+  if (['writing', 'speaking'].includes(item.module)) score += 20
+  if (['reading', 'listening'].includes(item.module)) score += 14
+  if (['pronunciation', 'grammar', 'reading', 'listening'].includes(item.type)) score += 8
+  if (String(item.source || '').includes('mock')) score += 10
+  if (String(item.reason || '').includes('未作答')) score += 6
+  return score
+}
+
+function getPriorityLabel(item) {
+  const score = getPriorityScore(item)
+  if (item.reviewedAt) return { zh: '已完成', en: 'Done', level: 'done' }
+  if (score >= 58) return { zh: '优先', en: 'Priority', level: 'high' }
+  if (score >= 44) return { zh: '今天清', en: 'Today', level: 'medium' }
+  return { zh: '普通', en: 'Normal', level: 'normal' }
+}
+
+const topPriorityItems = computed(() => prioritizedItems.value.filter(item => !item.reviewedAt).slice(0, 3))
+
 async function markReviewed(item) {
   await markReviewItemReviewed(item.id)
   item.reviewedAt = new Date().toISOString()
@@ -98,6 +123,12 @@ async function markReviewed(item) {
 async function deleteItem(item) {
   await deleteReviewItem(item.id)
   allItems.value = allItems.value.filter(i => i.id !== item.id)
+}
+
+async function markTopThreeReviewed() {
+  for (const item of topPriorityItems.value) {
+    await markReviewed(item)
+  }
 }
 
 function goToModule(mod) {
@@ -134,6 +165,17 @@ function formatDate(ts) {
           <span class="stat-num">{{ stats.items.filter(i => i.reviewedAt).length }}</span>
           <span class="stat-label">{{ themeStore.lang === 'zh' ? '已复习' : 'Reviewed' }}</span>
         </div>
+      </div>
+
+      <div v-if="topPriorityItems.length" class="priority-panel">
+        <div>
+          <span class="priority-kicker">{{ themeStore.lang === 'zh' ? '建议先清' : 'Clear First' }}</span>
+          <h2>{{ themeStore.lang === 'zh' ? `优先处理 ${topPriorityItems.length} 个高价值弱点` : `${topPriorityItems.length} high-value weak spots` }}</h2>
+          <p>{{ themeStore.lang === 'zh' ? '这些通常来自输出反馈、模考或最近未掌握的题。' : 'Usually from output feedback, mock exams, or recent missed items.' }}</p>
+        </div>
+        <button @click="markTopThreeReviewed">
+          {{ themeStore.lang === 'zh' ? '本轮已复习' : 'Mark Reviewed' }}
+        </button>
       </div>
 
       <!-- Empty state -->
@@ -178,7 +220,12 @@ function formatDate(ts) {
         <div class="item-list">
           <div v-for="item in items" :key="item.id" class="review-item" :class="{ reviewed: item.reviewedAt }">
             <div class="item-content">
-              <span class="item-type" v-if="item.type">{{ item.type }}</span>
+              <div class="item-tags">
+                <span class="item-priority" :class="getPriorityLabel(item).level">
+                  {{ themeStore.lang === 'zh' ? getPriorityLabel(item).zh : getPriorityLabel(item).en }}
+                </span>
+                <span class="item-type" v-if="item.type">{{ item.type }}</span>
+              </div>
               <p class="item-text">{{ item.text }}</p>
               <p class="item-reason" v-if="item.reason">{{ item.reason }}</p>
               <span class="item-date">{{ formatDate(item.createdAt) }}</span>
@@ -242,6 +289,51 @@ function formatDate(ts) {
 .stat-num { font-size: var(--font-size-xl); font-weight: 800; }
 .stat-label { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 2px; }
 .stat.active .stat-label { color: inherit; opacity: 0.7; }
+
+.priority-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  background: var(--yellow-soft);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-md);
+}
+
+.priority-kicker {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.priority-panel h2 {
+  margin-top: 2px;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.priority-panel p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.priority-panel button {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+[data-theme="dark"] .priority-panel button {
+  background: var(--white);
+  color: var(--black);
+}
 
 .empty {
   text-align: center;
@@ -381,6 +473,43 @@ function formatDate(ts) {
 
 .item-content { flex: 1; min-width: 0; }
 
+.item-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.item-priority {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.item-priority.high {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.item-priority.medium {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.item-priority.normal {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.item-priority.done {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
 .item-type {
   display: inline-block;
   font-size: var(--font-size-xs);
@@ -389,7 +518,6 @@ function formatDate(ts) {
   background: var(--blue-soft);
   padding: 1px 6px;
   border-radius: 3px;
-  margin-bottom: 4px;
   text-transform: uppercase;
 }
 
@@ -445,5 +573,7 @@ function formatDate(ts) {
   .stats-bar { gap: 8px; }
   .stat { padding: 10px 16px; min-width: 60px; }
   .seed-grid { grid-template-columns: 1fr; }
+  .priority-panel { align-items: flex-start; flex-direction: column; }
+  .priority-panel button { width: 100%; }
 }
 </style>

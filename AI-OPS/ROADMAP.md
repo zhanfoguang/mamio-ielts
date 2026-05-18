@@ -72,3 +72,15 @@ Success signal: It is clear who is using Mamio, how often, and why they convert 
 6. ~~Improve landing page (pricing, activation explanation, feature highlights)~~ — Done.
 
 ## All Phase 4 items complete. Product is ready for wider testing.
+
+## Phase 5: Retention & Guided Study
+
+Goal: make Mamio feel like a daily coach instead of a collection of tools.
+
+- [ ] Turn Dashboard recommendations into a clear daily action queue.
+- [ ] Make Review prioritize high-value weak spots instead of showing a flat list.
+- [ ] Improve empty states so every blank page explains how to create useful data.
+- [ ] Tighten mobile first-screen density for login, dashboard, and core practice modules.
+- [ ] Add more conversion context around trial limits, activation, and study continuity.
+
+Success signal: A new user can register, set a goal, complete one practice, see a concrete weakness, and know what to do tomorrow without external explanation.
