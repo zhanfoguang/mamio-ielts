@@ -217,9 +217,24 @@ npm install && node index.js  # localhost:3000
 
 ## Known Issues / Tech Debt
 - No refresh token mechanism (JWT valid for 7 days)
-- No request logging/audit trail
-- LLM prompt injection possible via user input in AI endpoints
-- `incrementDailyModule` uses pre-compiled queries (was SQL injection, now fixed)
 - Some old components in `src/components/` may be unused (PhonemeDemo, VideoPlayer, etc.)
 - `src/data/flashcards.js`, `src/data/phonemes.js`, `src/data/sentences.js` may be legacy
 - i18n is partial — some pages hardcoded in Chinese
+
+## Current Product Optimization Track
+
+Mamio is now moving from "module collection" to "daily guided study product".
+
+Recent direction:
+- Dashboard has a start checklist and a daily action queue.
+- Review items are prioritized by source/module and expose a top-three weak-spot cleanup action.
+- Login and pricing flows explain the trial-to-activation path more clearly.
+- Reading/listening practice produces reports, history, and review items.
+- Content generation is draft-only, with admin review and dry-run merge safeguards.
+
+Next recommended work:
+1. Move approved content from static data files into server-side content tables.
+2. Add a small admin publishing flow for approved content instead of local script-only merge.
+3. Improve mobile Dashboard density now that checklist + action queue are both present.
+4. Add server-side reading/listening attempt history so Dashboard is not split between API and localStorage.
+5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.
