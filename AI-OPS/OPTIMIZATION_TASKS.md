@@ -130,3 +130,10 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add `npm run content:merge-approved` to merge approved, unmerged drafts into reading/listening banks with duplicate protection.
 - [ ] Move approved content from static files into server-side content tables.
 - [ ] Add weekly VPS cron for draft generation only, never direct publishing.
+
+## Phase 18: Practice Feedback Loop
+
+- [x] Add reading practice report with Band estimate, unanswered count, wrong count, target time, question-type breakdown, and next-step recommendation.
+- [x] Add listening completion report with Band estimate, missed words, unanswered count, Section context, and next-step recommendation.
+- [x] Save listening completion scores into local history.
+- [x] Surface reading/listening average accuracy in Dashboard module stats and study-plan priority.

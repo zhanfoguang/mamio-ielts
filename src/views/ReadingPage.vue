@@ -15,6 +15,7 @@ const showResults = ref(false)
 const score = ref(null)
 const selectedLevel = ref('all')
 const selectedQuestionType = ref('all')
+const practiceReport = ref(null)
 
 const questionTypeLabels = {
   'true-false-ng': { zh: '判断题', en: 'TFNG' },
@@ -72,6 +73,7 @@ function selectPassage(passage) {
   userAnswers.value = {}
   showResults.value = false
   score.value = null
+  practiceReport.value = null
   stopTimer()
   startTimer()
 }
@@ -159,6 +161,7 @@ function submitAnswers() {
   }
 
   score.value = { correct, total, percentage: Math.round((correct / total) * 100) }
+  practiceReport.value = buildPracticeReport()
   showResults.value = true
 
   // Save to reading history
@@ -209,6 +212,98 @@ function submitAnswers() {
   }
 }
 
+function normalizeShortAnswer(value) {
+  return String(value || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
+}
+
+function isAnswerCorrect(q, index) {
+  const answer = getAnswer(q.id, index)
+  if (q.type === 'true-false-ng') return answer === q.statements[index].answer
+  if (q.type === 'matching') return String(answer || '').toUpperCase() === q.answers[index].toUpperCase()
+  if (q.type === 'matching-headings') return String(answer || '').toLowerCase() === q.answers[index].toLowerCase()
+  if (q.type === 'short-answer') return normalizeShortAnswer(answer) === normalizeShortAnswer(q.items[index].answer)
+  if (q.type === 'multiple-choice') return String(answer || '').toUpperCase() === q.items[index].answer.toUpperCase()
+  return false
+}
+
+function getQuestionItemCount(q) {
+  if (q.type === 'true-false-ng') return q.statements.length
+  if (q.type === 'matching' || q.type === 'matching-headings') return q.answers.length
+  if (q.type === 'short-answer' || q.type === 'multiple-choice') return q.items.length
+  return 0
+}
+
+function getBandEstimate(percentage) {
+  if (percentage >= 90) return '8.5-9.0'
+  if (percentage >= 80) return '7.5-8.0'
+  if (percentage >= 70) return '6.5-7.0'
+  if (percentage >= 60) return '5.5-6.0'
+  if (percentage >= 45) return '4.5-5.0'
+  return '<4.5'
+}
+
+function buildPracticeReport() {
+  const byType = {}
+  let unanswered = 0
+  let wrong = 0
+
+  for (const q of selectedPassage.value.questions) {
+    if (!byType[q.type]) byType[q.type] = { correct: 0, total: 0, unanswered: 0 }
+    const count = getQuestionItemCount(q)
+    for (let i = 0; i < count; i++) {
+      const answer = getAnswer(q.id, i)
+      byType[q.type].total++
+      if (!answer) {
+        unanswered++
+        byType[q.type].unanswered++
+      } else if (isAnswerCorrect(q, i)) {
+        byType[q.type].correct++
+      } else {
+        wrong++
+      }
+    }
+  }
+
+  const weakTypes = Object.entries(byType)
+    .map(([type, data]) => ({ type, ...data, percentage: data.total ? Math.round((data.correct / data.total) * 100) : 0 }))
+    .sort((a, b) => a.percentage - b.percentage)
+
+  const targetSeconds = selectedPassage.value.level === 'hard' ? 1200 : selectedPassage.value.level === 'medium' ? 1050 : 900
+  const timePressure = timerSeconds.value > targetSeconds
+  const recommendation = makeRecommendation(weakTypes, unanswered, timePressure)
+  return {
+    byType: weakTypes,
+    unanswered,
+    wrong,
+    band: getBandEstimate(score.value.percentage),
+    targetTime: targetSeconds,
+    timePressure,
+    recommendation
+  }
+}
+
+function makeRecommendation(weakTypes, unanswered, timePressure) {
+  const weakest = weakTypes.find(item => item.total > 0 && item.percentage < 80)
+  if (unanswered > 0) {
+    return themeStore.lang === 'zh'
+      ? `先练限时答题：这次有 ${unanswered} 道未完成，下一篇先保证全题作答。`
+      : `Prioritise timed completion: ${unanswered} unanswered item(s). Finish every item before optimising accuracy.`
+  }
+  if (weakest) {
+    return themeStore.lang === 'zh'
+      ? `下一步重点练 ${getQuestionTypeLabel(weakest.type)}，这类题正确率只有 ${weakest.percentage}%。`
+      : `Next focus: ${getQuestionTypeLabel(weakest.type)}. Accuracy for this type was ${weakest.percentage}%.`
+  }
+  if (timePressure) {
+    return themeStore.lang === 'zh'
+      ? '正确率不错，但耗时偏长；下一篇练定位速度和略读。'
+      : 'Accuracy is solid, but time was high. Practise skimming and locating evidence faster next.'
+  }
+  return themeStore.lang === 'zh'
+    ? '这篇完成质量不错，下一篇可以提高难度或切换到弱题型专项。'
+    : 'Good attempt. Move up a level or switch to a weaker question-type drill.'
+}
+
 function getScoreColor(pct) {
   if (pct >= 80) return 'var(--green)'
   if (pct >= 60) return 'var(--yellow, var(--amber))'
@@ -219,6 +314,7 @@ function resetPractice() {
   selectedPassage.value = null
   showResults.value = false
   score.value = null
+  practiceReport.value = null
   stopTimer()
 }
 
@@ -412,8 +508,45 @@ function getQuestionTypeLabel(type) {
               <span class="score-detail">{{ score.correct }}/{{ score.total }}</span>
             </div>
             <div class="result-time">
+              <span class="time-label">{{ themeStore.lang === 'zh' ? '预估 Band' : 'Band Estimate' }}</span>
+              <span class="time-value">{{ practiceReport?.band }}</span>
+            </div>
+            <div class="result-time">
               <span class="time-label">{{ themeStore.lang === 'zh' ? '用时' : 'Time' }}</span>
               <span class="time-value">{{ formatTime(timerSeconds) }}</span>
+            </div>
+          </div>
+
+          <div v-if="practiceReport" class="practice-insight">
+            <div class="insight-main">
+              <span>{{ themeStore.lang === 'zh' ? '下一步' : 'Next Step' }}</span>
+              <strong>{{ practiceReport.recommendation }}</strong>
+            </div>
+            <div class="insight-metrics">
+              <div>
+                <span>{{ themeStore.lang === 'zh' ? '未完成' : 'Unanswered' }}</span>
+                <strong>{{ practiceReport.unanswered }}</strong>
+              </div>
+              <div>
+                <span>{{ themeStore.lang === 'zh' ? '错题' : 'Wrong' }}</span>
+                <strong>{{ practiceReport.wrong }}</strong>
+              </div>
+              <div>
+                <span>{{ themeStore.lang === 'zh' ? '目标用时' : 'Target Time' }}</span>
+                <strong>{{ formatTime(practiceReport.targetTime) }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="practiceReport" class="type-breakdown">
+            <div v-for="item in practiceReport.byType" :key="item.type" class="type-row">
+              <div>
+                <strong>{{ getQuestionTypeLabel(item.type) }}</strong>
+                <span>{{ item.correct }}/{{ item.total }} · {{ item.percentage }}%</span>
+              </div>
+              <div class="type-bar">
+                <span :style="{ width: item.percentage + '%', background: getScoreColor(item.percentage) }"></span>
+              </div>
             </div>
           </div>
 
@@ -973,6 +1106,93 @@ function getQuestionTypeLabel(type) {
   font-variant-numeric: tabular-nums;
 }
 
+.practice-insight {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.insight-main span,
+.insight-metrics span {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.insight-main strong {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+.insight-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.insight-metrics div {
+  padding: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.insight-metrics strong {
+  font-size: var(--font-size-lg);
+  font-weight: 900;
+}
+
+.type-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: var(--space-2xl);
+}
+
+.type-row {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.type-row div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.type-row strong {
+  font-size: var(--font-size-sm);
+}
+
+.type-row span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.type-bar {
+  height: 6px;
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.type-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
 .result-details h3 {
   font-size: var(--font-size-lg);
   font-weight: 700;
@@ -1075,6 +1295,17 @@ function getQuestionTypeLabel(type) {
 
   .passage-panel {
     position: static;
+  }
+
+  .result-header,
+  .practice-insight,
+  .insight-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .result-header {
+    flex-direction: column;
+    gap: var(--space-lg);
   }
 }
 </style>

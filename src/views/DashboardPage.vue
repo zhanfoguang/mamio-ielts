@@ -116,6 +116,18 @@ const avgWritingScore = computed(() => {
   return (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
 })
 
+const avgReadingScore = computed(() => {
+  const scores = readingHistory.value.filter(h => typeof h.score === 'number').map(h => h.score)
+  if (scores.length === 0) return null
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+})
+
+const avgListeningScore = computed(() => {
+  const scores = listeningHistory.value.filter(h => typeof h.score === 'number').map(h => h.score)
+  if (scores.length === 0) return null
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+})
+
 function getScoreField(details, keys) {
   for (const key of keys) {
     const value = details?.[key]
@@ -357,6 +369,26 @@ const studyPlan = computed(() => {
       reasonEn: 'Input practice is behind output practice',
       tone: 'amber'
     })
+  } else if (avgReadingScore.value !== null && avgReadingScore.value < 70) {
+    primary = buildPlanTask({
+      icon: '📖',
+      zh: '做 1 篇阅读限时练习',
+      en: 'Complete one timed reading passage',
+      path: '/reading',
+      reasonZh: `阅读平均正确率 ${avgReadingScore.value}%，需要补定位和题型稳定性`,
+      reasonEn: `Reading average is ${avgReadingScore.value}%; work on locating evidence and question-type stability`,
+      tone: 'amber'
+    })
+  } else if (avgListeningScore.value !== null && avgListeningScore.value < 70) {
+    primary = buildPlanTask({
+      icon: '🎧',
+      zh: '做 1 套听力填空',
+      en: 'Complete one listening completion set',
+      path: '/listening',
+      reasonZh: `听力平均正确率 ${avgListeningScore.value}%，先补关键词捕捉`,
+      reasonEn: `Listening average is ${avgListeningScore.value}%; focus on catching key words`,
+      tone: 'blue'
+    })
   } else if (vocab < 50) {
     primary = buildPlanTask({
       icon: '📚',
@@ -505,7 +537,8 @@ const moduleStats = computed(() => [
     labelZh: '听力练习',
     labelEn: 'Listening',
     count: listeningHistory.value.length,
-    score: null,
+    score: avgListeningScore.value,
+    scoreSuffix: '%',
     color: 'var(--blue)'
   },
   {
@@ -513,7 +546,8 @@ const moduleStats = computed(() => [
     labelZh: '阅读练习',
     labelEn: 'Reading',
     count: readingHistory.value.length,
-    score: null,
+    score: avgReadingScore.value,
+    scoreSuffix: '%',
     color: 'var(--amber)'
   },
   {
@@ -561,6 +595,12 @@ function getSparklinePath(scores) {
 function getScoreColor(score) {
   if (score >= 7) return 'var(--green)'
   if (score >= 5.5) return 'var(--yellow, var(--amber))'
+  return 'var(--red)'
+}
+
+function getPercentScoreColor(score) {
+  if (score >= 80) return 'var(--green)'
+  if (score >= 60) return 'var(--yellow, var(--amber))'
   return 'var(--red)'
 }
 
@@ -842,8 +882,8 @@ onMounted(async () => {
                   <span class="module-name">{{ themeStore.lang === 'zh' ? m.labelZh : m.labelEn }}</span>
                   <span class="module-count">{{ m.count }} {{ themeStore.lang === 'zh' ? '次' : 'sessions' }}</span>
                 </div>
-                <div v-if="m.score" class="module-score" :style="{ color: getScoreColor(parseFloat(m.score)) }">
-                  {{ m.score }}
+                <div v-if="m.score" class="module-score" :style="{ color: m.scoreSuffix ? getPercentScoreColor(parseFloat(m.score)) : getScoreColor(parseFloat(m.score)) }">
+                  {{ m.score }}{{ m.scoreSuffix || '' }}
                 </div>
               </div>
             </div>

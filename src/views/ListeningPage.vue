@@ -19,6 +19,7 @@ const autoPlay = ref(false)
 const selectedSectionType = ref('all')
 const questionAnswers = ref({})
 const showQuestionResults = ref(false)
+const listeningReport = ref(null)
 
 const section = computed(() => listeningSections[activeSection.value])
 const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
@@ -137,6 +138,7 @@ function selectSection(index) {
   showComparison.value = false
   questionAnswers.value = {}
   showQuestionResults.value = false
+  listeningReport.value = null
   reset()
   stopPlayback()
 }
@@ -163,6 +165,22 @@ function pickQuestionAnswer(text) {
 
 function submitListeningQuestions() {
   showQuestionResults.value = true
+  listeningReport.value = buildListeningReport()
+  const history = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
+  history.unshift({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    section: section.value.title,
+    sectionNumber: section.value.section,
+    mode: 'completion',
+    score: listeningReport.value.accuracy,
+    correct: listeningReport.value.correct,
+    total: listeningReport.value.total,
+    missedWords: listeningReport.value.missedWords
+  })
+  if (history.length > 50) history.length = 50
+  localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+
   const wrongItems = listeningQuestions.value
     .filter(q => normalizeAnswer(questionAnswers.value[q.id]) && normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
     .map(q => ({
@@ -174,6 +192,58 @@ function submitListeningQuestions() {
     addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'listening', source: 'listening-questions' })
   }
   incrementDailyStats(toLocalDateKey(), 'listening')
+}
+
+function getListeningBandEstimate(percentage) {
+  if (percentage >= 90) return '8.5-9.0'
+  if (percentage >= 80) return '7.5-8.0'
+  if (percentage >= 70) return '6.5-7.0'
+  if (percentage >= 60) return '5.5-6.0'
+  if (percentage >= 45) return '4.5-5.0'
+  return '<4.5'
+}
+
+function makeListeningRecommendation(report) {
+  if (report.unanswered > 0) {
+    return themeStore.lang === 'zh'
+      ? `这套有 ${report.unanswered} 个空没填，先练完整听完再作答，别被单句卡住。`
+      : `${report.unanswered} blank(s) were unanswered. Practise completing the whole section before polishing accuracy.`
+  }
+  if (report.accuracy < 70) {
+    return section.value.section >= 3
+      ? (themeStore.lang === 'zh' ? 'Section 3/4 信息密度高，下一轮先做笔记关键词，再填答案。' : 'Sections 3/4 are dense. Next round, take keyword notes before filling answers.')
+      : (themeStore.lang === 'zh' ? '基础场景词识别还不稳，下一轮先用双语字幕听两遍再隐藏字幕。' : 'Core scenario word recognition is shaky. Listen twice with subtitles, then hide them.')
+  }
+  if (report.accuracy < 85) {
+    return themeStore.lang === 'zh'
+      ? '正确率接近可用，下一轮重点检查单复数、拼写和连字符。'
+      : 'Accuracy is close. Next focus on plurals, spelling, and hyphenated words.'
+  }
+  return themeStore.lang === 'zh'
+    ? '这套完成不错，可以切到更高 Section 或开启隐藏字幕练。'
+    : 'Strong attempt. Move to a harder section or practise with subtitles hidden.'
+}
+
+function buildListeningReport() {
+  const total = listeningQuestions.value.length
+  const correct = listeningQuestions.value.filter(q => normalizeAnswer(questionAnswers.value[q.id]) === normalizeAnswer(q.answer)).length
+  const unanswered = listeningQuestions.value.filter(q => !normalizeAnswer(questionAnswers.value[q.id])).length
+  const wrong = total - correct - unanswered
+  const accuracy = total ? Math.round((correct / total) * 100) : 0
+  const missedWords = listeningQuestions.value
+    .filter(q => normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
+    .map(q => q.answer)
+  const report = {
+    correct,
+    total,
+    unanswered,
+    wrong,
+    accuracy,
+    band: getListeningBandEstimate(accuracy),
+    missedWords,
+    section: section.value.section
+  }
+  return { ...report, recommendation: makeListeningRecommendation(report) }
 }
 
 function startDictation() {
@@ -347,12 +417,40 @@ onUnmounted(() => stopPlayback())
               <button class="submit-questions-btn" @click="submitListeningQuestions" :disabled="showQuestionResults">
                 {{ themeStore.lang === 'zh' ? '提交填空题' : 'Submit Answers' }}
               </button>
-              <button v-if="showQuestionResults" class="reset-questions-btn" @click="questionAnswers = {}; showQuestionResults = false">
+              <button v-if="showQuestionResults" class="reset-questions-btn" @click="questionAnswers = {}; showQuestionResults = false; listeningReport = null">
                 {{ themeStore.lang === 'zh' ? '重做' : 'Retry' }}
               </button>
               <span v-if="showQuestionResults" class="question-score">
                 {{ questionScore.correct }}/{{ questionScore.total }} · {{ questionScore.percentage }}%
               </span>
+            </div>
+
+            <div v-if="listeningReport" class="listening-report">
+              <div class="report-score">
+                <strong>{{ listeningReport.accuracy }}%</strong>
+                <span>Band {{ listeningReport.band }}</span>
+              </div>
+              <div class="report-body">
+                <span>{{ themeStore.lang === 'zh' ? '下一步' : 'Next Step' }}</span>
+                <p>{{ listeningReport.recommendation }}</p>
+                <div class="report-metrics">
+                  <div>
+                    <span>{{ themeStore.lang === 'zh' ? '错题' : 'Wrong' }}</span>
+                    <strong>{{ listeningReport.wrong }}</strong>
+                  </div>
+                  <div>
+                    <span>{{ themeStore.lang === 'zh' ? '漏答' : 'Blank' }}</span>
+                    <strong>{{ listeningReport.unanswered }}</strong>
+                  </div>
+                  <div>
+                    <span>Section</span>
+                    <strong>{{ listeningReport.section }}</strong>
+                  </div>
+                </div>
+                <div v-if="listeningReport.missedWords.length" class="missed-words">
+                  <span v-for="word in listeningReport.missedWords" :key="word">{{ word }}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -768,6 +866,84 @@ onUnmounted(() => stopPlayback())
   font-weight: 700;
 }
 
+.listening-report {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.report-score {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 110px;
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+.report-score strong {
+  font-size: var(--font-size-2xl);
+  font-weight: 900;
+}
+
+.report-score span,
+.report-body > span,
+.report-metrics span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.report-body p {
+  margin: 4px 0 var(--space-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.report-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.report-metrics div {
+  padding: 8px 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.report-metrics strong {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-lg);
+  font-weight: 900;
+}
+
+.missed-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-md);
+}
+
+.missed-words span {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
 .dictation-area {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -860,6 +1036,8 @@ onUnmounted(() => stopPlayback())
   .question-head { align-items: flex-start; flex-direction: column; }
   .listen-all-btn { width: 100%; }
   .question-item { grid-template-columns: 1fr; }
+  .listening-report,
+  .report-metrics { grid-template-columns: 1fr; }
   .sentence-list { max-height: 240px; }
 }
 </style>
