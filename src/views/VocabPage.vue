@@ -17,6 +17,55 @@ const loadingAi = ref(false)
 const vocabSearch = ref('')
 const selectedBand = ref('all')
 const bandOptions = ['all', 6, 7, 8]
+const topicGroupMap = {
+  Technology: 'Technology & Digital Life',
+  'Science & Technology': 'Technology & Digital Life',
+  'Digital Media': 'Media & Communication',
+  Communication: 'Media & Communication',
+  'Crime & Law': 'Crime & Law',
+  'Crime & Punishment': 'Crime & Law',
+  'Work & Career': 'Work & Employment',
+  'Work & Employment': 'Work & Employment',
+  Society: 'Society & Urban Life',
+  Urbanization: 'Society & Urban Life',
+  Science: 'Science',
+  'Mental Health': 'Health'
+}
+
+function uniqueWords(words) {
+  const seen = new Set()
+  return words.filter(word => {
+    const key = getSrsKey(word.word)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const vocabDisplayTopics = computed(() => {
+  const groups = new Map()
+  for (const topic of vocabTopics) {
+    const groupName = topicGroupMap[topic.topic] || topic.topic
+    const existing = groups.get(groupName)
+    if (existing) {
+      existing.words.push(...topic.words)
+      existing.sourceTopics.push(topic.topic)
+    } else {
+      groups.set(groupName, {
+        topic: groupName,
+        icon: topic.icon,
+        words: [...topic.words],
+        sourceTopics: [topic.topic]
+      })
+    }
+  }
+  return [...groups.values()].map(topic => ({
+    ...topic,
+    words: uniqueWords(topic.words)
+  }))
+})
+
+const allVocabWords = computed(() => uniqueWords(vocabTopics.flatMap(t => t.words)))
 
 // SRS state (SM-2 algorithm)
 const srsData = ref(JSON.parse(localStorage.getItem('mamio-vocab-srs') || '{}'))
@@ -82,7 +131,7 @@ function dailyRank(word) {
 // Daily recommendations
 const dailyWords = computed(() => {
   const learned = Object.keys(srsData.value)
-  const allWords = vocabTopics.flatMap(t => t.words)
+  const allWords = allVocabWords.value
   const unseen = allWords.filter(w => !learned.includes(w.word.toLowerCase()))
   // Mix: 5 new words + 5 due for review
   const newWords = [...unseen].sort((a, b) => dailyRank(a) - dailyRank(b)).slice(0, 5)
@@ -119,7 +168,7 @@ function updateVocabStreak() {
   localStorage.setItem('mamio-vocab-streak', JSON.stringify(vocabStreak.value))
 }
 
-const currentTopic = computed(() => vocabTopics[activeTopic.value])
+const currentTopic = computed(() => vocabDisplayTopics.value[activeTopic.value] || vocabDisplayTopics.value[0])
 
 const allCurrentWords = computed(() => {
   const base = currentTopic.value?.words || []
@@ -140,16 +189,14 @@ const filteredTopicWords = computed(() => {
 const stats = computed(() => {
   const data = srsData.value
   let newCount = 0, learning = 0, mastered = 0
-  for (const topic of vocabTopics) {
-    for (const w of topic.words) {
-      const key = w.word.toLowerCase()
-      if (!data[key]) {
-        newCount++
-      } else if (data[key].ease < 2.5 || data[key].interval < 21) {
-        learning++
-      } else {
-        mastered++
-      }
+  for (const w of allVocabWords.value) {
+    const key = w.word.toLowerCase()
+    if (!data[key]) {
+      newCount++
+    } else if (data[key].ease < 2.5 || data[key].interval < 21) {
+      learning++
+    } else {
+      mastered++
     }
   }
   return { newCount, learning, mastered, total: newCount + learning + mastered }
@@ -163,13 +210,11 @@ function getSrsKey(word) {
 function getDueWords() {
   const now = Date.now()
   const due = []
-  for (const topic of vocabTopics) {
-    for (const w of topic.words) {
-      const key = getSrsKey(w.word)
-      const entry = srsData.value[key]
-      if (!entry || entry.due <= now) {
-        due.push(w)
-      }
+  for (const w of allVocabWords.value) {
+    const key = getSrsKey(w.word)
+    const entry = srsData.value[key]
+    if (!entry || entry.due <= now) {
+      due.push(w)
     }
   }
   return due
@@ -244,7 +289,7 @@ function startQuiz(type) {
   if (words.length < 4) return
 
   // All words pool for distractors (from all topics)
-  const allPool = vocabTopics.flatMap(t => t.words)
+  const allPool = allVocabWords.value
 
   // Generate 10 questions
   const shuffled = [...words].sort(() => Math.random() - 0.5).slice(0, 10)
@@ -395,14 +440,20 @@ watch(activeTopic, () => {
       <template v-if="mode === 'browse'">
         <!-- Topic tabs -->
         <div class="topic-tabs">
-          <button v-for="(topic, i) in vocabTopics" :key="topic.topic" class="topic-btn" :class="{ active: activeTopic === i }" @click="activeTopic = i; aiWords = []">
+          <button v-for="(topic, i) in vocabDisplayTopics" :key="topic.topic" class="topic-btn" :class="{ active: activeTopic === i }" @click="activeTopic = i; aiWords = []">
             <span class="topic-icon">{{ topic.icon }}</span>
             {{ topic.topic }}
+            <span class="topic-count">{{ topic.words.length }}</span>
           </button>
         </div>
 
         <div class="topic-header">
-          <h2>{{ currentTopic.icon }} {{ currentTopic.topic }}</h2>
+          <div>
+            <h2>{{ currentTopic.icon }} {{ currentTopic.topic }}</h2>
+            <p v-if="currentTopic.sourceTopics?.length > 1" class="merged-topic-note">
+              {{ themeStore.lang === 'zh' ? '已合并：' : 'Merged: ' }}{{ currentTopic.sourceTopics.join(' / ') }}
+            </p>
+          </div>
           <div class="topic-actions">
             <button class="quiz-btn" @click="startQuiz('choice')">
               {{ themeStore.lang === 'zh' ? '选择题测验' : 'Quiz' }}
@@ -761,6 +812,17 @@ watch(activeTopic, () => {
 
 .topic-icon { font-size: 1rem; }
 
+.topic-count {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: 2px;
+}
+
+.topic-btn.active .topic-count {
+  color: inherit;
+  opacity: 0.75;
+}
+
 .topic-header {
   display: flex;
   justify-content: space-between;
@@ -771,6 +833,12 @@ watch(activeTopic, () => {
 }
 
 .topic-header h2 { font-size: var(--font-size-xl); font-weight: 700; }
+
+.merged-topic-note {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
 
 .topic-actions { display: flex; gap: 8px; }
 
