@@ -173,6 +173,39 @@ const avgListeningScore = computed(() => {
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
 })
 
+const recentInputAttempts = computed(() => {
+  const reading = readingHistory.value.map(item => ({
+    ...item,
+    module: 'reading',
+    icon: '📖',
+    title: item.passage,
+    path: '/reading',
+    scoreLabel: typeof item.score === 'number' ? `${item.score}%` : '-',
+    issueZh: item.details?.report?.recommendation || (item.score < 70 ? '正确率偏低，建议重做同类题型。' : '保持输入训练节奏。'),
+    issueEn: item.details?.report?.recommendation || (item.score < 70 ? 'Accuracy is low. Redo the same question type.' : 'Keep input practice steady.')
+  }))
+  const listening = listeningHistory.value.map(item => ({
+    ...item,
+    module: 'listening',
+    icon: '🎧',
+    title: item.section,
+    path: '/listening',
+    scoreLabel: typeof item.score === 'number' ? `${item.score}%` : (item.mode === 'dictation' ? 'Dictation' : '-'),
+    issueZh: item.details?.report?.recommendation || (item.mode === 'dictation' ? '复听这句，检查漏听词。' : '先复盘错词，再做下一套。'),
+    issueEn: item.details?.report?.recommendation || (item.mode === 'dictation' ? 'Replay this sentence and check missed words.' : 'Review missed words before the next set.')
+  }))
+  return [...reading, ...listening]
+    .filter(item => item.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 6)
+})
+
+const inputRecoveryPlan = computed(() => {
+  const weak = recentInputAttempts.value.find(item => typeof item.score === 'number' && item.score < 70)
+  const dictation = recentInputAttempts.value.find(item => item.module === 'listening' && item.mode === 'dictation')
+  return weak || dictation || recentInputAttempts.value[0] || null
+})
+
 function getLatestPracticeDate() {
   const dates = [
     ...speakingHistory.value,
@@ -999,6 +1032,23 @@ onMounted(async () => {
         </div>
       </div>
 
+      <div v-if="inputRecoveryPlan" class="input-recovery-card">
+        <div class="input-recovery-main">
+          <span class="input-recovery-icon">{{ inputRecoveryPlan.icon }}</span>
+          <div>
+            <span class="plan-kicker">{{ themeStore.lang === 'zh' ? '输入复盘' : 'Input Follow-up' }}</span>
+            <h2>{{ inputRecoveryPlan.title }}</h2>
+            <p>{{ themeStore.lang === 'zh' ? inputRecoveryPlan.issueZh : inputRecoveryPlan.issueEn }}</p>
+          </div>
+        </div>
+        <div class="input-recovery-side">
+          <strong>{{ inputRecoveryPlan.scoreLabel }}</strong>
+          <button @click="router.push(inputRecoveryPlan.path)">
+            {{ themeStore.lang === 'zh' ? '去复练' : 'Review' }}
+          </button>
+        </div>
+      </div>
+
       <div class="dashboard-grid">
         <!-- Left column -->
         <div class="dashboard-left">
@@ -1762,6 +1812,78 @@ button.support-card:hover {
   font-weight: 800;
 }
 
+.input-recovery-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.input-recovery-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.input-recovery-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  font-size: 1.25rem;
+}
+
+.input-recovery-main h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.input-recovery-main p {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.input-recovery-side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.input-recovery-side strong {
+  font-size: var(--font-size-xl);
+  font-weight: 900;
+}
+
+.input-recovery-side button {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+[data-theme="dark"] .input-recovery-side button {
+  background: var(--white);
+  color: var(--black);
+}
+
 /* Dashboard grid */
 .dashboard-grid {
   display: grid;
@@ -2014,6 +2136,8 @@ button.support-card:hover {
   .plan-support { grid-template-columns: 1fr; }
   .return-banner { align-items: flex-start; flex-direction: column; }
   .return-banner button { width: 100%; }
+  .input-recovery-card { align-items: flex-start; flex-direction: column; }
+  .input-recovery-side { width: 100%; justify-content: space-between; }
   .study-plan-header,
   .start-checklist-head { flex-direction: column; }
   .action-queue-head { align-items: flex-start; flex-direction: column; gap: 2px; }
@@ -2049,6 +2173,7 @@ button.support-card:hover {
   .start-checklist,
   .today-card,
   .study-plan-card,
+  .input-recovery-card,
   .card {
     padding: var(--space-md);
     border-radius: var(--radius-md);
@@ -2143,6 +2268,23 @@ button.support-card:hover {
   .dashboard-grid {
     gap: var(--space-md);
     margin-bottom: var(--space-xl);
+  }
+
+  .input-recovery-main {
+    align-items: flex-start;
+  }
+
+  .input-recovery-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .input-recovery-main h2 {
+    font-size: var(--font-size-base);
+  }
+
+  .input-recovery-main p {
+    font-size: var(--font-size-xs);
   }
 
   .quick-link {

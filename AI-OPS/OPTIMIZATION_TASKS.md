@@ -168,3 +168,4 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Save Listening completion and dictation attempts API-first with localStorage fallback.
 - [x] Feed server-side reading/listening history into Dashboard aggregates.
 - [x] Add one-time local-to-server migration for old reading/listening attempts.
+- [x] Add Dashboard input follow-up card for weak recent reading/listening attempts.

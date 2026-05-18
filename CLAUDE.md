@@ -236,12 +236,13 @@ Recent direction:
 - Review items are prioritized by source/module and expose a top-three weak-spot cleanup action.
 - Login and pricing flows explain the trial-to-activation path more clearly.
 - Reading/listening practice produces reports, review items, API-first server history, and one-time local history migration.
+- Dashboard now surfaces a reading/listening input follow-up card when recent attempts expose weak accuracy or dictation work.
 - Mobile Dashboard density is tighter on small screens after adding the checklist/action queue.
 - Content generation is draft-only, with admin review and dry-run merge safeguards.
 
 Next recommended work:
 1. Move approved content from static data files into server-side content tables.
 2. Add a small admin publishing flow for approved content instead of local script-only merge.
-3. Add richer Dashboard streak/retention signals from server-side reading/listening attempts.
-4. Add attempt detail pages for reading/listening history so users can review old mistakes.
+3. Add attempt detail pages for reading/listening history so users can review old mistakes.
+4. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.
