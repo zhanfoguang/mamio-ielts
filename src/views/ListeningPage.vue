@@ -182,11 +182,11 @@ function submitListeningQuestions() {
   localStorage.setItem('mamio-listening-history', JSON.stringify(history))
 
   const wrongItems = listeningQuestions.value
-    .filter(q => normalizeAnswer(questionAnswers.value[q.id]) && normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
+    .filter(q => normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
     .map(q => ({
       type: 'listening',
       text: q.answer,
-      reason: `句子填空错误：${q.prompt}`
+      reason: `句子填空错误：${q.prompt}；你的答案：${questionAnswers.value[q.id] || '未作答'}`
     }))
   if (wrongItems.length) {
     addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'listening', source: 'listening-questions' })

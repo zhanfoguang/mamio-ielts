@@ -186,23 +186,37 @@ function submitAnswers() {
     const answers = userAnswers.value[q.id] || {}
     if (q.type === 'true-false-ng') {
       q.statements.forEach((s, i) => {
-        if (answers[i] && answers[i] !== s.answer) {
-          wrongItems.push({ type: 'reading', text: s.text, reason: `正确答案: ${s.answer}，你的答案: ${answers[i]}` })
+        if (!answers[i] || answers[i] !== s.answer) {
+          wrongItems.push({ type: 'reading', text: s.text, reason: `正确答案: ${s.answer}，你的答案: ${answers[i] || '未作答'}` })
+        }
+      })
+    } else if (q.type === 'matching') {
+      q.answers.forEach((a, i) => {
+        const userAns = (answers[i] || '').toUpperCase()
+        if (!userAns || userAns !== a.toUpperCase()) {
+          wrongItems.push({ type: 'reading', text: q.items[i], reason: `匹配题错误。正确答案: ${a}，你的答案: ${answers[i] || '未作答'}` })
         }
       })
     } else if (q.type === 'short-answer') {
       q.items.forEach((item, i) => {
-        const userAns = (answers[i] || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
-        const correctAns = item.answer.toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')
-        if (userAns && userAns !== correctAns) {
-          wrongItems.push({ type: 'reading', text: item.question, reason: `正确答案: ${item.answer}，你的答案: ${answers[i]}` })
+        const userAns = normalizeShortAnswer(answers[i])
+        const correctAns = normalizeShortAnswer(item.answer)
+        if (!userAns || userAns !== correctAns) {
+          wrongItems.push({ type: 'reading', text: item.question, reason: `正确答案: ${item.answer}，你的答案: ${answers[i] || '未作答'}` })
         }
       })
     } else if (q.type === 'matching-headings') {
       q.answers.forEach((a, i) => {
         const userAns = (answers[i] || '').toLowerCase()
-        if (userAns && userAns !== a.toLowerCase()) {
-          wrongItems.push({ type: 'reading', text: `Paragraph ${String.fromCharCode(65 + i)}`, reason: `正确答案: ${a}，你的答案: ${answers[i]}` })
+        if (!userAns || userAns !== a.toLowerCase()) {
+          wrongItems.push({ type: 'reading', text: `Paragraph ${String.fromCharCode(65 + i)}`, reason: `正确答案: ${a}，你的答案: ${answers[i] || '未作答'}` })
+        }
+      })
+    } else if (q.type === 'multiple-choice') {
+      q.items.forEach((item, i) => {
+        const userAns = (answers[i] || '').toUpperCase()
+        if (!userAns || userAns !== item.answer.toUpperCase()) {
+          wrongItems.push({ type: 'reading', text: item.question, reason: `选择题错误。正确答案: ${item.answer}，你的答案: ${answers[i] || '未作答'}` })
         }
       })
     }

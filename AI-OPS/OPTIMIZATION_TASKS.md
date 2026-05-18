@@ -137,3 +137,5 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add listening completion report with Band estimate, missed words, unanswered count, Section context, and next-step recommendation.
 - [x] Save listening completion scores into local history.
 - [x] Surface reading/listening average accuracy in Dashboard module stats and study-plan priority.
+- [x] Send all reading wrong/unanswered item types into Review, including matching and multiple choice.
+- [x] Send listening completion wrong/unanswered blanks into Review.
