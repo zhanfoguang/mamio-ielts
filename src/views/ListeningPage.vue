@@ -16,9 +16,23 @@ const isPlaying = ref(false)
 const subtitleMode = ref('bilingual')
 const showComparison = ref(false)
 const autoPlay = ref(false)
+const selectedSectionType = ref('all')
 
 const section = computed(() => listeningSections[activeSection.value])
 const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
+const sectionTypeOptions = ['all', 1, 2, 3, 4]
+
+const sectionCounts = computed(() => {
+  return listeningSections.reduce((acc, item) => {
+    acc[item.section] = (acc[item.section] || 0) + 1
+    return acc
+  }, { all: listeningSections.length })
+})
+
+const filteredListeningSections = computed(() => {
+  if (selectedSectionType.value === 'all') return listeningSections
+  return listeningSections.filter(item => item.section === selectedSectionType.value)
+})
 
 const currentWordIndex = ref(-1)
 let currentUtterance = null
@@ -90,6 +104,20 @@ function goToSentence(i) {
   stopPlayback()
   currentSentenceIndex.value = i
   currentWordIndex.value = -1
+}
+
+function selectSection(index) {
+  activeSection.value = index
+  currentSentenceIndex.value = 0
+  showComparison.value = false
+  reset()
+  stopPlayback()
+}
+
+function pickRandomSection() {
+  const pool = filteredListeningSections.value.length ? filteredListeningSections.value : listeningSections
+  const picked = pool[Math.floor(Math.random() * pool.length)]
+  selectSection(listeningSections.findIndex(item => item.id === picked.id))
 }
 
 function startDictation() {
@@ -164,9 +192,28 @@ onUnmounted(() => stopPlayback())
       <h1>{{ themeStore.lang === 'zh' ? '雅思听力练习' : 'IELTS Listening Practice' }}</h1>
 
       <!-- Section tabs -->
+      <div class="listening-bank">
+        <div>
+          <h2>{{ themeStore.lang === 'zh' ? '听力题库' : 'Listening Bank' }}</h2>
+          <p>{{ themeStore.lang === 'zh' ? `${listeningSections.length} 套 · ${listeningSections.reduce((sum, item) => sum + item.sentences.length, 0)} 句精听材料` : `${listeningSections.length} sets · ${listeningSections.reduce((sum, item) => sum + item.sentences.length, 0)} dictation sentences` }}</p>
+        </div>
+        <button class="random-btn" @click="pickRandomSection">
+          {{ themeStore.lang === 'zh' ? '随机听一套' : 'Random Set' }}
+        </button>
+      </div>
+
+      <div class="section-filters">
+        <button v-for="opt in sectionTypeOptions" :key="opt" class="section-filter" :class="{ active: selectedSectionType === opt }" @click="selectedSectionType = opt">
+          {{ opt === 'all' ? (themeStore.lang === 'zh' ? '全部' : 'All') : 'Section ' + opt }}
+          <span>{{ sectionCounts[opt] || 0 }}</span>
+        </button>
+      </div>
+
       <div class="section-tabs">
-        <button v-for="(s, i) in listeningSections" :key="s.id" class="section-btn" :class="{ active: activeSection === i }" @click="activeSection = i; currentSentenceIndex = 0; stopPlayback()">
-          {{ themeStore.lang === 'zh' ? '第' + s.section + '部分' : 'Section ' + s.section }}
+        <button v-for="s in filteredListeningSections" :key="s.id" class="section-btn" :class="{ active: section.id === s.id }" @click="selectSection(listeningSections.findIndex(item => item.id === s.id))">
+          <span class="section-kicker">Section {{ s.section }}</span>
+          <strong>{{ s.title }}</strong>
+          <small>{{ s.sentences.length }} {{ themeStore.lang === 'zh' ? '句' : 'sentences' }}</small>
         </button>
       </div>
 
@@ -268,24 +315,123 @@ onUnmounted(() => stopPlayback())
   margin-bottom: var(--space-lg);
 }
 
-.section-tabs {
+.listening-bank {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 18px 20px;
+  margin-bottom: var(--space-md);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.listening-bank h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.listening-bank p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.random-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .random-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.section-filters {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: var(--space-md);
 }
 
-.section-btn {
-  padding: 8px 20px;
+.section-filter {
+  padding: 8px 14px;
   border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.section-filter span {
+  margin-left: 4px;
+  color: var(--text-tertiary);
+}
+
+.section-filter.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+.section-filter.active span {
+  color: inherit;
+  opacity: 0.75;
+}
+
+[data-theme="dark"] .section-filter.active {
+  background: var(--white);
+  color: var(--black);
+}
+
+.section-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-bottom: var(--space-md);
+}
+
+.section-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 86px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: 600;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
+  text-align: left;
+}
+
+.section-btn strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  margin: 4px 0;
+}
+
+.section-btn small,
+.section-kicker {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
 }
 
 .section-btn.active {
   background: var(--black);
   color: var(--white);
+}
+
+.section-btn.active strong,
+.section-btn.active small,
+.section-btn.active .section-kicker {
+  color: inherit;
+  opacity: 0.85;
 }
 
 [data-theme="dark"] .section-btn.active {
@@ -485,6 +631,15 @@ onUnmounted(() => stopPlayback())
 .sentence-cn { font-size: var(--font-size-xs); color: var(--text-tertiary); }
 
 @media (max-width: 768px) {
+  .listening-bank {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .random-btn {
+    width: 100%;
+  }
+
   .listening-layout { grid-template-columns: 1fr; }
   .sentence-list { max-height: 240px; }
 }

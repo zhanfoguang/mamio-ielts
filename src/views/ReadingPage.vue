@@ -13,6 +13,34 @@ const currentQuestionIndex = ref(0)
 const userAnswers = ref({})
 const showResults = ref(false)
 const score = ref(null)
+const selectedLevel = ref('all')
+const selectedQuestionType = ref('all')
+
+const questionTypeLabels = {
+  'true-false-ng': { zh: '判断题', en: 'TFNG' },
+  matching: { zh: '匹配题', en: 'Matching' },
+  'matching-headings': { zh: '标题匹配', en: 'Headings' },
+  'short-answer': { zh: '简答题', en: 'Short Answer' },
+  'multiple-choice': { zh: '选择题', en: 'Multiple Choice' }
+}
+
+const levelOptions = ['all', 'easy', 'medium', 'hard']
+const questionTypeOptions = ['all', ...Object.keys(questionTypeLabels)]
+
+const levelCounts = computed(() => {
+  return readingPassages.reduce((acc, passage) => {
+    acc[passage.level] = (acc[passage.level] || 0) + 1
+    return acc
+  }, { all: readingPassages.length })
+})
+
+const filteredPassages = computed(() => {
+  return readingPassages.filter(passage => {
+    const levelOk = selectedLevel.value === 'all' || passage.level === selectedLevel.value
+    const typeOk = selectedQuestionType.value === 'all' || passage.questions.some(q => q.type === selectedQuestionType.value)
+    return levelOk && typeOk
+  })
+})
 
 // Timer
 const timerRunning = ref(false)
@@ -55,13 +83,21 @@ const currentQuestion = computed(() => {
 
 const totalQuestions = computed(() => {
   if (!selectedPassage.value) return 0
-  return selectedPassage.value.questions.reduce((sum, q) => {
+  return countPassageQuestions(selectedPassage.value)
+})
+
+function countPassageQuestions(passage) {
+  return passage.questions.reduce((sum, q) => {
     if (q.type === 'true-false-ng') return sum + q.statements.length
     if (q.type === 'matching' || q.type === 'matching-headings' || q.type === 'short-answer') return sum + (q.items?.length || q.answers?.length || 0)
     if (q.type === 'multiple-choice') return sum + (q.items?.length || 0)
     return sum + 1
   }, 0)
-})
+}
+
+function getPassageQuestionTypes(passage) {
+  return [...new Set(passage.questions.map(q => q.type))]
+}
 
 function setAnswer(questionId, index, value) {
   if (!userAnswers.value[questionId]) userAnswers.value[questionId] = {}
@@ -187,7 +223,7 @@ function resetPractice() {
 }
 
 function getLevelLabel(level) {
-  const labels = { easy: themeStore.lang === 'zh' ? '简单' : 'Easy', medium: themeStore.lang === 'zh' ? '中等' : 'Medium', hard: themeStore.lang === 'zh' ? '困难' : 'Hard' }
+  const labels = { all: themeStore.lang === 'zh' ? '全部' : 'All', easy: themeStore.lang === 'zh' ? '简单' : 'Easy', medium: themeStore.lang === 'zh' ? '中等' : 'Medium', hard: themeStore.lang === 'zh' ? '困难' : 'Hard' }
   return labels[level] || level
 }
 
@@ -198,6 +234,12 @@ function getLevelColor(level) {
 
 function headingValue(heading) {
   return String(heading).split('.')[0].trim()
+}
+
+function getQuestionTypeLabel(type) {
+  if (type === 'all') return themeStore.lang === 'zh' ? '全部题型' : 'All Types'
+  const label = questionTypeLabels[type]
+  return themeStore.lang === 'zh' ? label?.zh : label?.en
 }
 </script>
 
@@ -213,14 +255,41 @@ function headingValue(heading) {
 
       <!-- Passage selection -->
       <div v-if="!selectedPassage" class="passage-list">
-        <div v-for="p in readingPassages" :key="p.id" class="passage-card" @click="selectPassage(p)">
+        <div class="bank-toolbar">
+          <div>
+            <h2>{{ themeStore.lang === 'zh' ? '阅读题库' : 'Reading Bank' }}</h2>
+            <p>{{ themeStore.lang === 'zh' ? `${readingPassages.length} 篇 · ${readingPassages.reduce((sum, p) => sum + countPassageQuestions(p), 0)} 道题` : `${readingPassages.length} passages · ${readingPassages.reduce((sum, p) => sum + countPassageQuestions(p), 0)} questions` }}</p>
+          </div>
+          <button class="random-btn" @click="selectPassage(filteredPassages[Math.floor(Math.random() * filteredPassages.length)] || readingPassages[0])">
+            {{ themeStore.lang === 'zh' ? '随机练一篇' : 'Random Practice' }}
+          </button>
+        </div>
+
+        <div class="filter-row">
+          <button v-for="level in levelOptions" :key="level" class="filter-chip" :class="{ active: selectedLevel === level }" @click="selectedLevel = level">
+            {{ getLevelLabel(level) }} <span>{{ levelCounts[level] || 0 }}</span>
+          </button>
+        </div>
+
+        <div class="filter-row">
+          <button v-for="type in questionTypeOptions" :key="type" class="filter-chip compact" :class="{ active: selectedQuestionType === type }" @click="selectedQuestionType = type">
+            {{ getQuestionTypeLabel(type) }}
+          </button>
+        </div>
+
+        <div v-if="filteredPassages.length === 0" class="empty-filter">
+          {{ themeStore.lang === 'zh' ? '当前筛选下没有文章' : 'No passages match these filters' }}
+        </div>
+
+        <div v-for="p in filteredPassages" :key="p.id" class="passage-card" @click="selectPassage(p)">
           <div class="passage-info">
             <h3>{{ p.title }}</h3>
             <div class="passage-meta">
               <span class="level-tag" :style="{ color: getLevelColor(p.level), background: getLevelColor(p.level) + '18' }">
                 {{ getLevelLabel(p.level) }}
               </span>
-              <span class="question-count">{{ p.questions.length }} {{ themeStore.lang === 'zh' ? '组题' : 'question groups' }}</span>
+              <span class="question-count">{{ countPassageQuestions(p) }} {{ themeStore.lang === 'zh' ? '题' : 'questions' }}</span>
+              <span v-for="type in getPassageQuestionTypes(p)" :key="type" class="type-tag">{{ getQuestionTypeLabel(type) }}</span>
             </div>
           </div>
           <span class="passage-arrow">→</span>
@@ -469,6 +538,91 @@ function headingValue(heading) {
   gap: 12px;
 }
 
+.bank-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 18px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.bank-toolbar h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.bank-toolbar p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+.random-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .random-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.filter-chip.compact {
+  font-size: var(--font-size-xs);
+  padding: 6px 12px;
+}
+
+.filter-chip span {
+  margin-left: 4px;
+  color: var(--text-tertiary);
+}
+
+.filter-chip.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+.filter-chip.active span {
+  color: inherit;
+  opacity: 0.75;
+}
+
+[data-theme="dark"] .filter-chip.active {
+  background: var(--white);
+  color: var(--black);
+}
+
+.empty-filter {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
+
 .passage-card {
   display: flex;
   align-items: center;
@@ -505,6 +659,14 @@ function headingValue(heading) {
 .question-count {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+}
+
+.type-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
 }
 
 .passage-arrow { color: var(--text-tertiary); font-size: 1.2rem; }
@@ -894,6 +1056,19 @@ function headingValue(heading) {
 }
 
 @media (max-width: 768px) {
+  .bank-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .random-btn {
+    width: 100%;
+  }
+
+  .passage-meta {
+    flex-wrap: wrap;
+  }
+
   .reading-layout {
     grid-template-columns: 1fr;
   }

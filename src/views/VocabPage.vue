@@ -14,6 +14,9 @@ const activeTopic = ref(0)
 const flippedCards = ref(new Set())
 const aiWords = ref([])
 const loadingAi = ref(false)
+const vocabSearch = ref('')
+const selectedBand = ref('all')
+const bandOptions = ['all', 6, 7, 8]
 
 // SRS state (SM-2 algorithm)
 const srsData = ref(JSON.parse(localStorage.getItem('mamio-vocab-srs') || '{}'))
@@ -122,6 +125,15 @@ const allCurrentWords = computed(() => {
   const base = currentTopic.value?.words || []
   const ai = aiWords.value.length ? aiWords.value : []
   return [...base, ...ai]
+})
+
+const filteredTopicWords = computed(() => {
+  const query = vocabSearch.value.trim().toLowerCase()
+  return currentTopic.value.words.filter(word => {
+    const bandOk = selectedBand.value === 'all' || word.band === selectedBand.value
+    const text = `${word.word} ${word.meaning} ${word.example} ${(word.collocations || []).join(' ')}`.toLowerCase()
+    return bandOk && (!query || text.includes(query))
+  })
 })
 
 // Stats
@@ -321,6 +333,8 @@ function getBandColor(band) {
 watch(activeTopic, () => {
   aiWords.value = []
   flippedCards.value = new Set()
+  vocabSearch.value = ''
+  selectedBand.value = 'all'
 })
 </script>
 
@@ -399,9 +413,25 @@ watch(activeTopic, () => {
           </div>
         </div>
 
+        <div class="vocab-tools">
+          <input
+            v-model="vocabSearch"
+            class="vocab-search"
+            :placeholder="themeStore.lang === 'zh' ? '搜索单词、释义、例句或搭配' : 'Search words, meanings, examples, or collocations'"
+          />
+          <div class="band-filters">
+            <button v-for="band in bandOptions" :key="band" class="band-filter" :class="{ active: selectedBand === band }" @click="selectedBand = band">
+              {{ band === 'all' ? (themeStore.lang === 'zh' ? '全部 Band' : 'All Bands') : 'Band ' + band }}
+            </button>
+          </div>
+          <span class="vocab-count">
+            {{ filteredTopicWords.length }}/{{ currentTopic.words.length }}
+          </span>
+        </div>
+
         <!-- Word cards -->
-        <div class="word-grid">
-          <div v-for="(word, i) in currentTopic.words" :key="i" class="word-card" :class="{ flipped: isFlipped(i) }" @click="toggleFlip(i)">
+        <div v-if="filteredTopicWords.length" class="word-grid">
+          <div v-for="word in filteredTopicWords" :key="word.word" class="word-card" :class="{ flipped: isFlipped(word.word) }" @click="toggleFlip(word.word)">
             <div class="card-inner">
               <div class="card-front">
                 <span class="band-badge" :style="{ color: getBandColor(word.band) }">Band {{ word.band }}</span>
@@ -418,6 +448,10 @@ watch(activeTopic, () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div v-else class="vocab-empty">
+          {{ themeStore.lang === 'zh' ? '当前筛选下没有词汇' : 'No words match these filters' }}
         </div>
 
         <!-- AI generated words -->
@@ -739,6 +773,69 @@ watch(activeTopic, () => {
 .topic-header h2 { font-size: var(--font-size-xl); font-weight: 700; }
 
 .topic-actions { display: flex; gap: 8px; }
+
+.vocab-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.vocab-search {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+}
+
+.vocab-search:focus {
+  border-color: var(--blue);
+}
+
+.band-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.band-filter {
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.band-filter.active {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .band-filter.active {
+  background: var(--white);
+  color: var(--black);
+}
+
+.vocab-count {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.vocab-empty {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--text-tertiary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
 
 .quiz-btn {
   padding: 8px 20px;
