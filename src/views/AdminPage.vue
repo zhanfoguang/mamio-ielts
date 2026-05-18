@@ -16,6 +16,7 @@ const stats = ref(null)
 const logs = ref([])
 const logStats = ref([])
 const contentDrafts = ref([])
+const contentHealth = ref(null)
 const loading = ref(false)
 const generating = ref(false)
 const newCodes = ref([])
@@ -154,6 +155,15 @@ async function fetchContentDrafts() {
   }
 }
 
+async function fetchContentHealth() {
+  try {
+    const { data } = await api.get('/auth/admin/content-health')
+    contentHealth.value = data
+  } catch (e) {
+    console.error('Failed to fetch content health:', e)
+  }
+}
+
 async function updateDraftStatus(draft, status) {
   await api.patch(`/auth/admin/content-drafts/${encodeURIComponent(draft.fileName)}`, {
     status,
@@ -179,6 +189,7 @@ onMounted(() => {
   fetchStats()
   fetchLogs()
   fetchContentDrafts()
+  fetchContentHealth()
 })
 </script>
 
@@ -204,7 +215,7 @@ onMounted(() => {
         <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'; fetchLogs()">
           {{ themeStore.lang === 'zh' ? 'API日志' : 'API Logs' }}
         </button>
-        <button class="tab" :class="{ active: tab === 'content' }" @click="tab = 'content'; fetchContentDrafts()">
+        <button class="tab" :class="{ active: tab === 'content' }" @click="tab = 'content'; fetchContentDrafts(); fetchContentHealth()">
           {{ themeStore.lang === 'zh' ? '内容草稿' : 'Content Drafts' }}
         </button>
       </div>
@@ -519,6 +530,41 @@ onMounted(() => {
 
       <!-- Content Drafts Tab -->
       <div v-if="tab === 'content'" class="tab-content">
+        <div v-if="contentHealth" class="content-health">
+          <div class="health-score" :class="{ weak: contentHealth.score < 80 }">
+            <strong>{{ contentHealth.score }}</strong>
+            <span>{{ themeStore.lang === 'zh' ? '题库健康分' : 'Bank Health' }}</span>
+          </div>
+          <div class="health-metrics">
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</span>
+              <strong>{{ contentHealth.reading.total }}</strong>
+              <small>{{ contentHealth.reading.avgWords }} avg words</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '听力' : 'Listening' }}</span>
+              <strong>{{ contentHealth.listening.total }}</strong>
+              <small>{{ contentHealth.listening.avgSentences }} avg sentences</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '阅读等级' : 'Reading Levels' }}</span>
+              <strong>E{{ contentHealth.reading.byLevel.easy }} / M{{ contentHealth.reading.byLevel.medium }} / H{{ contentHealth.reading.byLevel.hard }}</strong>
+              <small>easy / medium / hard</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '听力 Section' : 'Listening Sections' }}</span>
+              <strong>S1 {{ contentHealth.listening.bySection[1] }} · S2 {{ contentHealth.listening.bySection[2] }} · S3 {{ contentHealth.listening.bySection[3] }} · S4 {{ contentHealth.listening.bySection[4] }}</strong>
+              <small>coverage</small>
+            </div>
+          </div>
+          <div v-if="contentHealth.gaps.length" class="health-gaps">
+            <span v-for="gap in contentHealth.gaps" :key="gap">{{ gap }}</span>
+          </div>
+          <div v-else class="health-gaps clean">
+            {{ themeStore.lang === 'zh' ? '当前结构覆盖达标，下一步应继续扩内容量和真题相似度。' : 'Current structure coverage is healthy; next focus is volume and exam resemblance.' }}
+          </div>
+        </div>
+
         <div class="draft-summary">
           <div class="draft-stat">
             <strong>{{ contentDrafts.length }}</strong>
@@ -1187,6 +1233,90 @@ onMounted(() => {
 }
 
 /* Content drafts */
+.content-health {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.health-score {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: var(--space-md);
+  border-right: 1px solid var(--border-color);
+}
+
+.health-score strong {
+  font-size: 2.4rem;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--green);
+}
+
+.health-score.weak strong {
+  color: var(--red);
+}
+
+.health-score span,
+.health-metrics span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.health-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.health-metrics div {
+  min-width: 0;
+}
+
+.health-metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-base);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.health-metrics small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.health-gaps {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.health-gaps span {
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.health-gaps.clean {
+  color: var(--green);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
 .draft-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1498,10 +1628,23 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .content-health,
+  .health-metrics,
   .draft-summary,
   .draft-layout,
   .draft-columns {
     grid-template-columns: 1fr;
+  }
+
+  .health-score {
+    padding-right: 0;
+    padding-bottom: var(--space-md);
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .health-gaps {
+    grid-column: auto;
   }
 }
 </style>

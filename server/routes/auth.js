@@ -120,6 +120,80 @@ function assessContentDraft(payload) {
   }
 }
 
+function wordCount(text) {
+  return String(text || '').trim().split(/\s+/).filter(Boolean).length
+}
+
+function buildContentHealth() {
+  const readingByLevel = readingPassages.reduce((acc, passage) => {
+    acc[passage.level] = (acc[passage.level] || 0) + 1
+    return acc
+  }, { easy: 0, medium: 0, hard: 0 })
+
+  const readingTypes = readingPassages.reduce((acc, passage) => {
+    for (const question of passage.questions || []) {
+      acc[question.type] = (acc[question.type] || 0) + 1
+    }
+    return acc
+  }, {})
+
+  const listeningBySection = listeningSections.reduce((acc, section) => {
+    acc[section.section] = (acc[section.section] || 0) + 1
+    return acc
+  }, { 1: 0, 2: 0, 3: 0, 4: 0 })
+
+  const readingWordCounts = readingPassages.map(passage => wordCount(passage.passage))
+  const listeningSentenceCounts = listeningSections.map(section => section.sentences?.length || 0)
+  const duplicateReadingTitles = findDuplicateTitles(readingPassages)
+  const duplicateListeningTitles = findDuplicateTitles(listeningSections)
+  const gaps = []
+
+  for (const [level, count] of Object.entries(readingByLevel)) {
+    if (count < 4) gaps.push(`Reading ${level} needs at least 4 passages; current ${count}.`)
+  }
+  for (const type of allowedReadingTypes) {
+    if (!readingTypes[type]) gaps.push(`Reading question type missing: ${type}.`)
+  }
+  for (const [section, count] of Object.entries(listeningBySection)) {
+    if (count < 2) gaps.push(`Listening Section ${section} needs at least 2 scenes; current ${count}.`)
+  }
+  if (duplicateReadingTitles.length) gaps.push(`Duplicate reading titles: ${duplicateReadingTitles.join(', ')}.`)
+  if (duplicateListeningTitles.length) gaps.push(`Duplicate listening titles: ${duplicateListeningTitles.join(', ')}.`)
+
+  return {
+    generatedAt: new Date().toISOString(),
+    score: Math.max(0, 100 - gaps.length * 10),
+    gaps,
+    reading: {
+      total: readingPassages.length,
+      byLevel: readingByLevel,
+      questionTypes: readingTypes,
+      avgWords: readingWordCounts.length ? Math.round(readingWordCounts.reduce((sum, count) => sum + count, 0) / readingWordCounts.length) : 0,
+      shortest: readingWordCounts.length ? Math.min(...readingWordCounts) : 0,
+      longest: readingWordCounts.length ? Math.max(...readingWordCounts) : 0
+    },
+    listening: {
+      total: listeningSections.length,
+      bySection: listeningBySection,
+      avgSentences: listeningSentenceCounts.length ? Math.round(listeningSentenceCounts.reduce((sum, count) => sum + count, 0) / listeningSentenceCounts.length) : 0,
+      shortest: listeningSentenceCounts.length ? Math.min(...listeningSentenceCounts) : 0,
+      longest: listeningSentenceCounts.length ? Math.max(...listeningSentenceCounts) : 0
+    }
+  }
+}
+
+function findDuplicateTitles(items) {
+  const seen = new Set()
+  const duplicates = new Set()
+  for (const item of items) {
+    const title = normalizeTitle(item.title)
+    if (!title) continue
+    if (seen.has(title)) duplicates.add(item.title)
+    seen.add(title)
+  }
+  return [...duplicates]
+}
+
 async function readContentDraftFiles() {
   let fileNames = []
   try {
@@ -513,6 +587,16 @@ router.get('/admin/content-drafts', authMiddleware, adminMiddleware, async (req,
   } catch (err) {
     console.error('Content drafts error:', err.message)
     res.status(500).json({ error: '获取内容草稿失败' })
+  }
+})
+
+// Admin: current IELTS content bank health
+router.get('/admin/content-health', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    res.json(buildContentHealth())
+  } catch (err) {
+    console.error('Content health error:', err.message)
+    res.status(500).json({ error: '获取题库健康数据失败' })
   }
 })
 
