@@ -114,3 +114,14 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add pricing section with trial/monthly/yearly plans.
 - [x] Add activation code explanation with 3-step guide.
 - [x] Create `src/components/landing/PricingSection.vue` with i18n support.
+
+## Phase 17: Content Supply System
+
+- [x] Expand the first static reading/listening banks beyond demo size.
+- [x] Add `AI-OPS/CONTENT_UPDATE_BLUEPRINT.md` for safe content sourcing and publishing.
+- [x] Add `npm run content:seed` to fetch public topic seeds into `AI-OPS/content-drafts/`.
+- [x] Add `npm run content:generate` to create AI-generated draft content from seeds.
+- [x] Add `npm run content:validate` to catch schema and bank-size regressions.
+- [ ] Add admin review UI for approving generated content.
+- [ ] Move approved content from static files into server-side content tables.
+- [ ] Add weekly VPS cron for draft generation only, never direct publishing.

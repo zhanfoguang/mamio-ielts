@@ -19,6 +19,9 @@ server/.env
 *.db-shm
 *.db-wal
 
+# Generated content drafts
+AI-OPS/content-drafts/*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

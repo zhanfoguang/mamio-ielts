@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "content:seed": "node tools/content-refresh.mjs",
+    "content:generate": "node tools/content-refresh.mjs --generate",
+    "content:validate": "node tools/validate-content.mjs"
   },
   "dependencies": {
     "@iconify/iconify": "^3.1.1",
