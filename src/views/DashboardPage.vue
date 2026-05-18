@@ -13,7 +13,7 @@ const authStore = useAuthStore()
 const checkinStore = useCheckinStore()
 const router = useRouter()
 
-const weekDays = checkinStore.getWeekDays()
+const weekDays = computed(() => checkinStore.getWeekDays())
 
 // Load all history
 const speakingHistory = ref([])

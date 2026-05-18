@@ -1,11 +1,12 @@
 <script setup>
+import { computed } from 'vue'
 import { useCheckinStore } from '../../stores/checkin'
 import { useThemeStore } from '../../stores/theme'
 import { toLocalDateKey } from '../../utils/date'
 
 const checkinStore = useCheckinStore()
 const themeStore = useThemeStore()
-const weekDays = checkinStore.getWeekDays()
+const weekDays = computed(() => checkinStore.getWeekDays())
 const today = toLocalDateKey()
 </script>
 
