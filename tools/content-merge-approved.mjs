@@ -10,6 +10,7 @@ const readingPath = path.join(root, 'src', 'data', 'ielts', 'reading.js')
 const listeningPath = path.join(root, 'src', 'data', 'ielts', 'listening.js')
 const allowedReadingTypes = new Set(['true-false-ng', 'matching', 'matching-headings', 'short-answer', 'multiple-choice'])
 const allowedLevels = new Set(['easy', 'medium', 'hard'])
+const isDryRun = process.argv.includes('--dry-run')
 
 function normalizeTitle(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
@@ -190,20 +191,25 @@ async function main() {
   const newReading = withSequentialIds(readingToAdd.map(({ fileName, ...item }) => item), nextReadingId)
   const newListening = withSequentialIds(listeningToAdd.map(({ fileName, ...item }) => item), nextListeningId)
 
-  await writeDataModule(readingPath, 'readingPassages', [...readingPassages, ...newReading])
-  await writeDataModule(listeningPath, 'listeningSections', [...listeningSections, ...newListening])
+  if (!isDryRun) {
+    await writeDataModule(readingPath, 'readingPassages', [...readingPassages, ...newReading])
+    await writeDataModule(listeningPath, 'listeningSections', [...listeningSections, ...newListening])
+  }
 
   const mergedAt = new Date().toISOString()
   const mergedFiles = new Set([...readingToAdd, ...listeningToAdd].map(item => item.fileName))
-  for (const draft of approvedDrafts.filter(item => mergedFiles.has(item.fileName))) {
-    const mergedSummary = {
-      readingTitles: readingToAdd.filter(item => item.fileName === draft.fileName).map(item => item.title),
-      listeningTitles: listeningToAdd.filter(item => item.fileName === draft.fileName).map(item => item.title)
+  if (!isDryRun) {
+    for (const draft of approvedDrafts.filter(item => mergedFiles.has(item.fileName))) {
+      const mergedSummary = {
+        readingTitles: readingToAdd.filter(item => item.fileName === draft.fileName).map(item => item.title),
+        listeningTitles: listeningToAdd.filter(item => item.fileName === draft.fileName).map(item => item.title)
+      }
+      await fs.writeFile(draft.fullPath, `${JSON.stringify({ ...draft.payload, mergedAt, mergedSummary }, null, 2)}\n`)
     }
-    await fs.writeFile(draft.fullPath, `${JSON.stringify({ ...draft.payload, mergedAt, mergedSummary }, null, 2)}\n`)
   }
 
   console.log(JSON.stringify({
+    dryRun: isDryRun,
     approvedDraftFiles: approvedDrafts.length,
     addedReading: newReading.length,
     addedListening: newListening.length,

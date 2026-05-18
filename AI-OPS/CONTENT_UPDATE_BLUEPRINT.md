@@ -51,7 +51,9 @@ Guardrails:
 - It reads `DEEPSEEK_API_KEY` from `/var/www/mimio/server/.env`.
 - It writes JSON drafts under `AI-OPS/content-drafts/`.
 - It never merges or publishes content automatically.
-- Approved drafts must still be reviewed in Admin and merged deliberately with `npm run content:merge-approved`.
+- Approved drafts must still be reviewed in Admin and merged deliberately.
+- Preview a merge with `npm run content:merge-approved:dry`.
+- Publish approved local drafts with `npm run content:merge-approved`.
 
 Suggested weekly cron:
 

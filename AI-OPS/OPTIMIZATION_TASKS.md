@@ -128,6 +128,7 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add admin content-bank health dashboard for reading level coverage, question types, listening sections, and structural gaps.
 - [x] Persist admin draft review status back into generated JSON files.
 - [x] Add `npm run content:merge-approved` to merge approved, unmerged drafts into reading/listening banks with duplicate protection.
+- [x] Add dry-run mode for approved content merge previews.
 - [ ] Move approved content from static files into server-side content tables.
 - [x] Add weekly VPS cron script for draft generation only, never direct publishing.
 - [ ] Install weekly VPS cron after confirming the production DeepSeek key is valid.

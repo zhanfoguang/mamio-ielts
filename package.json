@@ -10,6 +10,7 @@
     "content:seed": "node tools/content-refresh.mjs",
     "content:generate": "node tools/content-refresh.mjs --generate",
     "content:merge-approved": "node tools/content-merge-approved.mjs",
+    "content:merge-approved:dry": "node tools/content-merge-approved.mjs --dry-run",
     "content:validate": "node tools/validate-content.mjs"
   },
   "dependencies": {
