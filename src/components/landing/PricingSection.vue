@@ -89,6 +89,12 @@ function goToPlan(plan) {
 
       <div class="activation-info">
         <h3 class="activation-title">{{ themeStore.lang === 'zh' ? '如何激活？' : 'How to activate?' }}</h3>
+        <p class="activation-subtitle">
+          {{ themeStore.lang === 'zh'
+            ? '试用期适合确认学习流程；正式备考建议激活后连续练，避免 AI 调用次数打断节奏。'
+            : 'Use the trial to test the workflow; activate for continuous prep without AI-call interruptions.'
+          }}
+        </p>
         <div class="activation-steps">
           <div class="activation-step">
             <span class="step-num">1</span>
@@ -102,6 +108,14 @@ function goToPlan(plan) {
             <span class="step-num">3</span>
             <p>{{ themeStore.lang === 'zh' ? '登录后打开激活码标签输入，立即解锁全部功能' : 'Log in, open the activation tab, and unlock all features' }}</p>
           </div>
+        </div>
+        <div class="activation-cta-row">
+          <button class="activation-primary" @click="router.push(authStore.isLoggedIn ? '/login?mode=activate' : '/login?mode=register&after=activate')">
+            {{ themeStore.lang === 'zh' ? '注册/登录后激活' : 'Register/Login to Activate' }}
+          </button>
+          <button class="activation-secondary" @click="router.push('/login?mode=register')">
+            {{ themeStore.lang === 'zh' ? '先免费试用' : 'Start Free Trial' }}
+          </button>
         </div>
       </div>
     </div>
@@ -249,7 +263,15 @@ function goToPlan(plan) {
 .activation-title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  margin-bottom: var(--space-xl);
+  margin-bottom: 6px;
+}
+
+.activation-subtitle {
+  max-width: 640px;
+  margin: 0 auto var(--space-xl);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
 }
 
 .activation-steps {
@@ -291,6 +313,38 @@ function goToPlan(plan) {
   line-height: 1.5;
 }
 
+.activation-cta-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: var(--space-xl);
+}
+
+.activation-primary,
+.activation-secondary {
+  padding: 11px 20px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.activation-primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .activation-primary {
+  background: var(--white);
+  color: var(--black);
+}
+
+.activation-secondary {
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
 @media (max-width: 768px) {
   .pricing-grid {
     grid-template-columns: 1fr;
@@ -310,6 +364,11 @@ function goToPlan(plan) {
   .activation-steps {
     flex-direction: column;
     align-items: center;
+  }
+
+  .activation-primary,
+  .activation-secondary {
+    width: 100%;
   }
 }
 </style>

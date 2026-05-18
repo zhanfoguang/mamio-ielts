@@ -156,4 +156,5 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add one-click review completion for the top three priority weak spots.
 - [x] Add lightweight stale-user prompt when there has been no practice today.
 - [ ] Tighten mobile first-screen density on Dashboard after the new checklist and action queue.
+- [x] Clarify landing pricing activation path and trial-to-paid continuity.
 - [ ] Update handoff notes with the next content/database migration path.
