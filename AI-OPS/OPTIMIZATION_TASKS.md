@@ -140,3 +140,4 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Surface reading/listening average accuracy in Dashboard module stats and study-plan priority.
 - [x] Send all reading wrong/unanswered item types into Review, including matching and multiple choice.
 - [x] Send listening completion wrong/unanswered blanks into Review.
+- [x] Show recent reading/listening attempts inside each module so learners can resume or compare attempts quickly.

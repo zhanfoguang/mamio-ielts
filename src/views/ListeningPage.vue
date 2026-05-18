@@ -20,6 +20,7 @@ const selectedSectionType = ref('all')
 const questionAnswers = ref({})
 const showQuestionResults = ref(false)
 const listeningReport = ref(null)
+const listeningHistory = ref(loadListeningHistory())
 
 const section = computed(() => listeningSections[activeSection.value])
 const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
@@ -149,6 +150,14 @@ function pickRandomSection() {
   selectSection(listeningSections.findIndex(item => item.id === picked.id))
 }
 
+function loadListeningHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
+  } catch {
+    return []
+  }
+}
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -180,6 +189,7 @@ function submitListeningQuestions() {
   })
   if (history.length > 50) history.length = 50
   localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+  listeningHistory.value = history
 
   const wrongItems = listeningQuestions.value
     .filter(q => normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
@@ -267,6 +277,7 @@ function stopDictation() {
     })
     if (history.length > 50) history.length = 50
     localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+    listeningHistory.value = history
   }
 
   incrementDailyStats(toLocalDateKey(), 'listening')
@@ -341,6 +352,20 @@ onUnmounted(() => stopPlayback())
           <strong>{{ s.title }}</strong>
           <small>{{ s.sentences.length }} {{ themeStore.lang === 'zh' ? '句' : 'sentences' }}</small>
         </button>
+      </div>
+
+      <div v-if="listeningHistory.length" class="history-strip">
+        <div class="history-head">
+          <h3>{{ themeStore.lang === 'zh' ? '最近听力记录' : 'Recent Listening' }}</h3>
+          <span>{{ listeningHistory.slice(0, 5).length }} / {{ listeningHistory.length }}</span>
+        </div>
+        <div class="history-list">
+          <button v-for="item in listeningHistory.slice(0, 5)" :key="item.id" class="history-item" @click="selectSection(Math.max(0, listeningSections.findIndex(s => s.title === item.section)))">
+            <strong>{{ item.section }}</strong>
+            <span v-if="typeof item.score === 'number'">{{ item.score }}%</span>
+            <small>{{ item.mode === 'completion' ? 'Completion' : 'Dictation' }}</small>
+          </button>
+        </div>
       </div>
 
       <div class="section-info">
@@ -626,6 +651,67 @@ onUnmounted(() => stopPlayback())
 [data-theme="dark"] .section-btn.active {
   background: var(--white);
   color: var(--black);
+}
+
+.history-strip {
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: 10px;
+}
+
+.history-head h3 {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.history-head span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  padding: 10px;
+  text-align: left;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.history-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+}
+
+.history-item span {
+  color: var(--green);
+  font-size: var(--font-size-xs);
+  font-weight: 900;
+}
+
+.history-item small {
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .section-info {

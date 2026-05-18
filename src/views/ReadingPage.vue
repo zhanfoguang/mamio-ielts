@@ -16,6 +16,7 @@ const score = ref(null)
 const selectedLevel = ref('all')
 const selectedQuestionType = ref('all')
 const practiceReport = ref(null)
+const readingHistory = ref(loadReadingHistory())
 
 const questionTypeLabels = {
   'true-false-ng': { zh: '判断题', en: 'TFNG' },
@@ -101,6 +102,14 @@ function getPassageQuestionTypes(passage) {
   return [...new Set(passage.questions.map(q => q.type))]
 }
 
+function loadReadingHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+  } catch {
+    return []
+  }
+}
+
 function setAnswer(questionId, index, value) {
   if (!userAnswers.value[questionId]) userAnswers.value[questionId] = {}
   userAnswers.value[questionId][index] = value
@@ -177,6 +186,7 @@ function submitAnswers() {
   })
   if (history.length > 50) history.length = 50
   localStorage.setItem('mamio-reading-history', JSON.stringify(history))
+  readingHistory.value = history
 
   incrementDailyStats(toLocalDateKey(), 'reading')
 
@@ -389,6 +399,20 @@ function getQuestionTypeLabel(type) {
 
         <div v-if="filteredPassages.length === 0" class="empty-filter">
           {{ themeStore.lang === 'zh' ? '当前筛选下没有文章' : 'No passages match these filters' }}
+        </div>
+
+        <div v-if="readingHistory.length" class="history-strip">
+          <div class="history-head">
+            <h3>{{ themeStore.lang === 'zh' ? '最近阅读记录' : 'Recent Reading' }}</h3>
+            <span>{{ readingHistory.slice(0, 5).length }} / {{ readingHistory.length }}</span>
+          </div>
+          <div class="history-list">
+            <button v-for="item in readingHistory.slice(0, 5)" :key="item.id" class="history-item" @click="selectPassage(readingPassages.find(p => p.title === item.passage) || readingPassages[0])">
+              <strong>{{ item.passage }}</strong>
+              <span :style="{ color: getScoreColor(item.score) }">{{ item.score }}%</span>
+              <small>{{ formatTime(item.time || 0) }}</small>
+            </button>
+          </div>
         </div>
 
         <div v-for="p in filteredPassages" :key="p.id" class="passage-card" @click="selectPassage(p)">
@@ -768,6 +792,65 @@ function getQuestionTypeLabel(type) {
   color: var(--text-tertiary);
   border: 1px dashed var(--border-color);
   border-radius: var(--radius-md);
+}
+
+.history-strip {
+  padding: var(--space-md);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: 10px;
+}
+
+.history-head h3 {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.history-head span {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  padding: 10px;
+  text-align: left;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.history-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+}
+
+.history-item span {
+  font-size: var(--font-size-xs);
+  font-weight: 900;
+}
+
+.history-item small {
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .passage-card {
