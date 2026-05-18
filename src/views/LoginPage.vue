@@ -220,7 +220,7 @@ async function handleActivate() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-xl);
+  padding: calc(var(--header-height) + var(--space-lg)) var(--space-xl) var(--space-xl);
   background: var(--bg-primary);
 }
 
@@ -466,4 +466,22 @@ async function handleActivate() {
 .status-value.paid { color: var(--green); }
 .status-value.trial { color: var(--blue); }
 .status-value.expired { color: var(--red); }
+
+@media (max-width: 520px) {
+  .login-page {
+    align-items: flex-start;
+    padding: calc(var(--header-height) + 12px) 16px 24px;
+  }
+
+  .login-card {
+    padding: var(--space-xl);
+    border-radius: var(--radius-md);
+  }
+
+  .login-subtitle {
+    max-width: 240px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>
