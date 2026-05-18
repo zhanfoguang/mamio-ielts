@@ -66,14 +66,23 @@ const today = new Date().toISOString().split('T')[0]
 const dailyProgress = ref(JSON.parse(localStorage.getItem('mamio-vocab-daily') || '{}'))
 const vocabStreak = ref(JSON.parse(localStorage.getItem('mamio-vocab-streak') || '{"count":0,"lastDate":""}'))
 
+function dailyRank(word) {
+  const key = `${today}:${word.word}`.toLowerCase()
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
 // Daily recommendations
 const dailyWords = computed(() => {
   const learned = Object.keys(srsData.value)
   const allWords = vocabTopics.flatMap(t => t.words)
   const unseen = allWords.filter(w => !learned.includes(w.word.toLowerCase()))
   // Mix: 5 new words + 5 due for review
-  const newWords = unseen.sort(() => Math.random() - 0.5).slice(0, 5)
-  const due = getDueWords().slice(0, 5)
+  const newWords = [...unseen].sort((a, b) => dailyRank(a) - dailyRank(b)).slice(0, 5)
+  const due = getDueWords().sort((a, b) => dailyRank(a) - dailyRank(b)).slice(0, 5)
   const combined = [...newWords, ...due]
   // Deduplicate
   const seen = new Set()
@@ -443,6 +452,14 @@ watch(activeTopic, () => {
 
         <div v-if="dailyWords.length === 0" class="srs-empty">
           <p>{{ themeStore.lang === 'zh' ? '今日词汇已全部学完！' : "All today's words completed!" }}</p>
+          <div class="empty-actions">
+            <button class="srs-show-btn" @click="startSrs">
+              {{ themeStore.lang === 'zh' ? '检查到期复习' : 'Check Due Reviews' }}
+            </button>
+            <button class="secondary-btn" @click="mode = 'browse'">
+              {{ themeStore.lang === 'zh' ? '浏览话题词' : 'Browse Topics' }}
+            </button>
+          </div>
         </div>
 
         <div v-else class="daily-words-grid">
@@ -478,6 +495,14 @@ watch(activeTopic, () => {
 
         <div v-if="srsQueue.length === 0" class="srs-empty">
           <p>{{ themeStore.lang === 'zh' ? '没有需要复习的词汇！' : 'No words due for review!' }}</p>
+          <div class="empty-actions">
+            <button class="srs-show-btn" @click="mode = 'daily'">
+              {{ themeStore.lang === 'zh' ? '回今日词汇' : "Back to Today's Words" }}
+            </button>
+            <button class="secondary-btn" @click="mode = 'browse'">
+              {{ themeStore.lang === 'zh' ? '浏览新词' : 'Browse New Words' }}
+            </button>
+          </div>
         </div>
 
         <template v-else>
@@ -1014,6 +1039,14 @@ watch(activeTopic, () => {
   font-size: var(--font-size-lg);
 }
 
+.empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-lg);
+}
+
 .srs-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -1052,6 +1085,19 @@ watch(activeTopic, () => {
   font-size: var(--font-size-base);
   background: var(--blue);
   color: white;
+}
+
+.secondary-btn {
+  padding: 12px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.secondary-btn:hover {
+  background: var(--bg-tertiary);
 }
 
 .srs-rate-btn {
