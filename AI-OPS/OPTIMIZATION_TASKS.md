@@ -118,6 +118,7 @@ This is the active execution list for turning Mamio from a module collection int
 ## Phase 17: Content Supply System
 
 - [x] Expand the first static reading/listening banks beyond demo size.
+- [x] Expand formal content again to 16 reading passages and 12 listening scenes, with all four listening sections now having 3 scenes each.
 - [x] Add `AI-OPS/CONTENT_UPDATE_BLUEPRINT.md` for safe content sourcing and publishing.
 - [x] Add `npm run content:seed` to fetch public topic seeds into `AI-OPS/content-drafts/`.
 - [x] Add `npm run content:generate` to create AI-generated draft content from seeds.

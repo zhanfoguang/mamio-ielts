@@ -61,8 +61,8 @@ const totals = {
   listeningBySection
 }
 
-if (readingPassages.length < 14) fail('Reading bank below current minimum: 14 passages')
-if (listeningSections.length < 8) fail('Listening bank below current minimum: 8 scenes')
+if (readingPassages.length < 16) fail('Reading bank below current minimum: 16 passages')
+if (listeningSections.length < 12) fail('Listening bank below current minimum: 12 scenes')
 if ((writingTasks.task1?.length || 0) < 4 || (writingTasks.task2?.length || 0) < 4) fail('Writing bank needs at least 4 prompts per task type')
 if ((speakingTopics.part1?.length || 0) < 5 || (speakingTopics.part2?.length || 0) < 5 || (speakingTopics.part3?.length || 0) < 5) fail('Speaking bank needs at least 5 topics per part')
 

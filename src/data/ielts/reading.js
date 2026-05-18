@@ -809,5 +809,118 @@ Designers are now exploring ways to make navigation tools more educational. Some
         ]
       }
     ]
+  },
+  {
+    id: 15,
+    title: 'Community Repair Cafes',
+    level: 'medium',
+    passage: `In many cities, small volunteer-run workshops known as repair cafes have become a practical response to the culture of disposable consumer goods. Instead of throwing away a broken toaster, lamp, bicycle, or item of clothing, residents bring it to a community venue where volunteers help diagnose the problem and, when possible, repair it on the spot. The model began in the Netherlands in 2009 and has since spread to numerous countries.
+
+The environmental argument for repair cafes is straightforward. Manufacturing new products requires raw materials, energy, transport, and packaging, while discarded goods often end up in landfill or low-value recycling streams. Extending the life of household items can therefore reduce both waste and carbon emissions. Although a single repaired kettle may seem insignificant, thousands of small repairs across a city can produce a measurable reduction in discarded electrical goods.
+
+Repair cafes also have social benefits that are less obvious but equally important. They create spaces where older residents with practical skills can share knowledge with younger people who may have grown up replacing rather than repairing objects. Participants often report that they learn how products work and become more confident attempting simple repairs at home. In this sense, the cafe is not merely a free repair service; it is a form of informal education.
+
+However, the movement faces limitations. Some modern products are difficult to open without specialist tools, and replacement parts may be expensive or unavailable. Safety rules also mean volunteers must avoid repairing certain high-risk electrical items. For this reason, campaigners argue that repair cafes should be supported by wider "right to repair" policies requiring manufacturers to provide spare parts, manuals, and designs that allow safe maintenance.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Repair cafes first appeared in the Netherlands.', answer: 'TRUE', explanation: 'The first paragraph states that the model began in the Netherlands in 2009.' },
+          { text: 'Every item brought to a repair cafe can be repaired immediately.', answer: 'FALSE', explanation: 'The passage says volunteers repair items "when possible" and later describes limitations.' },
+          { text: 'Repair cafes can help younger people learn practical skills.', answer: 'TRUE', explanation: 'The third paragraph says younger people can learn from older residents with practical skills.' },
+          { text: 'Most repair cafes charge the same price as commercial repair shops.', answer: 'NOT GIVEN', explanation: 'The passage does not compare prices with commercial repair shops.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'According to the passage, repairing household items can reduce:',
+            options: [
+              'A. the number of volunteers in cities',
+              'B. the need for product manuals',
+              'C. waste and carbon emissions',
+              'D. the cost of specialist tools'
+            ],
+            answer: 'C',
+            explanation: 'The second paragraph links longer product life with reduced waste and carbon emissions.'
+          },
+          {
+            question: 'The writer suggests that right to repair policies would:',
+            options: [
+              'A. replace all community repair cafes',
+              'B. make safe maintenance easier',
+              'C. ban the sale of electrical goods',
+              'D. remove the need for volunteers'
+            ],
+            answer: 'B',
+            explanation: 'The final paragraph says policies could require parts, manuals, and designs that allow safe maintenance.'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What type of goods culture are repair cafes responding to?', answer: 'disposable consumer goods' },
+          { question: 'Where do many discarded goods end up?', answer: 'landfill' },
+          { question: 'What kind of education can repair cafes provide?', answer: 'informal education' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 16,
+    title: 'Restoring Coral Reefs',
+    level: 'hard',
+    passage: `Coral reefs occupy a tiny fraction of the ocean floor, yet they support an extraordinary range of marine life. They also protect coastlines by reducing wave energy and provide food and income for millions of people. In recent decades, however, reefs have been placed under growing pressure from warming seas, pollution, destructive fishing practices, and ocean acidification.
+
+One increasingly visible response is coral restoration. In some projects, fragments of healthy coral are grown in underwater nurseries and later transplanted onto damaged reefs. Other teams use land-based tanks where temperature, light, and water chemistry can be carefully controlled. Scientists are also experimenting with selectively breeding corals that show higher tolerance to heat, although this approach remains scientifically and ethically complex.
+
+The results of restoration projects are mixed. At a local scale, transplanted corals can increase habitat complexity and help bring fish back to degraded areas. Restoration work can also engage coastal communities and create employment for divers, boat operators, and monitoring teams. Nevertheless, restoration is expensive and labour-intensive, and it cannot be applied across the enormous areas affected by marine heatwaves.
+
+Many researchers therefore warn that restoration should not be treated as a substitute for reducing the causes of reef decline. If sea temperatures continue to rise, newly planted corals may suffer the same bleaching events that damaged the original reef. The most effective strategy is likely to combine local restoration with pollution control, sustainable fisheries management, and global reductions in greenhouse gas emissions.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'matching-headings',
+        question: 'Match each paragraph (A-D) with the most suitable heading.',
+        headings: [
+          'i. Why restoration has limits',
+          'ii. The value and vulnerability of reefs',
+          'iii. Combining repair with prevention',
+          'iv. Techniques used to rebuild coral',
+          'v. The history of commercial diving'
+        ],
+        answers: ['ii', 'iv', 'i', 'iii'],
+        explanation: 'A explains reef value and pressures. B lists restoration techniques. C describes benefits and limits. D argues restoration must be combined with prevention.'
+      },
+      {
+        id: 'q2',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Coral reefs protect coastlines by reducing wave energy.', answer: 'TRUE', explanation: 'The first paragraph states this directly.' },
+          { text: 'Land-based coral tanks allow scientists to control environmental conditions.', answer: 'TRUE', explanation: 'The second paragraph mentions control of temperature, light, and water chemistry.' },
+          { text: 'Restoration can currently be applied cheaply across all damaged reefs.', answer: 'FALSE', explanation: 'The passage says restoration is expensive, labour-intensive, and cannot be applied across enormous areas.' },
+          { text: 'All scientists agree that selective breeding of corals is ethically simple.', answer: 'FALSE', explanation: 'The passage describes selective breeding as scientifically and ethically complex.' }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What events may damage newly planted corals if temperatures rise?', answer: 'bleaching events' },
+          { question: 'What kind of fisheries management should accompany restoration?', answer: 'sustainable fisheries management' },
+          { question: 'What do transplanted corals increase at a local scale?', answer: 'habitat complexity' }
+        ]
+      }
+    ]
   }
 ]

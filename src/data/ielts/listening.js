@@ -116,5 +116,64 @@ export const listeningSections = [
       { en: 'Students often reduce their sleep before exams, but this strategy can actually impair recall.', cn: '学生常在考试前减少睡眠，但这种策略实际上可能损害回忆能力。', duration: 6500 },
       { en: 'A more effective approach is to study in shorter sessions across several days and maintain a regular sleep schedule.', cn: '更有效的方法是在几天内进行较短时间的学习，并保持规律睡眠。', duration: 7500 }
     ]
+  },
+  {
+    id: 9,
+    section: 1,
+    title: 'Changing a Dental Appointment',
+    description: 'A phone call between a patient and a dental clinic receptionist',
+    sentences: [
+      { en: 'Good morning, Westside Dental Clinic. How may I help you?', cn: '早上好，这里是西区牙科诊所。有什么可以帮您？', duration: 4500 },
+      { en: 'I have an appointment with Dr Patel tomorrow afternoon, but I need to change it.', cn: '我明天下午约了Patel医生，但我需要改时间。', duration: 5500 },
+      { en: 'Let me check the schedule. Could you give me your full name, please?', cn: '我查一下日程。请告诉我您的全名。', duration: 4500 },
+      { en: 'It is Emma Wilson, and the appointment was for a routine check-up.', cn: '我是Emma Wilson，预约的是常规检查。', duration: 5000 },
+      { en: 'We have an opening at ten thirty on Friday morning or four o clock next Monday.', cn: '我们周五上午十点半或下周一四点有空位。', duration: 6000 },
+      { en: 'Friday morning would be better. Do I need to pay a cancellation fee?', cn: '周五上午更好。我需要付取消费用吗？', duration: 5000 },
+      { en: 'No, because you are giving us more than twenty-four hours notice.', cn: '不用，因为您提前超过二十四小时通知我们。', duration: 5000 }
+    ]
+  },
+  {
+    id: 10,
+    section: 2,
+    title: 'Campus Safety Orientation',
+    description: 'A university staff member explaining safety services to new students',
+    sentences: [
+      { en: 'This briefing will introduce the main safety services available across the campus.', cn: '本次说明会将介绍校园内主要的安全服务。', duration: 6000 },
+      { en: 'The security office is open twenty-four hours a day and is located beside the main gate.', cn: '保安办公室全天二十四小时开放，位于主门旁边。', duration: 6500 },
+      { en: 'If you study late in the library, you can request an escort back to your accommodation.', cn: '如果您在图书馆学习到很晚，可以申请有人护送回宿舍。', duration: 6500 },
+      { en: 'Emergency phones are marked in yellow and connect directly to the control room.', cn: '紧急电话用黄色标识，会直接接通控制室。', duration: 6000 },
+      { en: 'Bicycles should be locked in the covered racks behind the sports centre.', cn: '自行车应锁在体育中心后面的有顶车架上。', duration: 5500 },
+      { en: 'Please report lost cards immediately, because they can be used to enter several buildings.', cn: '请立即报告丢失的卡，因为它们可以进入多栋建筑。', duration: 6500 },
+      { en: 'You can download the campus safety app using the QR code on the screen.', cn: '您可以使用屏幕上的二维码下载校园安全应用。', duration: 5500 }
+    ]
+  },
+  {
+    id: 11,
+    section: 3,
+    title: 'Preparing a Marketing Presentation',
+    description: 'Two students discussing survey results and presentation roles',
+    sentences: [
+      { en: 'We need to decide which survey results to include in our marketing presentation.', cn: '我们需要决定在营销展示中包含哪些调查结果。', duration: 6000 },
+      { en: 'The strongest finding is that students care more about delivery speed than packaging design.', cn: '最有力的发现是学生更关心配送速度，而不是包装设计。', duration: 7000 },
+      { en: 'I agree, but we should mention that environmentally friendly packaging still influenced older customers.', cn: '我同意，但我们应该提到环保包装仍然影响了年龄较大的顾客。', duration: 7500 },
+      { en: 'Could you create a chart comparing the three customer age groups?', cn: '你能做一个比较三个顾客年龄组的图表吗？', duration: 5500 },
+      { en: 'Yes, and you could explain the limitations of our sample size.', cn: '可以，你可以解释我们样本量的局限。', duration: 5000 },
+      { en: 'The tutor said we should avoid reading directly from the slides.', cn: '导师说我们应该避免直接照着幻灯片念。', duration: 5500 },
+      { en: 'Let us rehearse twice on Thursday so the timing stays under ten minutes.', cn: '我们周四排练两次，这样时间能控制在十分钟以内。', duration: 6000 }
+    ]
+  },
+  {
+    id: 12,
+    section: 4,
+    title: 'Lecture on Coral Reef Restoration',
+    description: 'An academic lecture about methods used to restore damaged coral reefs',
+    sentences: [
+      { en: 'Today we will examine several methods used to restore damaged coral reef ecosystems.', cn: '今天我们将研究几种用于修复受损珊瑚礁生态系统的方法。', duration: 7500 },
+      { en: 'One common technique is to grow small coral fragments in underwater nurseries before transplanting them.', cn: '一种常见技术是在水下苗圃培育小珊瑚碎片，然后再移植。', duration: 8000 },
+      { en: 'Land-based tanks allow researchers to control temperature, light, and water chemistry more precisely.', cn: '陆地水箱让研究人员能更精确地控制温度、光照和水化学成分。', duration: 8000 },
+      { en: 'Some teams are testing whether heat-tolerant corals can survive future marine heatwaves.', cn: '一些团队正在测试耐热珊瑚能否在未来的海洋热浪中存活。', duration: 7000 },
+      { en: 'However, restoration is expensive and cannot protect reefs if global temperatures continue to rise.', cn: '然而，修复成本高昂，而且如果全球气温继续上升，它无法保护珊瑚礁。', duration: 8000 },
+      { en: 'For this reason, reef restoration must be combined with pollution control and emission reduction.', cn: '因此，珊瑚礁修复必须与污染控制和减排结合起来。', duration: 7000 }
+    ]
   }
 ]
