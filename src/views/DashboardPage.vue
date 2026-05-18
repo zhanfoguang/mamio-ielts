@@ -51,6 +51,51 @@ const reviewItemStats = computed(() => {
 })
 const dueReviewItemsPreview = computed(() => reviewItemStats.value.dueItems.slice(0, 3))
 
+const totalPracticeCount = computed(() => (
+  speakingHistory.value.length +
+  writingHistory.value.length +
+  listeningHistory.value.length +
+  readingHistory.value.length
+))
+
+const onboardingChecklist = computed(() => [
+  {
+    key: 'goal',
+    done: targetScore.value > 0 || !!examDate.value,
+    titleZh: '设置目标分或考试日期',
+    titleEn: 'Set target score or exam date',
+    detailZh: targetScore.value > 0 ? `目标 Band ${targetScore.value}` : '让学习计划知道你的冲刺方向',
+    detailEn: targetScore.value > 0 ? `Target Band ${targetScore.value}` : 'Give the plan a clear direction',
+    actionZh: '设置目标',
+    actionEn: 'Set Goal',
+    action: () => { showGoalSettings.value = true }
+  },
+  {
+    key: 'first-practice',
+    done: totalPracticeCount.value > 0,
+    titleZh: '完成第一次有效练习',
+    titleEn: 'Complete the first practice',
+    detailZh: totalPracticeCount.value > 0 ? `已完成 ${totalPracticeCount.value} 次练习` : '建议从口语 Part 1 或阅读限时开始',
+    detailEn: totalPracticeCount.value > 0 ? `${totalPracticeCount.value} practice session(s) done` : 'Start with Speaking Part 1 or timed Reading',
+    actionZh: '开始口语',
+    actionEn: 'Start Speaking',
+    action: () => router.push('/speaking')
+  },
+  {
+    key: 'review',
+    done: reviewItemStats.value.total > 0 || vocabReviewStats.value.total > 0,
+    titleZh: '建立复习材料',
+    titleEn: 'Build review material',
+    detailZh: reviewItemStats.value.total > 0 ? `已有 ${reviewItemStats.value.total} 个弱点项` : '错题和 AI 反馈会进入复习中心',
+    detailEn: reviewItemStats.value.total > 0 ? `${reviewItemStats.value.total} weak spot(s) saved` : 'Mistakes and AI feedback flow into Review',
+    actionZh: '去复习中心',
+    actionEn: 'Open Review',
+    action: () => router.push(reviewItemStats.value.total > 0 ? '/review' : '/vocabulary')
+  }
+])
+
+const shouldShowStartChecklist = computed(() => onboardingChecklist.value.some(item => !item.done))
+
 // Score trends (last 10 entries per module)
 const speakingScores = computed(() => {
   return speakingHistory.value
@@ -769,6 +814,33 @@ onMounted(async () => {
         </button>
       </div>
 
+      <!-- Start checklist -->
+      <div v-if="shouldShowStartChecklist" class="start-checklist">
+        <div class="start-checklist-head">
+          <div>
+            <span class="plan-kicker">{{ themeStore.lang === 'zh' ? '新手启动' : 'Getting Started' }}</span>
+            <h2>{{ themeStore.lang === 'zh' ? '先把学习闭环搭起来' : 'Build the learning loop first' }}</h2>
+          </div>
+          <span class="plan-status">{{ onboardingChecklist.filter(item => item.done).length }}/{{ onboardingChecklist.length }}</span>
+        </div>
+        <div class="start-steps">
+          <button
+            v-for="item in onboardingChecklist"
+            :key="item.key"
+            class="start-step"
+            :class="{ done: item.done }"
+            @click="item.action"
+          >
+            <span class="start-dot">{{ item.done ? '✓' : '' }}</span>
+            <span class="start-step-copy">
+              <strong>{{ themeStore.lang === 'zh' ? item.titleZh : item.titleEn }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? item.detailZh : item.detailEn }}</small>
+            </span>
+            <span class="start-action">{{ item.done ? (themeStore.lang === 'zh' ? '已完成' : 'Done') : (themeStore.lang === 'zh' ? item.actionZh : item.actionEn) }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Today's progress -->
       <div class="today-card">
         <div class="today-header">
@@ -1124,6 +1196,96 @@ onMounted(async () => {
 }
 
 [data-theme="dark"] .trial-btn { background: var(--white); color: var(--black); }
+
+/* Start checklist */
+.start-checklist {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-md);
+}
+
+.start-checklist-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.start-checklist-head h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.start-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.start-step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  text-align: left;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.start-step:hover {
+  border-color: var(--text-tertiary);
+}
+
+.start-step.done {
+  background: var(--green-soft);
+}
+
+.start-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--green);
+  font-weight: 900;
+}
+
+.start-step-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.start-step-copy strong {
+  font-size: var(--font-size-sm);
+}
+
+.start-step-copy small {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.start-action {
+  grid-column: 2;
+  color: var(--blue);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.start-step.done .start-action {
+  color: var(--green);
+}
 
 /* Today card */
 .today-card {
@@ -1654,8 +1816,10 @@ button.support-card:hover {
 @media (max-width: 768px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .quick-links { grid-template-columns: 1fr; }
+  .start-steps { grid-template-columns: 1fr; }
   .plan-support { grid-template-columns: 1fr; }
-  .study-plan-header { flex-direction: column; }
+  .study-plan-header,
+  .start-checklist-head { flex-direction: column; }
 }
 
 /* Onboarding */

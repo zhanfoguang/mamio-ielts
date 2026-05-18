@@ -142,3 +142,8 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Send all reading wrong/unanswered item types into Review, including matching and multiple choice.
 - [x] Send listening completion wrong/unanswered blanks into Review.
 - [x] Show recent reading/listening attempts inside each module so learners can resume or compare attempts quickly.
+
+## Phase 19: Onboarding & Conversion
+
+- [x] Add activation value explanation on LoginPage.
+- [x] Add Dashboard start checklist for target setup, first practice, and review-loop creation.
