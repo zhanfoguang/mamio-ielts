@@ -708,16 +708,20 @@ onMounted(async () => {
     const data = await getDashboardData()
     speakingHistory.value = data.speaking || []
     writingHistory.value = data.writing || []
+    readingHistory.value = data.reading?.length ? data.reading : JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+    listeningHistory.value = data.listening?.length ? data.listening : JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
     // Cache to localStorage
     localStorage.setItem('mamio-speaking-history', JSON.stringify(speakingHistory.value))
     localStorage.setItem('mamio-writing-history', JSON.stringify(writingHistory.value))
+    localStorage.setItem('mamio-reading-history', JSON.stringify(readingHistory.value))
+    localStorage.setItem('mamio-listening-history', JSON.stringify(listeningHistory.value))
   } catch {
     // API failed, load from localStorage
     speakingHistory.value = JSON.parse(localStorage.getItem('mamio-speaking-history') || '[]')
     writingHistory.value = JSON.parse(localStorage.getItem('mamio-writing-history') || '[]')
+    readingHistory.value = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+    listeningHistory.value = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
   }
-  listeningHistory.value = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
-  readingHistory.value = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
 
   // Show onboarding for first-time users
   if (!localStorage.getItem('mamio-onboarded')) {
@@ -2013,6 +2017,137 @@ button.support-card:hover {
   .study-plan-header,
   .start-checklist-head { flex-direction: column; }
   .action-queue-head { align-items: flex-start; flex-direction: column; gap: 2px; }
+}
+
+@media (max-width: 520px) {
+  .dashboard-page {
+    padding-top: calc(var(--header-height) + var(--space-md));
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+  }
+
+  .dashboard-header h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .welcome {
+    display: none;
+  }
+
+  .goal-btn {
+    padding: 7px 12px;
+    max-width: 132px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .trial-banner,
+  .return-banner,
+  .start-checklist,
+  .today-card,
+  .study-plan-card,
+  .card {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+  }
+
+  .start-checklist-head,
+  .study-plan-header {
+    margin-bottom: 10px;
+  }
+
+  .start-checklist-head h2,
+  .study-plan-header h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  .start-steps {
+    gap: 8px;
+  }
+
+  .start-step {
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    padding: 9px 10px;
+  }
+
+  .start-dot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .start-step-copy {
+    gap: 1px;
+  }
+
+  .start-step-copy small {
+    display: none;
+  }
+
+  .start-action {
+    grid-column: auto;
+    white-space: nowrap;
+  }
+
+  .today-header {
+    margin-bottom: 10px;
+  }
+
+  .today-breakdown {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .breakdown-item {
+    min-width: calc(20% - 7px);
+    font-size: var(--font-size-xs);
+  }
+
+  .primary-plan {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .primary-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+  }
+
+  .support-card {
+    padding: 11px;
+  }
+
+  .plan-chips {
+    display: none;
+  }
+
+  .action-step {
+    grid-template-columns: 24px 1fr auto;
+    gap: 8px;
+    padding: 9px 0;
+  }
+
+  .action-order {
+    width: 24px;
+    height: 24px;
+  }
+
+  .action-copy small {
+    display: none;
+  }
+
+  .dashboard-grid {
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+  }
+
+  .quick-link {
+    padding: 12px 14px;
+  }
 }
 
 /* Onboarding */

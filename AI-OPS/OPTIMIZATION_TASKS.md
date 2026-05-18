@@ -156,6 +156,15 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add one-click review completion for the top three priority weak spots.
 - [x] Add lightweight stale-user prompt when there has been no practice today.
 - [x] Verify pricing activation section on 390px mobile viewport without horizontal overflow.
-- [ ] Tighten mobile first-screen density on Dashboard after the new checklist and action queue.
+- [x] Tighten mobile first-screen density on Dashboard after the new checklist and action queue.
 - [x] Clarify landing pricing activation path and trial-to-paid continuity.
 - [x] Update handoff notes with the next content/database migration path.
+
+## Phase 21: Server-Side Input Practice History
+
+- [x] Add SQLite `reading_history` and `listening_history` tables.
+- [x] Add authenticated reading/listening history API endpoints.
+- [x] Save Reading practice attempts API-first with localStorage fallback.
+- [x] Save Listening completion and dictation attempts API-first with localStorage fallback.
+- [x] Feed server-side reading/listening history into Dashboard aggregates.
+- [ ] Add one-time local-to-server migration for old reading/listening attempts.

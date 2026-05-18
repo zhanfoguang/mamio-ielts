@@ -71,6 +71,33 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS reading_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    passage TEXT,
+    score INTEGER,
+    correct INTEGER,
+    total INTEGER,
+    time INTEGER,
+    details TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS listening_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    section TEXT,
+    section_number INTEGER,
+    mode TEXT DEFAULT 'completion',
+    score INTEGER,
+    correct INTEGER,
+    total INTEGER,
+    details TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS vocab_progress (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -113,6 +140,8 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_review_items_user ON review_items(user_id);
   CREATE INDEX IF NOT EXISTS idx_review_items_due ON review_items(user_id, reviewed_at);
+  CREATE INDEX IF NOT EXISTS idx_reading_history_user_time ON reading_history(user_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_listening_history_user_time ON listening_history(user_id, created_at);
 
   CREATE TABLE IF NOT EXISTS api_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,6 +229,14 @@ export const progressQueries = {
   // Writing
   getWriting: db.prepare('SELECT * FROM writing_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
   addWriting: db.prepare('INSERT INTO writing_history (user_id, task_type, task, essay, score, details) VALUES (?, ?, ?, ?, ?, ?)'),
+
+  // Reading
+  getReading: db.prepare('SELECT * FROM reading_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
+  addReading: db.prepare('INSERT INTO reading_history (user_id, passage, score, correct, total, time, details) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+
+  // Listening
+  getListening: db.prepare('SELECT * FROM listening_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
+  addListening: db.prepare('INSERT INTO listening_history (user_id, section, section_number, mode, score, correct, total, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
 
   // Vocab
   getVocab: db.prepare('SELECT * FROM vocab_progress WHERE user_id = ?'),

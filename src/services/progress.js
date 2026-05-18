@@ -22,6 +22,28 @@ export async function addWritingRecord(record) {
   return data
 }
 
+// Reading
+export async function getReadingHistory() {
+  const { data } = await api.get('/progress/reading')
+  return data
+}
+
+export async function addReadingRecord(record) {
+  const { data } = await api.post('/progress/reading', record)
+  return data
+}
+
+// Listening
+export async function getListeningHistory() {
+  const { data } = await api.get('/progress/listening')
+  return data
+}
+
+export async function addListeningRecord(record) {
+  const { data } = await api.post('/progress/listening', record)
+  return data
+}
+
 // Vocab SRS
 export async function getVocabProgress() {
   const { data } = await api.get('/progress/vocab')

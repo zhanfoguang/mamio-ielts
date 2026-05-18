@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { listeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
-import { incrementDailyStats } from '../services/progress'
+import { addListeningRecord, getListeningHistory, incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 import { toLocalDateKey } from '../utils/date'
 
@@ -158,6 +158,14 @@ function loadListeningHistory() {
   }
 }
 
+function saveListeningHistoryLocal(record) {
+  const history = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
+  history.unshift(record)
+  if (history.length > 50) history.length = 50
+  localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+  listeningHistory.value = history
+}
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -172,11 +180,10 @@ function pickQuestionAnswer(text) {
   return candidates.sort((a, b) => b.length - a.length)[0] || words[0] || ''
 }
 
-function submitListeningQuestions() {
+async function submitListeningQuestions() {
   showQuestionResults.value = true
   listeningReport.value = buildListeningReport()
-  const history = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
-  history.unshift({
+  const historyRecord = {
     id: Date.now(),
     date: new Date().toISOString(),
     section: section.value.title,
@@ -185,11 +192,18 @@ function submitListeningQuestions() {
     score: listeningReport.value.accuracy,
     correct: listeningReport.value.correct,
     total: listeningReport.value.total,
-    missedWords: listeningReport.value.missedWords
-  })
-  if (history.length > 50) history.length = 50
-  localStorage.setItem('mamio-listening-history', JSON.stringify(history))
-  listeningHistory.value = history
+    missedWords: listeningReport.value.missedWords,
+    details: {
+      missedWords: listeningReport.value.missedWords,
+      report: listeningReport.value
+    }
+  }
+  try {
+    const saved = await addListeningRecord(historyRecord)
+    saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+  } catch {
+    saveListeningHistoryLocal(historyRecord)
+  }
 
   const wrongItems = listeningQuestions.value
     .filter(q => normalizeAnswer(questionAnswers.value[q.id]) !== normalizeAnswer(q.answer))
@@ -201,7 +215,7 @@ function submitListeningQuestions() {
   if (wrongItems.length) {
     addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'listening', source: 'listening-questions' })
   }
-  incrementDailyStats(toLocalDateKey(), 'listening')
+  incrementDailyStats(toLocalDateKey(), 'listening').catch(() => {})
 }
 
 function getListeningBandEstimate(percentage) {
@@ -261,26 +275,34 @@ function startDictation() {
   start()
 }
 
-function stopDictation() {
+async function stopDictation() {
   stop()
   showComparison.value = true
 
   // Save listening practice to history
   if (transcript.value.trim()) {
-    const history = JSON.parse(localStorage.getItem('mamio-listening-history') || '[]')
-    history.unshift({
+    const historyRecord = {
       id: Date.now(),
       date: new Date().toISOString(),
       section: section.value.title,
+      sectionNumber: section.value.section,
+      mode: 'dictation',
       sentence: currentSentence.value.en,
-      transcript: transcript.value
-    })
-    if (history.length > 50) history.length = 50
-    localStorage.setItem('mamio-listening-history', JSON.stringify(history))
-    listeningHistory.value = history
+      transcript: transcript.value,
+      details: {
+        sentence: currentSentence.value.en,
+        transcript: transcript.value
+      }
+    }
+    try {
+      const saved = await addListeningRecord(historyRecord)
+      saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+    } catch {
+      saveListeningHistoryLocal(historyRecord)
+    }
   }
 
-  incrementDailyStats(toLocalDateKey(), 'listening')
+  incrementDailyStats(toLocalDateKey(), 'listening').catch(() => {})
 
   // Extract wrong words as review items
   if (transcript.value.trim()) {
@@ -313,10 +335,19 @@ const wordDiff = computed(() => {
 })
 
 // Load TTS voices
-onMounted(() => {
+onMounted(async () => {
   if (ttsSupported) {
     window.speechSynthesis.getVoices()
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
+  }
+  try {
+    const history = await getListeningHistory()
+    if (history.length) {
+      localStorage.setItem('mamio-listening-history', JSON.stringify(history))
+      listeningHistory.value = history
+    }
+  } catch {
+    listeningHistory.value = loadListeningHistory()
   }
 })
 

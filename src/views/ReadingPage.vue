@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
 import { readingPassages } from '../data/ielts/reading'
-import { incrementDailyStats } from '../services/progress'
+import { addReadingRecord, getReadingHistory, incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 import { toLocalDateKey } from '../utils/date'
 
@@ -110,6 +110,14 @@ function loadReadingHistory() {
   }
 }
 
+function saveReadingHistoryLocal(record) {
+  const history = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
+  history.unshift(record)
+  if (history.length > 50) history.length = 50
+  localStorage.setItem('mamio-reading-history', JSON.stringify(history))
+  readingHistory.value = history
+}
+
 function setAnswer(questionId, index, value) {
   if (!userAnswers.value[questionId]) userAnswers.value[questionId] = {}
   userAnswers.value[questionId][index] = value
@@ -131,7 +139,7 @@ function prevQuestion() {
   }
 }
 
-function submitAnswers() {
+async function submitAnswers() {
   stopTimer()
   let correct = 0
   let total = 0
@@ -173,22 +181,29 @@ function submitAnswers() {
   practiceReport.value = buildPracticeReport()
   showResults.value = true
 
-  // Save to reading history
-  const history = JSON.parse(localStorage.getItem('mamio-reading-history') || '[]')
-  history.unshift({
+  const historyRecord = {
     id: Date.now(),
     date: new Date().toISOString(),
     passage: selectedPassage.value.title,
     score: score.value.percentage,
     correct,
     total,
-    time: timerSeconds.value
-  })
-  if (history.length > 50) history.length = 50
-  localStorage.setItem('mamio-reading-history', JSON.stringify(history))
-  readingHistory.value = history
+    time: timerSeconds.value,
+    details: {
+      level: selectedPassage.value.level,
+      questionTypes: getPassageQuestionTypes(selectedPassage.value),
+      report: practiceReport.value
+    }
+  }
 
-  incrementDailyStats(toLocalDateKey(), 'reading')
+  try {
+    const saved = await addReadingRecord(historyRecord)
+    saveReadingHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+  } catch {
+    saveReadingHistoryLocal(historyRecord)
+  }
+
+  incrementDailyStats(toLocalDateKey(), 'reading').catch(() => {})
 
   // Extract wrong answers as review items
   const wrongItems = []
@@ -235,6 +250,18 @@ function submitAnswers() {
     addReviewItemsFromFeedback({ reviewItems: wrongItems }, { module: 'reading', source: 'reading-mistake' })
   }
 }
+
+onMounted(async () => {
+  try {
+    const history = await getReadingHistory()
+    if (history.length) {
+      localStorage.setItem('mamio-reading-history', JSON.stringify(history))
+      readingHistory.value = history
+    }
+  } catch {
+    readingHistory.value = loadReadingHistory()
+  }
+})
 
 function normalizeShortAnswer(value) {
   return String(value || '').toLowerCase().trim().replace(/^(a|an|the)\s+/i, '')

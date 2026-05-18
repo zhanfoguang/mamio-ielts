@@ -67,7 +67,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `server/db.js` — SQLite schema, prepared statements, admin auto-creation
 - `server/routes/ai.js` — DeepSeek API integration (speaking/writing/vocab/listening scoring)
 - `server/routes/auth.js` — Register, login, JWT, forgot password, admin endpoints
-- `server/routes/progress.js` — Speaking/writing history, vocab SRS, daily stats, dashboard aggregate
+- `server/routes/progress.js` — Speaking/writing/reading/listening history, vocab SRS, daily stats, dashboard aggregate
 - `server/middleware/auth.js` — JWT verification middleware
 - `server/mail.js` — SMTP email for password reset
 
@@ -127,6 +127,8 @@ sudo git config --global --add safe.directory /var/www/mimio
 - `reset_codes` — email, code, expires_at, used
 - `speaking_history` — user_id, mode, part, topic, question, answer, score, details (JSON), exchanges
 - `writing_history` — user_id, task_type, task, essay, score, details (JSON)
+- `reading_history` — user_id, passage, score, correct, total, time, details (JSON)
+- `listening_history` — user_id, section, section_number, mode, score, correct, total, details (JSON)
 - `vocab_progress` — user_id, word, ease, interval, reps, due, last_review (SM-2 fields)
 - `daily_stats` — user_id, date, speaking, writing, listening, reading, vocab counts
 - `review_items` — user_id, module, type, text, reason, source, reviewed_at, created_at
@@ -172,6 +174,10 @@ sudo git config --global --add safe.directory /var/www/mimio
 | POST | /speaking | Yes | Add speaking record |
 | GET | /writing | Yes | Writing history (last 50) |
 | POST | /writing | Yes | Add writing record |
+| GET | /reading | Yes | Reading history (last 50) |
+| POST | /reading | Yes | Add reading record |
+| GET | /listening | Yes | Listening history (last 50) |
+| POST | /listening | Yes | Add listening record |
 | GET | /vocab | Yes | All SRS data |
 | POST | /vocab | Yes | Upsert SRS data |
 | GET | /daily-stats?date= | Yes | Get daily stats |
@@ -229,12 +235,13 @@ Recent direction:
 - Dashboard has a start checklist and a daily action queue.
 - Review items are prioritized by source/module and expose a top-three weak-spot cleanup action.
 - Login and pricing flows explain the trial-to-activation path more clearly.
-- Reading/listening practice produces reports, history, and review items.
+- Reading/listening practice produces reports, review items, and API-first server history with local fallback.
+- Mobile Dashboard density is tighter on small screens after adding the checklist/action queue.
 - Content generation is draft-only, with admin review and dry-run merge safeguards.
 
 Next recommended work:
 1. Move approved content from static data files into server-side content tables.
 2. Add a small admin publishing flow for approved content instead of local script-only merge.
-3. Improve mobile Dashboard density now that checklist + action queue are both present.
-4. Add server-side reading/listening attempt history so Dashboard is not split between API and localStorage.
+3. Add one-time local-to-server migration for old reading/listening attempts.
+4. Add richer Dashboard streak/retention signals from server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.

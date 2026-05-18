@@ -28,11 +28,53 @@ function addReviewItemIfNew(userId, item) {
   return { id: result.lastInsertRowid, created: true }
 }
 
+function parseDetails(value) {
+  if (!value) return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
+function stringifyDetails(details) {
+  if (!details) return null
+  const value = JSON.stringify(details)
+  return value.length <= 20000 ? value : null
+}
+
+function mapReadingRow(row) {
+  return {
+    ...row,
+    passage: row.passage,
+    score: row.score,
+    correct: row.correct,
+    total: row.total,
+    time: row.time,
+    details: parseDetails(row.details),
+    date: row.created_at
+  }
+}
+
+function mapListeningRow(row) {
+  return {
+    ...row,
+    section: row.section,
+    sectionNumber: row.section_number,
+    mode: row.mode,
+    score: row.score,
+    correct: row.correct,
+    total: row.total,
+    details: parseDetails(row.details),
+    date: row.created_at
+  }
+}
+
 // === Speaking History ===
 router.get('/speaking', (req, res) => {
   try {
     const rows = progressQueries.getSpeaking.all(req.user.id)
-    res.json(rows.map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at })))
+    res.json(rows.map(r => ({ ...r, details: parseDetails(r.details), date: r.created_at })))
   } catch (err) {
     console.error('Get speaking error:', err.message)
     res.status(500).json({ error: '获取口语历史失败' })
@@ -59,7 +101,7 @@ router.post('/speaking', (req, res) => {
 router.get('/writing', (req, res) => {
   try {
     const rows = progressQueries.getWriting.all(req.user.id)
-    res.json(rows.map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at })))
+    res.json(rows.map(r => ({ ...r, details: parseDetails(r.details), date: r.created_at })))
   } catch (err) {
     console.error('Get writing error:', err.message)
     res.status(500).json({ error: '获取写作历史失败' })
@@ -78,6 +120,77 @@ router.post('/writing', (req, res) => {
   } catch (err) {
     console.error('Add writing error:', err.message)
     res.status(500).json({ error: '保存写作记录失败' })
+  }
+})
+
+// === Reading History ===
+router.get('/reading', (req, res) => {
+  try {
+    const rows = progressQueries.getReading.all(req.user.id)
+    res.json(rows.map(mapReadingRow))
+  } catch (err) {
+    console.error('Get reading error:', err.message)
+    res.status(500).json({ error: '获取阅读历史失败' })
+  }
+})
+
+router.post('/reading', (req, res) => {
+  try {
+    const { passage, score, correct, total, time, details } = req.body
+    if (passage && (typeof passage !== 'string' || passage.length > 500)) return res.status(400).json({ error: '文章标题格式不正确' })
+    const cleanScore = Number.isFinite(Number(score)) ? Math.max(0, Math.min(100, Math.round(Number(score)))) : null
+    const cleanCorrect = Number.isFinite(Number(correct)) ? Math.max(0, Math.round(Number(correct))) : null
+    const cleanTotal = Number.isFinite(Number(total)) ? Math.max(0, Math.round(Number(total))) : null
+    const cleanTime = Number.isFinite(Number(time)) ? Math.max(0, Math.round(Number(time))) : null
+    const result = progressQueries.addReading.run(
+      req.user.id,
+      passage || '',
+      cleanScore,
+      cleanCorrect,
+      cleanTotal,
+      cleanTime,
+      stringifyDetails(details)
+    )
+    res.json({ id: result.lastInsertRowid })
+  } catch (err) {
+    console.error('Add reading error:', err.message)
+    res.status(500).json({ error: '保存阅读记录失败' })
+  }
+})
+
+// === Listening History ===
+router.get('/listening', (req, res) => {
+  try {
+    const rows = progressQueries.getListening.all(req.user.id)
+    res.json(rows.map(mapListeningRow))
+  } catch (err) {
+    console.error('Get listening error:', err.message)
+    res.status(500).json({ error: '获取听力历史失败' })
+  }
+})
+
+router.post('/listening', (req, res) => {
+  try {
+    const { section, sectionNumber, mode, score, correct, total, details } = req.body
+    if (section && (typeof section !== 'string' || section.length > 500)) return res.status(400).json({ error: '听力场景格式不正确' })
+    const cleanScore = Number.isFinite(Number(score)) ? Math.max(0, Math.min(100, Math.round(Number(score)))) : null
+    const cleanCorrect = Number.isFinite(Number(correct)) ? Math.max(0, Math.round(Number(correct))) : null
+    const cleanTotal = Number.isFinite(Number(total)) ? Math.max(0, Math.round(Number(total))) : null
+    const cleanSectionNumber = Number.isFinite(Number(sectionNumber)) ? Math.max(1, Math.min(4, Math.round(Number(sectionNumber)))) : null
+    const result = progressQueries.addListening.run(
+      req.user.id,
+      section || '',
+      cleanSectionNumber,
+      mode || 'completion',
+      cleanScore,
+      cleanCorrect,
+      cleanTotal,
+      stringifyDetails(details)
+    )
+    res.json({ id: result.lastInsertRowid })
+  } catch (err) {
+    console.error('Add listening error:', err.message)
+    res.status(500).json({ error: '保存听力记录失败' })
   }
 })
 
@@ -217,8 +330,10 @@ router.post('/review-items/migrate', (req, res) => {
 router.get('/dashboard', (req, res) => {
   try {
     const userId = req.user.id
-    const speaking = progressQueries.getSpeaking.all(userId).map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at }))
-    const writing = progressQueries.getWriting.all(userId).map(r => ({ ...r, details: r.details ? (() => { try { return JSON.parse(r.details) } catch { return null } })() : null, date: r.created_at }))
+    const speaking = progressQueries.getSpeaking.all(userId).map(r => ({ ...r, details: parseDetails(r.details), date: r.created_at }))
+    const writing = progressQueries.getWriting.all(userId).map(r => ({ ...r, details: parseDetails(r.details), date: r.created_at }))
+    const reading = progressQueries.getReading.all(userId).map(mapReadingRow)
+    const listening = progressQueries.getListening.all(userId).map(mapListeningRow)
     const vocabRows = progressQueries.getVocab.all(userId)
     const today = toLocalDateKey()
     const thirtyDaysAgo = localDateKeyDaysAgo(28)
@@ -228,6 +343,8 @@ router.get('/dashboard', (req, res) => {
     res.json({
       speaking,
       writing,
+      reading,
+      listening,
       vocabCount: vocabRows.length,
       dailyStats
     })
