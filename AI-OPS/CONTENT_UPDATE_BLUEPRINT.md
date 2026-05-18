@@ -41,6 +41,25 @@ Avoid:
 - `npm run content:validate` checks production content shape and minimum bank size.
 - A human or agent reviews draft JSON before moving it into `src/data/ielts/`.
 
+## VPS Draft Cron
+
+Use `deploy/content-draft-cron.sh` for unattended draft generation on the VPS.
+
+Guardrails:
+
+- It runs `npm run content:seed` and then `npm run content:generate`.
+- It reads `DEEPSEEK_API_KEY` from `/var/www/mimio/server/.env`.
+- It writes JSON drafts under `AI-OPS/content-drafts/`.
+- It never merges or publishes content automatically.
+- Approved drafts must still be reviewed in Admin and merged deliberately with `npm run content:merge-approved`.
+
+Suggested weekly cron:
+
+```bash
+sudo chmod +x /var/www/mimio/deploy/content-draft-cron.sh
+sudo bash -lc '(crontab -l 2>/dev/null | grep -v "content-draft-cron.sh"; echo "30 4 * * 1 /var/www/mimio/deploy/content-draft-cron.sh >> /var/www/mimio/content-draft.log 2>&1") | crontab -'
+```
+
 ## Product Targets
 
 Short term:

@@ -129,7 +129,8 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Persist admin draft review status back into generated JSON files.
 - [x] Add `npm run content:merge-approved` to merge approved, unmerged drafts into reading/listening banks with duplicate protection.
 - [ ] Move approved content from static files into server-side content tables.
-- [ ] Add weekly VPS cron for draft generation only, never direct publishing.
+- [x] Add weekly VPS cron script for draft generation only, never direct publishing.
+- [ ] Install weekly VPS cron after confirming the production DeepSeek key is valid.
 
 ## Phase 18: Practice Feedback Loop
 
