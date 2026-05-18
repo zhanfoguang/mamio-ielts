@@ -167,4 +167,4 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Save Reading practice attempts API-first with localStorage fallback.
 - [x] Save Listening completion and dictation attempts API-first with localStorage fallback.
 - [x] Feed server-side reading/listening history into Dashboard aggregates.
-- [ ] Add one-time local-to-server migration for old reading/listening attempts.
+- [x] Add one-time local-to-server migration for old reading/listening attempts.

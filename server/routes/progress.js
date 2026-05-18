@@ -43,6 +43,14 @@ function stringifyDetails(details) {
   return value.length <= 20000 ? value : null
 }
 
+function sanitizeCreatedAt(value) {
+  if (typeof value !== 'string') return null
+  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(value)) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return value.slice(0, 32)
+}
+
 function mapReadingRow(row) {
   return {
     ...row,
@@ -52,11 +60,13 @@ function mapReadingRow(row) {
     total: row.total,
     time: row.time,
     details: parseDetails(row.details),
-    date: row.created_at
+    date: row.created_at,
+    synced: true
   }
 }
 
 function mapListeningRow(row) {
+  const details = parseDetails(row.details)
   return {
     ...row,
     section: row.section,
@@ -65,8 +75,12 @@ function mapListeningRow(row) {
     score: row.score,
     correct: row.correct,
     total: row.total,
-    details: parseDetails(row.details),
-    date: row.created_at
+    missedWords: details?.missedWords || details?.report?.missedWords || [],
+    sentence: details?.sentence,
+    transcript: details?.transcript,
+    details,
+    date: row.created_at,
+    synced: true
   }
 }
 
@@ -142,7 +156,8 @@ router.post('/reading', (req, res) => {
     const cleanCorrect = Number.isFinite(Number(correct)) ? Math.max(0, Math.round(Number(correct))) : null
     const cleanTotal = Number.isFinite(Number(total)) ? Math.max(0, Math.round(Number(total))) : null
     const cleanTime = Number.isFinite(Number(time)) ? Math.max(0, Math.round(Number(time))) : null
-    const result = progressQueries.addReading.run(
+    const createdAt = sanitizeCreatedAt(req.body.createdAt || req.body.date)
+    const args = [
       req.user.id,
       passage || '',
       cleanScore,
@@ -150,7 +165,10 @@ router.post('/reading', (req, res) => {
       cleanTotal,
       cleanTime,
       stringifyDetails(details)
-    )
+    ]
+    const result = createdAt
+      ? progressQueries.addReadingWithDate.run(...args, createdAt)
+      : progressQueries.addReading.run(...args)
     res.json({ id: result.lastInsertRowid })
   } catch (err) {
     console.error('Add reading error:', err.message)
@@ -177,7 +195,8 @@ router.post('/listening', (req, res) => {
     const cleanCorrect = Number.isFinite(Number(correct)) ? Math.max(0, Math.round(Number(correct))) : null
     const cleanTotal = Number.isFinite(Number(total)) ? Math.max(0, Math.round(Number(total))) : null
     const cleanSectionNumber = Number.isFinite(Number(sectionNumber)) ? Math.max(1, Math.min(4, Math.round(Number(sectionNumber)))) : null
-    const result = progressQueries.addListening.run(
+    const createdAt = sanitizeCreatedAt(req.body.createdAt || req.body.date)
+    const args = [
       req.user.id,
       section || '',
       cleanSectionNumber,
@@ -186,7 +205,10 @@ router.post('/listening', (req, res) => {
       cleanCorrect,
       cleanTotal,
       stringifyDetails(details)
-    )
+    ]
+    const result = createdAt
+      ? progressQueries.addListeningWithDate.run(...args, createdAt)
+      : progressQueries.addListening.run(...args)
     res.json({ id: result.lastInsertRowid })
   } catch (err) {
     console.error('Add listening error:', err.message)

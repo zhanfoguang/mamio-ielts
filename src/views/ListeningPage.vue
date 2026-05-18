@@ -166,6 +166,22 @@ function saveListeningHistoryLocal(record) {
   listeningHistory.value = history
 }
 
+function isSameListeningAttempt(a, b) {
+  return a.section === b.section && a.mode === b.mode && a.score === b.score && a.correct === b.correct && a.total === b.total && a.date === b.date
+}
+
+async function migrateLocalListeningHistory(localHistory, serverHistory) {
+  const unsynced = localHistory
+    .filter(item => !item.synced && !serverHistory.some(serverItem => isSameListeningAttempt(item, serverItem)))
+    .slice(0, 50)
+  if (!unsynced.length) return serverHistory
+
+  for (const item of unsynced) {
+    await addListeningRecord({ ...item, createdAt: item.date })
+  }
+  return getListeningHistory()
+}
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -200,7 +216,7 @@ async function submitListeningQuestions() {
   }
   try {
     const saved = await addListeningRecord(historyRecord)
-    saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+    saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id, synced: true })
   } catch {
     saveListeningHistoryLocal(historyRecord)
   }
@@ -296,7 +312,7 @@ async function stopDictation() {
     }
     try {
       const saved = await addListeningRecord(historyRecord)
-      saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+      saveListeningHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id, synced: true })
     } catch {
       saveListeningHistoryLocal(historyRecord)
     }
@@ -340,14 +356,18 @@ onMounted(async () => {
     window.speechSynthesis.getVoices()
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
   }
+  const localHistory = loadListeningHistory()
   try {
-    const history = await getListeningHistory()
+    const serverHistory = await getListeningHistory()
+    const history = await migrateLocalListeningHistory(localHistory, serverHistory)
     if (history.length) {
       localStorage.setItem('mamio-listening-history', JSON.stringify(history))
       listeningHistory.value = history
+    } else {
+      listeningHistory.value = localHistory
     }
   } catch {
-    listeningHistory.value = loadListeningHistory()
+    listeningHistory.value = localHistory
   }
 })
 

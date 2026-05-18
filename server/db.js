@@ -233,10 +233,12 @@ export const progressQueries = {
   // Reading
   getReading: db.prepare('SELECT * FROM reading_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
   addReading: db.prepare('INSERT INTO reading_history (user_id, passage, score, correct, total, time, details) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+  addReadingWithDate: db.prepare('INSERT INTO reading_history (user_id, passage, score, correct, total, time, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
 
   // Listening
   getListening: db.prepare('SELECT * FROM listening_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 50'),
   addListening: db.prepare('INSERT INTO listening_history (user_id, section, section_number, mode, score, correct, total, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+  addListeningWithDate: db.prepare('INSERT INTO listening_history (user_id, section, section_number, mode, score, correct, total, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
 
   // Vocab
   getVocab: db.prepare('SELECT * FROM vocab_progress WHERE user_id = ?'),

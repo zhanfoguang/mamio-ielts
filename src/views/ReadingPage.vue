@@ -118,6 +118,22 @@ function saveReadingHistoryLocal(record) {
   readingHistory.value = history
 }
 
+function isSameReadingAttempt(a, b) {
+  return a.passage === b.passage && a.score === b.score && a.correct === b.correct && a.total === b.total && a.date === b.date
+}
+
+async function migrateLocalReadingHistory(localHistory, serverHistory) {
+  const unsynced = localHistory
+    .filter(item => !item.synced && !serverHistory.some(serverItem => isSameReadingAttempt(item, serverItem)))
+    .slice(0, 50)
+  if (!unsynced.length) return serverHistory
+
+  for (const item of unsynced) {
+    await addReadingRecord({ ...item, createdAt: item.date })
+  }
+  return getReadingHistory()
+}
+
 function setAnswer(questionId, index, value) {
   if (!userAnswers.value[questionId]) userAnswers.value[questionId] = {}
   userAnswers.value[questionId][index] = value
@@ -198,7 +214,7 @@ async function submitAnswers() {
 
   try {
     const saved = await addReadingRecord(historyRecord)
-    saveReadingHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id })
+    saveReadingHistoryLocal({ ...historyRecord, id: saved.id || historyRecord.id, synced: true })
   } catch {
     saveReadingHistoryLocal(historyRecord)
   }
@@ -252,14 +268,18 @@ async function submitAnswers() {
 }
 
 onMounted(async () => {
+  const localHistory = loadReadingHistory()
   try {
-    const history = await getReadingHistory()
+    const serverHistory = await getReadingHistory()
+    const history = await migrateLocalReadingHistory(localHistory, serverHistory)
     if (history.length) {
       localStorage.setItem('mamio-reading-history', JSON.stringify(history))
       readingHistory.value = history
+    } else {
+      readingHistory.value = localHistory
     }
   } catch {
-    readingHistory.value = loadReadingHistory()
+    readingHistory.value = localHistory
   }
 })
 
