@@ -57,7 +57,7 @@ const totalQuestions = computed(() => {
   if (!selectedPassage.value) return 0
   return selectedPassage.value.questions.reduce((sum, q) => {
     if (q.type === 'true-false-ng') return sum + q.statements.length
-    if (q.type === 'matching' || q.type === 'short-answer') return sum + (q.items?.length || 0)
+    if (q.type === 'matching' || q.type === 'matching-headings' || q.type === 'short-answer') return sum + (q.items?.length || q.answers?.length || 0)
     if (q.type === 'multiple-choice') return sum + (q.items?.length || 0)
     return sum + 1
   }, 0)
@@ -101,6 +101,11 @@ function submitAnswers() {
       q.answers.forEach((a, i) => {
         total++
         if ((answers[i] || '').toUpperCase() === a.toUpperCase()) correct++
+      })
+    } else if (q.type === 'matching-headings') {
+      q.answers.forEach((a, i) => {
+        total++
+        if ((answers[i] || '').toLowerCase() === a.toLowerCase()) correct++
       })
     } else if (q.type === 'short-answer') {
       q.items.forEach((item, i) => {
@@ -154,6 +159,13 @@ function submitAnswers() {
           wrongItems.push({ type: 'reading', text: item.question, reason: `正确答案: ${item.answer}，你的答案: ${answers[i]}` })
         }
       })
+    } else if (q.type === 'matching-headings') {
+      q.answers.forEach((a, i) => {
+        const userAns = (answers[i] || '').toLowerCase()
+        if (userAns && userAns !== a.toLowerCase()) {
+          wrongItems.push({ type: 'reading', text: `Paragraph ${String.fromCharCode(65 + i)}`, reason: `正确答案: ${a}，你的答案: ${answers[i]}` })
+        }
+      })
     }
   }
   if (wrongItems.length) {
@@ -182,6 +194,10 @@ function getLevelLabel(level) {
 function getLevelColor(level) {
   const colors = { easy: 'var(--green)', medium: 'var(--yellow, var(--amber))', hard: 'var(--red)' }
   return colors[level] || 'var(--text-secondary)'
+}
+
+function headingValue(heading) {
+  return String(heading).split('.')[0].trim()
 }
 </script>
 
@@ -261,6 +277,20 @@ function getLevelColor(level) {
                   <select :value="getAnswer(currentQuestion.id, i)" @change="setAnswer(currentQuestion.id, i, $event.target.value)" class="matching-select">
                     <option value="">{{ themeStore.lang === 'zh' ? '选择段落' : 'Select paragraph' }}</option>
                     <option v-for="l in ['A','B','C','D','E','F']" :key="l" :value="l">{{ l }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Matching headings -->
+              <div v-if="currentQuestion.type === 'matching-headings'" class="q-matching">
+                <div class="heading-bank">
+                  <p v-for="heading in currentQuestion.headings" :key="heading">{{ heading }}</p>
+                </div>
+                <div v-for="(_, i) in currentQuestion.answers" :key="i" class="matching-item">
+                  <p class="matching-text">Paragraph {{ String.fromCharCode(65 + i) }}</p>
+                  <select :value="getAnswer(currentQuestion.id, i)" @change="setAnswer(currentQuestion.id, i, $event.target.value)" class="matching-select">
+                    <option value="">{{ themeStore.lang === 'zh' ? '选择标题' : 'Select heading' }}</option>
+                    <option v-for="heading in currentQuestion.headings" :key="heading" :value="headingValue(heading)">{{ heading }}</option>
                   </select>
                 </div>
               </div>
@@ -348,6 +378,20 @@ function getLevelColor(level) {
                     <span v-if="(getAnswer(q.id, i) || '').toUpperCase() === q.answers[i].toUpperCase()" class="ri-check">✓</span>
                     <span v-else class="ri-cross">✗</span>
                   </span>
+                </div>
+              </div>
+
+              <div v-if="q.type === 'matching-headings'" class="result-items">
+                <div v-for="(_, i) in q.answers" :key="i" class="result-item" :class="{ correct: (getAnswer(q.id, i) || '').toLowerCase() === q.answers[i].toLowerCase(), wrong: getAnswer(q.id, i) && (getAnswer(q.id, i) || '').toLowerCase() !== q.answers[i].toLowerCase() }">
+                  <span class="ri-num">{{ i + 1 }}.</span>
+                  <span class="ri-text">Paragraph {{ String.fromCharCode(65 + i) }}</span>
+                  <span class="ri-answer">{{ themeStore.lang === 'zh' ? '正确答案' : 'Answer' }}: <strong>{{ q.answers[i] }}</strong></span>
+                  <span v-if="getAnswer(q.id, i)" class="ri-yours">
+                    {{ themeStore.lang === 'zh' ? '你的' : 'Yours' }}: <strong>{{ getAnswer(q.id, i) }}</strong>
+                    <span v-if="(getAnswer(q.id, i) || '').toLowerCase() === q.answers[i].toLowerCase()" class="ri-check">✓</span>
+                    <span v-else class="ri-cross">✗</span>
+                  </span>
+                  <p v-if="q.explanation" class="ri-explain">{{ q.explanation }}</p>
                 </div>
               </div>
 
@@ -584,6 +628,23 @@ function getLevelColor(level) {
 }
 
 /* Matching */
+.heading-bank {
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.heading-bank p {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.heading-bank p:last-child {
+  margin-bottom: 0;
+}
+
 .matching-item {
   margin-bottom: var(--space-md);
   display: flex;

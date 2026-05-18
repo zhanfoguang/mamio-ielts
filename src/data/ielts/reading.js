@@ -566,5 +566,248 @@ Emotion is another powerful driver of consumer behaviour. Studies in neuromarket
         ]
       }
     ]
+  },
+  {
+    id: 11,
+    title: 'The Rise of Vertical Farming',
+    level: 'medium',
+    passage: `Vertical farming is an agricultural method in which crops are grown in stacked layers inside controlled indoor environments. Instead of relying on soil and natural rainfall, many vertical farms use hydroponic or aeroponic systems that deliver nutrients directly to plant roots. Artificial lighting, humidity control, and automated monitoring allow growers to produce leafy vegetables throughout the year, even in dense urban areas where farmland is scarce.
+
+Supporters argue that vertical farming can reduce several environmental costs associated with conventional agriculture. Because water is recirculated, some systems use up to 90% less water than field-based farming. Indoor production can also reduce the need for pesticides, since crops are protected from many insects and diseases. Furthermore, locating farms near consumers may shorten supply chains and reduce emissions from refrigerated transport.
+
+However, the technology faces significant economic obstacles. The electricity required for lighting and climate control can be expensive, especially in regions where renewable energy is not widely available. Labour costs may also remain high unless farms invest heavily in automation. For this reason, most profitable vertical farms currently focus on high-value crops such as herbs, salad leaves, and microgreens rather than staple foods like wheat or rice.
+
+The future of vertical farming will probably depend on improvements in energy efficiency and crop selection. Advances in LED lighting have already reduced operating costs, while plant scientists are experimenting with varieties bred specifically for indoor growth. Although vertical farms are unlikely to replace traditional agriculture, they may become an important supplement in cities that want fresher produce and more resilient food systems.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Vertical farms usually grow crops in stacked layers.', answer: 'TRUE', explanation: 'The first paragraph defines vertical farming as crops grown "in stacked layers."' },
+          { text: 'Vertical farming always uses natural sunlight instead of artificial lighting.', answer: 'FALSE', explanation: 'The passage mentions "artificial lighting" as part of controlled indoor production.' },
+          { text: 'Most vertical farms are currently profitable when growing rice.', answer: 'FALSE', explanation: 'The passage says profitable farms focus on herbs, salad leaves, and microgreens rather than staple foods like rice.' },
+          { text: 'Some plant varieties are being developed specifically for indoor growth.', answer: 'TRUE', explanation: 'The final paragraph states plant scientists are experimenting with varieties bred for indoor growth.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'Which benefit of vertical farming is mentioned in the passage?',
+            options: [
+              'A. It eliminates all labour costs',
+              'B. It can reduce water use through recirculation',
+              'C. It makes wheat cheaper than field farming',
+              'D. It requires no energy input'
+            ],
+            answer: 'B',
+            explanation: 'The passage states that some systems use up to 90% less water because water is recirculated.'
+          },
+          {
+            question: 'The main economic challenge described is:',
+            options: [
+              'A. the lack of urban consumers',
+              'B. the cost of electricity and climate control',
+              'C. the inability to grow salad leaves',
+              'D. excessive rainfall inside farms'
+            ],
+            answer: 'B',
+            explanation: 'The passage highlights electricity for lighting and climate control as a major cost.'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What systems deliver nutrients directly to plant roots?', answer: 'hydroponic or aeroponic' },
+          { question: 'What type of lighting has reduced operating costs?', answer: 'LED lighting' },
+          { question: 'What kind of food systems may vertical farms help create?', answer: 'more resilient' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 12,
+    title: 'Why People Forget',
+    level: 'easy',
+    passage: `Forgetting is often seen as a failure of memory, but psychologists increasingly view it as a normal and useful process. Human beings encounter far more information than they can store permanently. If every detail were retained with equal strength, it would become difficult to identify what is relevant. Forgetting helps the brain prioritise information that is repeated, meaningful, or connected to current goals.
+
+One common cause of forgetting is interference. Proactive interference occurs when old knowledge makes it harder to learn something new, such as when a person keeps entering an old password after changing it. Retroactive interference works in the opposite direction: new information disrupts the recall of older information. This can happen when students study two similar subjects in a single evening and later confuse the details.
+
+Another explanation is retrieval failure. A memory may still exist, but the person lacks the right cue to access it. This is why a smell, song, or location can suddenly bring back a memory that seemed lost. The context in which information is learned can be particularly powerful. Students who revise in an environment similar to the exam room may find it easier to recall what they studied.
+
+Forgetting can be reduced through active strategies. Spaced repetition, which involves reviewing material at increasing intervals, strengthens long-term retention. Self-testing is also effective because it forces learners to practise retrieval rather than simply reread notes. These techniques do not prevent forgetting completely, but they make important memories easier to access when needed.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'matching',
+        question: 'Match each concept to the correct paragraph (A-D).',
+        items: [
+          'Using tests to practise recall',
+          'Old information blocking new learning',
+          'Forgetting as a useful filtering process',
+          'Memories becoming accessible through cues'
+        ],
+        answers: ['D', 'B', 'A', 'C'],
+        explanation: 'Strategies appear in D, interference in B, useful forgetting in A, and retrieval cues in C.'
+      },
+      {
+        id: 'q2',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Psychologists now often regard forgetting as a normal process.', answer: 'TRUE', explanation: 'The passage says psychologists increasingly view forgetting as "normal and useful."' },
+          { text: 'Retroactive interference means old knowledge blocks new learning.', answer: 'FALSE', explanation: 'That is proactive interference; retroactive interference is when new information disrupts older information.' },
+          { text: 'A smell can act as a cue for memory retrieval.', answer: 'TRUE', explanation: 'The passage mentions a smell, song, or location bringing back a memory.' },
+          { text: 'Spaced repetition completely prevents forgetting.', answer: 'FALSE', explanation: 'The passage says these techniques "do not prevent forgetting completely."' }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What type of interference occurs when old knowledge blocks new learning?', answer: 'proactive interference' },
+          { question: 'What kind of repetition reviews material at increasing intervals?', answer: 'spaced repetition' },
+          { question: 'What does self-testing force learners to practise?', answer: 'retrieval' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 13,
+    title: 'Restoring Historic Buildings',
+    level: 'medium',
+    passage: `Historic buildings provide cities with a visible link to their past. They can reveal how earlier communities lived, what materials were locally available, and which architectural styles were valued. For many residents, old buildings also create a sense of identity that modern developments sometimes fail to provide.
+
+Restoration, however, is rarely straightforward. Conservation specialists must decide whether to preserve a building exactly as it is, return it to an earlier appearance, or adapt it for a new purpose. Each option involves compromise. A former warehouse converted into apartments may remain useful, but new windows, lifts, and safety systems can alter its original character.
+
+Funding is another persistent challenge. Restoring traditional materials such as stone, timber, or handmade tiles can be far more expensive than using modern substitutes. Public grants may cover part of the cost, but owners often need additional income from tourism, events, or commercial tenants. Without a viable financial plan, restored buildings may quickly fall back into disrepair.
+
+Despite these difficulties, adaptive reuse is gaining support. Environmental researchers point out that reusing an existing structure can save the embodied carbon already invested in its materials. Urban planners also argue that renovated heritage sites can attract visitors while keeping neighbourhoods distinctive. The best projects therefore combine respect for historical value with practical plans for long-term use.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'matching-headings',
+        question: 'Match each paragraph (A-D) with the most suitable heading.',
+        headings: [
+          'i. The financial problem of conservation',
+          'ii. A connection with local history',
+          'iii. Benefits of giving old buildings new uses',
+          'iv. Choosing the right restoration approach',
+          'v. The decline of modern architecture'
+        ],
+        answers: ['ii', 'iv', 'i', 'iii'],
+        explanation: 'A discusses links to the past, B discusses restoration choices, C focuses on funding, and D explains adaptive reuse.'
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'Why can converting a warehouse into apartments be a compromise?',
+            options: [
+              'A. It always destroys the building',
+              'B. It may keep the building useful while changing original features',
+              'C. It prevents the use of safety systems',
+              'D. It removes the need for conservation specialists'
+            ],
+            answer: 'B',
+            explanation: 'The passage says conversion may keep a building useful but alter its original character.'
+          },
+          {
+            question: 'Environmental researchers support adaptive reuse because it can:',
+            options: [
+              'A. save embodied carbon in existing materials',
+              'B. make all restoration projects cheap',
+              'C. remove tourism from old neighbourhoods',
+              'D. replace traditional materials with plastic'
+            ],
+            answer: 'A',
+            explanation: 'The final paragraph states reusing a structure can save embodied carbon.'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What do old buildings create for many residents?', answer: 'sense of identity' },
+          { question: 'What type of tenants may provide income for restored buildings?', answer: 'commercial tenants' },
+          { question: 'What kind of use plans should the best projects include?', answer: 'long-term use' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 14,
+    title: 'Digital Maps and Human Navigation',
+    level: 'hard',
+    passage: `Digital mapping applications have changed the way people move through cities. Turn-by-turn instructions reduce the anxiety of travelling in unfamiliar places, and live traffic data can help drivers avoid congestion. For delivery companies, ride-hailing services, and emergency responders, real-time navigation has become an essential operational tool.
+
+Yet some researchers argue that constant reliance on digital maps may weaken spatial memory. Traditional navigation requires people to form mental maps by noticing landmarks, directions, and distances. When an application simply announces the next turn, users may reach their destination without understanding the wider layout of the area. Experiments in virtual towns have found that participants who navigated with step-by-step instructions later remembered fewer landmarks than those who explored more actively.
+
+The issue is not that digital maps are inherently harmful, but that different modes of use encourage different habits. A pedestrian who previews the route, identifies major landmarks, and then puts the phone away is still engaging in active navigation. By contrast, someone who follows every instruction without looking beyond the screen may develop only a shallow understanding of the route.
+
+Designers are now exploring ways to make navigation tools more educational. Some prototypes provide landmark-based instructions, such as "turn left after the library," rather than relying only on street names. Others ask users to estimate the direction of their destination before revealing the next step. These small changes aim to preserve the convenience of digital maps while encouraging users to build stronger mental representations of place.`,
+    questions: [
+      {
+        id: 'q1',
+        type: 'true-false-ng',
+        question: 'Do the following statements agree with the information given in the passage?',
+        statements: [
+          { text: 'Live traffic data can help drivers avoid congestion.', answer: 'TRUE', explanation: 'The first paragraph states this directly.' },
+          { text: 'Researchers unanimously agree that digital maps are inherently harmful.', answer: 'FALSE', explanation: 'The passage says the issue is not that digital maps are inherently harmful.' },
+          { text: 'Landmark-based instructions are being explored by designers.', answer: 'TRUE', explanation: 'The final paragraph mentions prototypes using landmark-based instructions.' },
+          { text: 'All emergency responders have stopped using digital maps.', answer: 'NOT GIVEN', explanation: 'The passage says real-time navigation is essential for emergency responders, not that they stopped using it.' }
+        ]
+      },
+      {
+        id: 'q2',
+        type: 'multiple-choice',
+        question: 'Choose the correct letter, A, B, C, or D.',
+        items: [
+          {
+            question: 'According to the passage, step-by-step instructions may reduce:',
+            options: [
+              'A. the cost of mobile phones',
+              'B. people\'s memory for landmarks',
+              'C. the number of delivery companies',
+              'D. the accuracy of live traffic data'
+            ],
+            answer: 'B',
+            explanation: 'The passage describes experiments where users of step-by-step instructions remembered fewer landmarks.'
+          },
+          {
+            question: 'An example of active navigation is:',
+            options: [
+              'A. following every instruction without looking up',
+              'B. ignoring all landmarks and distances',
+              'C. previewing a route and identifying major landmarks',
+              'D. using only street names in every instruction'
+            ],
+            answer: 'C',
+            explanation: 'The passage gives this as an example of active navigation.'
+          }
+        ]
+      },
+      {
+        id: 'q3',
+        type: 'short-answer',
+        question: 'Answer the following questions using NO MORE THAN THREE WORDS from the passage.',
+        items: [
+          { question: 'What kind of memory may digital-map reliance weaken?', answer: 'spatial memory' },
+          { question: 'What do traditional navigators form by noticing landmarks and distances?', answer: 'mental maps' },
+          { question: 'What are some prototypes based on instead of only street names?', answer: 'landmark-based instructions' }
+        ]
+      }
+    ]
   }
 ]

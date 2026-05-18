@@ -56,5 +56,65 @@ export const listeningSections = [
       { en: 'Copenhagen is often cited as a leading example of sustainable urban planning.', cn: '哥本哈根经常被引用为可持续城市规划的领先范例。', duration: 5000 },
       { en: 'The city has committed to becoming carbon neutral by 2025 through a combination of cycling infrastructure and renewable energy.', cn: '该市承诺到2025年通过自行车基础设施和可再生能源的组合实现碳中和。', duration: 6500 }
     ]
+  },
+  {
+    id: 5,
+    section: 1,
+    title: 'Registering for a Fitness Class',
+    description: 'A conversation between a gym receptionist and a new member',
+    sentences: [
+      { en: 'Good afternoon, Harbour Fitness Centre. Are you calling about membership or classes?', cn: '下午好，这里是海港健身中心。您是咨询会员还是课程？', duration: 5000 },
+      { en: 'I joined last week, and I would like to register for the beginner swimming class.', cn: '我上周刚入会，想报名初级游泳课。', duration: 5000 },
+      { en: 'That class runs on Tuesday and Thursday evenings from half past six to quarter past seven.', cn: '那门课在周二和周四晚上六点半到七点十五分上课。', duration: 6000 },
+      { en: 'Do I need to bring my own equipment, or is everything provided?', cn: '我需要自己带装备吗，还是你们都提供？', duration: 4500 },
+      { en: 'You need to bring a towel and swimming cap, but floats and training boards are available here.', cn: '您需要带毛巾和泳帽，但浮板和训练板这里都有。', duration: 6500 },
+      { en: 'The course lasts six weeks, and the total fee is forty-eight pounds.', cn: '课程持续六周，总费用是四十八英镑。', duration: 4500 },
+      { en: 'Could you put me down for the next course starting on the second of April?', cn: '能帮我报名四月二日开始的下一期吗？', duration: 5000 },
+      { en: 'Of course. I will send a confirmation email with the changing room code this afternoon.', cn: '当然。我今天下午会发确认邮件，里面有更衣室密码。', duration: 6000 }
+    ]
+  },
+  {
+    id: 6,
+    section: 2,
+    title: 'Library Orientation',
+    description: 'A librarian explaining services to new international students',
+    sentences: [
+      { en: 'This short orientation will introduce the main services available in the university library.', cn: '这次简短介绍会说明大学图书馆提供的主要服务。', duration: 6000 },
+      { en: 'Your student card allows you to borrow up to twelve books for a period of three weeks.', cn: '凭学生卡最多可以借十二本书，借期三周。', duration: 5500 },
+      { en: 'If nobody else has requested the item, you can renew it online twice.', cn: '如果没有其他人预约这本书，你可以在线续借两次。', duration: 5000 },
+      { en: 'Group study rooms must be booked at least twenty-four hours in advance.', cn: '小组学习室必须至少提前二十四小时预约。', duration: 5000 },
+      { en: 'The silent study area is on the top floor, next to the journal collection.', cn: '安静学习区在顶楼，紧挨着期刊收藏区。', duration: 5000 },
+      { en: 'Workshops on referencing software are held every Wednesday afternoon during term time.', cn: '学期内每周三下午都有文献引用软件工作坊。', duration: 6000 },
+      { en: 'Please ask at the information desk if you have trouble accessing electronic databases from home.', cn: '如果您在家无法访问电子数据库，请到咨询台寻求帮助。', duration: 6500 }
+    ]
+  },
+  {
+    id: 7,
+    section: 3,
+    title: 'Planning a Field Trip',
+    description: 'Two students organising transport and interview questions for a geography project',
+    sentences: [
+      { en: 'We need to finalise the plan for our field trip to the coastal village.', cn: '我们需要最终确定去海边村庄实地考察的计划。', duration: 5000 },
+      { en: 'The train is cheaper, but the bus stops much closer to the survey site.', cn: '火车更便宜，但公交车站离调查地点近得多。', duration: 5500 },
+      { en: 'Our tutor said we should interview at least six residents and two local business owners.', cn: '导师说我们至少要采访六位居民和两位当地店主。', duration: 6500 },
+      { en: 'I can prepare questions about seasonal employment and changes in visitor numbers.', cn: '我可以准备关于季节性就业和游客数量变化的问题。', duration: 6000 },
+      { en: 'Good idea. I will focus on coastal erosion and the new flood defence scheme.', cn: '好主意。我会重点关注海岸侵蚀和新的防洪方案。', duration: 5500 },
+      { en: 'We should also take photographs, but only after asking permission.', cn: '我们还应该拍照片，但必须先征得同意。', duration: 4500 },
+      { en: 'Let us meet outside the science building at eight fifteen on Friday morning.', cn: '我们周五早上八点十五分在科学楼外集合吧。', duration: 5500 }
+    ]
+  },
+  {
+    id: 8,
+    section: 4,
+    title: 'Lecture on Sleep and Memory',
+    description: 'An academic lecture about how sleep affects learning',
+    sentences: [
+      { en: 'In today\'s lecture, we will examine the relationship between sleep and memory consolidation.', cn: '今天的讲座中，我们将研究睡眠与记忆巩固之间的关系。', duration: 6500 },
+      { en: 'Memory consolidation refers to the process by which fragile new memories become more stable over time.', cn: '记忆巩固指脆弱的新记忆随着时间变得更加稳定的过程。', duration: 7000 },
+      { en: 'Research suggests that deep sleep is particularly important for factual knowledge, such as vocabulary and dates.', cn: '研究表明，深度睡眠对词汇和日期等事实性知识尤其重要。', duration: 7000 },
+      { en: 'By contrast, rapid eye movement sleep appears to support emotional processing and creative problem solving.', cn: '相比之下，快速眼动睡眠似乎有助于情绪处理和创造性解决问题。', duration: 7500 },
+      { en: 'Students often reduce their sleep before exams, but this strategy can actually impair recall.', cn: '学生常在考试前减少睡眠，但这种策略实际上可能损害回忆能力。', duration: 6500 },
+      { en: 'A more effective approach is to study in shorter sessions across several days and maintain a regular sleep schedule.', cn: '更有效的方法是在几天内进行较短时间的学习，并保持规律睡眠。', duration: 7500 }
+    ]
   }
 ]
