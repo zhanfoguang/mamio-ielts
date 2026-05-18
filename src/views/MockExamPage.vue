@@ -1,12 +1,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useThemeStore } from '../stores/theme'
 import { speakingTopics } from '../data/ielts/speaking'
 import { writingTasks } from '../data/ielts/writing'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
 import { scoreSpeaking, batchWriting } from '../services/ai'
+import { addReviewItemsFromFeedback } from '../services/reviewItems'
 
 const themeStore = useThemeStore()
+const router = useRouter()
 const {
   isListening, transcript, interimTranscript, isSupported,
   isRecording, audioUrl, recordingDuration,
@@ -51,6 +54,29 @@ function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function averageOverall(results = []) {
+  const validResults = results.filter(r => r.overall > 0)
+  if (!validResults.length) return 0
+  return Math.round(validResults.reduce((s, r) => s + r.overall, 0) / validResults.length * 10) / 10
+}
+
+function saveMockReviewItems(results, module, source) {
+  results
+    .filter(result => result.overall > 0)
+    .forEach(result => {
+      addReviewItemsFromFeedback(result, { module, source })
+      if (module === 'speaking' && result.pronunciationWords?.length) {
+        addReviewItemsFromFeedback({
+          reviewItems: result.pronunciationWords.map(pw => ({
+            type: 'pronunciation',
+            text: pw.word,
+            reason: pw.issue || pw.tip || ''
+          }))
+        }, { module: 'speaking', source: 'pronunciation-mock' })
+      }
+    })
 }
 
 function startTimer(duration) {
@@ -228,6 +254,7 @@ async function submitSpeakingMock() {
     mockScoreHistory.value.unshift(scoreEntry)
     if (mockScoreHistory.value.length > 20) mockScoreHistory.value.length = 20
     localStorage.setItem('mamio-mock-scores', JSON.stringify(mockScoreHistory.value))
+    saveMockReviewItems(results, 'speaking', 'speaking-mock')
   } catch (e) {
     console.error('Mock scoring error:', e)
   } finally {
@@ -322,6 +349,7 @@ async function submitWritingMock() {
     mockScoreHistory.value.unshift(scoreEntry)
     if (mockScoreHistory.value.length > 20) mockScoreHistory.value.length = 20
     localStorage.setItem('mamio-mock-scores', JSON.stringify(mockScoreHistory.value))
+    saveMockReviewItems(results, 'writing', 'writing-mock')
   } catch (e) {
     console.error('Mock scoring error:', e)
   } finally {
@@ -526,8 +554,8 @@ onUnmounted(() => {
         <template v-if="examType === 'speaking' && speakingResults">
           <div class="report-overview">
             <div class="report-score">
-              <span class="report-score-num" :style="{ color: getScoreColor(speakingResults.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / speakingResults.filter(r => r.overall > 0).length) }">
-                {{ (speakingResults.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / speakingResults.filter(r => r.overall > 0).length).toFixed(1) }}
+              <span class="report-score-num" :style="{ color: getScoreColor(averageOverall(speakingResults)) }">
+                {{ averageOverall(speakingResults).toFixed(1) }}
               </span>
               <span class="report-score-label">{{ themeStore.lang === 'zh' ? '总分' : 'Overall' }}</span>
             </div>
@@ -570,8 +598,8 @@ onUnmounted(() => {
         <template v-if="examType === 'writing' && writingResults">
           <div class="report-overview">
             <div class="report-score">
-              <span class="report-score-num" :style="{ color: getScoreColor(writingResults.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / writingResults.filter(r => r.overall > 0).length) }">
-                {{ (writingResults.filter(r => r.overall > 0).reduce((s, r) => s + r.overall, 0) / writingResults.filter(r => r.overall > 0).length).toFixed(1) }}
+              <span class="report-score-num" :style="{ color: getScoreColor(averageOverall(writingResults)) }">
+                {{ averageOverall(writingResults).toFixed(1) }}
               </span>
               <span class="report-score-label">{{ themeStore.lang === 'zh' ? '总分' : 'Overall' }}</span>
             </div>
@@ -611,9 +639,17 @@ onUnmounted(() => {
           </div>
         </template>
 
-        <button class="start-btn" @click="resetExam">
-          {{ themeStore.lang === 'zh' ? '再来一次' : 'Try Again' }}
-        </button>
+        <div class="result-actions">
+          <button class="result-primary" @click="router.push('/review')">
+            {{ themeStore.lang === 'zh' ? '复盘本次弱点' : 'Review Weak Spots' }}
+          </button>
+          <button class="result-secondary" @click="router.push('/dashboard')">
+            {{ themeStore.lang === 'zh' ? '回到今日计划' : "Back to Today's Plan" }}
+          </button>
+          <button class="result-secondary" @click="resetExam">
+            {{ themeStore.lang === 'zh' ? '再来一次' : 'Try Again' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -991,6 +1027,50 @@ onUnmounted(() => {
   font-style: italic;
   line-height: 1.5;
   margin-top: 8px;
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: var(--space-2xl);
+}
+
+.result-primary,
+.result-secondary {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.result-primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+[data-theme="dark"] .result-primary {
+  background: var(--white);
+  color: var(--black);
+}
+
+.result-secondary {
+  background: transparent;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.result-primary:hover,
+.result-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.result-secondary:hover {
+  background: var(--bg-tertiary);
 }
 
 /* Part 2 prep notice */
