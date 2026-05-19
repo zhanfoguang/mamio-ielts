@@ -26,11 +26,13 @@ Mamio uses a lightweight AI Ops layer in `AI-OPS/` for product planning, review,
 - Dictation practice with speech recognition
 - Word comparison and accuracy scoring
 - Auto-play mode for continuous listening
+- Completion reports, missed-word review items, and server-backed attempt history
 
 ### Reading
-- 10 IELTS reading passages with multiple question types
+- 16 IELTS reading passages with multiple question types
 - True/False/Not Given, Matching, Short Answer, Multiple Choice
 - Timer, detailed answer analysis, score tracking
+- Practice reports, wrong-answer review items, and server-backed attempt history
 
 ### Writing
 - Task 1 (data描述) and Task 2 (议论文) with real IELTS prompts
@@ -50,6 +52,7 @@ Mamio uses a lightweight AI Ops layer in `AI-OPS/` for product planning, review,
 - Learning streak tracking
 - Module-level progress stats
 - First-time onboarding guide
+- Target-aware daily action queue, start checklist, stale-user prompt, and input follow-up card
 
 ### Mock Exam
 - Full mock exam flow combining multiple modules
@@ -57,6 +60,7 @@ Mamio uses a lightweight AI Ops layer in `AI-OPS/` for product planning, review,
 ### Admin Panel
 - User management
 - Invite code generation and tracking
+- Usage stats, API logs, content draft review, and content-bank health checks
 
 ## Tech Stack
 

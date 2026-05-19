@@ -33,7 +33,7 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Run build and backend syntax checks.
 - [x] Browser-test Dashboard and Writing smoke paths.
 - [ ] Browser-test Speaking after a real microphone/AI scoring pass.
-- [ ] Decide which changes are product-code-ready for GitHub/VPS deployment.
+- [x] Decide which changes are product-code-ready for GitHub/VPS deployment.
 
 ## Phase 6: Review Items UI
 
@@ -92,7 +92,7 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Update `src/views/ReviewPage.vue` to use async API calls.
 - [x] Update `src/views/DashboardPage.vue` to use sync stats + migration on mount.
 - [x] Create `deploy/backup-db.sh` for daily VPS SQLite backup.
-- [ ] Add backup cron to VPS (manual step — user needs to run on VPS).
+- [x] Add backup cron to VPS.
 
 ## Phase 14: Productization — Admin Usage & Trial Flow
 
@@ -169,3 +169,42 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Feed server-side reading/listening history into Dashboard aggregates.
 - [x] Add one-time local-to-server migration for old reading/listening attempts.
 - [x] Add Dashboard input follow-up card for weak recent reading/listening attempts.
+
+## Phase 22: Next Claude Code Execution Plan
+
+### A. Content DB Migration
+
+- [ ] Add server content tables for reading/listening approved content.
+- [ ] Add read APIs for reading/listening banks.
+- [ ] Keep static JS banks as frontend fallback during migration.
+- [ ] Update ReadingPage and ListeningPage to load API content first.
+- [ ] Add admin publish-to-DB flow for approved drafts.
+- [ ] Add content version/disable metadata for rollback.
+
+### B. Attempt Detail Review
+
+- [ ] Add Reading attempt detail route and UI.
+- [ ] Add Listening attempt detail route and UI.
+- [ ] Link Dashboard input follow-up card to specific attempts when possible.
+- [ ] Add "send mistakes to Review" / "review mistakes" CTA from detail pages.
+
+### C. Admin Retention Analytics
+
+- [ ] Count active users from all practice attempts, not only AI calls.
+- [ ] Add first-practice, second-practice, review-loop completion metrics.
+- [ ] Add Admin cards for activation drop-off and repeated low-score users.
+- [ ] Include reading/listening attempts in retention stats.
+
+### D. First-Session Activation
+
+- [ ] Replace feature-list onboarding with action-oriented first-session flow.
+- [ ] Track first-session completion: goal set, first attempt, first weakness, first review action.
+- [ ] Show activation messaging after the first meaningful feedback loop.
+
+### E. VPS / Ops Hardening
+
+- [ ] Add health response with commit hash, DB status, and env presence flags.
+- [ ] Improve `deploy/auto-deploy.sh` logging around commit before/after and health check.
+- [ ] Add one local smoke command/script covering build, content validation, and backend syntax checks.
+- [ ] Verify backup cron creates gzip backups on VPS.
+- [ ] Document one-command VPS diagnosis flow.

@@ -109,11 +109,17 @@ cd /var/www/mimio && sudo git pull && sudo npm install && sudo npm run build && 
 ### VPS 自动部署安装/修复命令
 ```bash
 cd /var/www/mimio
+sudo chown -R admin:admin /var/www/mimio
+(crontab -l 2>/dev/null | grep -vE '/var/www/mimio/(deploy/)?auto-deploy\.sh') | crontab -
+sudo bash -lc '(crontab -l 2>/dev/null | grep -vE "/var/www/mimio/(deploy/)?auto-deploy\.sh") | crontab -'
 git pull --ff-only origin main
 chmod +x deploy/auto-deploy.sh
-sudo bash -lc '(crontab -l 2>/dev/null | grep -v "deploy/auto-deploy.sh"; echo "*/5 * * * * /var/www/mimio/deploy/auto-deploy.sh >> /var/www/mimio/deploy.log 2>&1") | crontab -'
+sudo bash -lc '(crontab -l 2>/dev/null | grep -vE "/var/www/mimio/(deploy/)?auto-deploy\.sh"; echo "*/5 * * * * /var/www/mimio/deploy/auto-deploy.sh >> /var/www/mimio/deploy.log 2>&1") | crontab -'
+sudo bash deploy/auto-deploy.sh
 tail -n 80 /var/www/mimio/deploy.log
 ```
+
+Auto-deploy incident note: old cron entries pointed to `/var/www/mimio/auto-deploy.sh` and produced repeated `Permission denied`. Remove both admin and root old-path entries before installing the root cron above. Do not paste log lines such as `/bin/sh: 1: ...` back into the shell.
 
 ### VPS git safe.directory 问题
 如果遇到 `dubious ownership` 错误，先跑：

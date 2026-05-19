@@ -43,7 +43,7 @@ Success signal: AI feedback is actionable, comparable over time, and safe to sto
 Goal: make Mamio viable as a small paid product.
 
 - [x] Create SQLite backup script (`deploy/backup-db.sh`).
-- [ ] Add backup cron to VPS (manual step after deploy).
+- [x] Add backup cron to VPS.
 - [x] Add server-side `review_items` table with API endpoints.
 - [x] Add admin visibility into usage and active users (Usage tab).
 - [x] Add trial countdown banner on Dashboard.
@@ -60,7 +60,7 @@ Success signal: It is clear who is using Mamio, how often, and why they convert 
 - [x] Add full Speaking mock flow with score trends, transcript replay, and repeated weak-area tracking.
 - [x] Connect weak words from Writing, Speaking, Listening, and Reading into one review system.
 - [x] Add target band and exam date so Dashboard recommendations can become goal-aware.
-- [ ] Add server-side `review_items` only after local review UX proves useful and live SQLite backup workflow is clear.
+- [x] Add server-side `review_items` after local review UX proved useful and live SQLite backup workflow was clear.
 
 ## Current Recommended Next Moves
 
@@ -77,10 +77,25 @@ Success signal: It is clear who is using Mamio, how often, and why they convert 
 
 Goal: make Mamio feel like a daily coach instead of a collection of tools.
 
-- [ ] Turn Dashboard recommendations into a clear daily action queue.
-- [ ] Make Review prioritize high-value weak spots instead of showing a flat list.
-- [ ] Improve empty states so every blank page explains how to create useful data.
-- [ ] Tighten mobile first-screen density for login, dashboard, and core practice modules.
-- [ ] Add more conversion context around trial limits, activation, and study continuity.
+- [x] Turn Dashboard recommendations into a clear daily action queue.
+- [x] Make Review prioritize high-value weak spots instead of showing a flat list.
+- [x] Improve empty states so every blank page explains how to create useful data.
+- [x] Tighten mobile first-screen density for login, dashboard, and core practice modules.
+- [x] Add more conversion context around trial limits, activation, and study continuity.
 
 Success signal: A new user can register, set a goal, complete one practice, see a concrete weakness, and know what to do tomorrow without external explanation.
+
+## Phase 6: Content And Retention Scale
+
+Goal: make content and history durable enough for real users.
+
+- [x] Add server-side reading/listening attempt history.
+- [x] Migrate old local reading/listening attempts to server.
+- [x] Surface weak reading/listening attempts on Dashboard.
+- [ ] Move approved content from static files into server-side content tables.
+- [ ] Add admin publishing flow for approved content.
+- [ ] Add reading/listening attempt detail pages.
+- [ ] Add admin retention analytics using all practice attempts.
+- [ ] Add deploy health diagnostics and backup verification.
+
+Success signal: The app can grow its content bank safely, users can review old mistakes, and the operator can see whether learners are returning.
