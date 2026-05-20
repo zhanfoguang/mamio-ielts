@@ -95,7 +95,7 @@ Goal: make content and history durable enough for real users.
 - [x] Add server-side published content tables and API-first reading/listening loading.
 - [x] Add admin publishing flow for approved content.
 - [x] Add admin disable/restore controls for DB-published content rollback.
-- [ ] Add reading/listening attempt detail pages.
+- [x] Add reading/listening attempt detail pages.
 - [ ] Add admin retention analytics using all practice attempts.
 - [ ] Add deploy health diagnostics and backup verification.
 

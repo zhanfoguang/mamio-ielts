@@ -465,11 +465,11 @@ function getQuestionTypeLabel(type) {
             <span>{{ readingHistory.slice(0, 5).length }} / {{ readingHistory.length }}</span>
           </div>
           <div class="history-list">
-            <button v-for="item in readingHistory.slice(0, 5)" :key="item.id" class="history-item" @click="selectPassage(readingPassages.find(p => p.title === item.passage) || readingPassages[0])">
+            <router-link v-for="item in readingHistory.slice(0, 5)" :key="item.id" class="history-item" :to="`/reading/history/${item.id}`">
               <strong>{{ item.passage }}</strong>
               <span :style="{ color: getScoreColor(item.score) }">{{ item.score }}%</span>
               <small>{{ formatTime(item.time || 0) }}</small>
-            </button>
+            </router-link>
           </div>
         </div>
 

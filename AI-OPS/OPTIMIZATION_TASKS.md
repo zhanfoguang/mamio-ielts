@@ -183,10 +183,10 @@ This is the active execution list for turning Mamio from a module collection int
 
 ### B. Attempt Detail Review
 
-- [ ] Add Reading attempt detail route and UI.
-- [ ] Add Listening attempt detail route and UI.
-- [ ] Link Dashboard input follow-up card to specific attempts when possible.
-- [ ] Add "send mistakes to Review" / "review mistakes" CTA from detail pages.
+- [x] Add Reading attempt detail route and UI.
+- [x] Add Listening attempt detail route and UI.
+- [x] Link Dashboard input follow-up card to specific attempts when possible.
+- [x] Add "send mistakes to Review" / "review mistakes" CTA from detail pages.
 
 ### C. Admin Retention Analytics
 

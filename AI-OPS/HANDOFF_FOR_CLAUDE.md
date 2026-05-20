@@ -167,14 +167,14 @@ Goal: history should be reviewable, not just counted.
 
 Tasks:
 
-1. Add Reading attempt detail route:
+1. Add Reading attempt detail route: Done.
    - route idea: `/reading/history/:id`
    - show passage title, score, time, question-type breakdown, wrong/unanswered list, explanation if available.
-2. Add Listening attempt detail route:
+2. Add Listening attempt detail route: Done.
    - route idea: `/listening/history/:id`
    - show section, mode, score, missed words, transcript/dictation comparison.
-3. Make Dashboard input follow-up card link to the relevant attempt when possible, not only to module root.
-4. Add "Review mistakes" CTA that sends missed items to Review if not already present.
+3. Make Dashboard input follow-up card link to the relevant attempt when possible, not only to module root: Done.
+4. Add "Review mistakes" CTA that sends missed items to Review if not already present: Detail pages now expose Review CTAs; original submit flows already create Review items.
 5. Ensure local fallback records still render detail pages where possible.
 
 Acceptance:

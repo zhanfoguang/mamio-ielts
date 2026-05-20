@@ -148,6 +148,17 @@ router.get('/reading', (req, res) => {
   }
 })
 
+router.get('/reading/:id', (req, res) => {
+  try {
+    const row = progressQueries.getReadingById.get(req.params.id, req.user.id)
+    if (!row) return res.status(404).json({ error: '阅读记录不存在' })
+    res.json(mapReadingRow(row))
+  } catch (err) {
+    console.error('Get reading detail error:', err.message)
+    res.status(500).json({ error: '获取阅读记录失败' })
+  }
+})
+
 router.post('/reading', (req, res) => {
   try {
     const { passage, score, correct, total, time, details } = req.body
@@ -184,6 +195,17 @@ router.get('/listening', (req, res) => {
   } catch (err) {
     console.error('Get listening error:', err.message)
     res.status(500).json({ error: '获取听力历史失败' })
+  }
+})
+
+router.get('/listening/:id', (req, res) => {
+  try {
+    const row = progressQueries.getListeningById.get(req.params.id, req.user.id)
+    if (!row) return res.status(404).json({ error: '听力记录不存在' })
+    res.json(mapListeningRow(row))
+  } catch (err) {
+    console.error('Get listening detail error:', err.message)
+    res.status(500).json({ error: '获取听力记录失败' })
   }
 })
 

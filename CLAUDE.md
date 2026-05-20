@@ -45,6 +45,7 @@ Frontend (Vite, port 5173 dev)          Backend (Express, port 3000)
 - `src/views/SpeakingPage.vue` — Speaking practice (Part 1/2/3), AI scoring, conversation mode
 - `src/views/ListeningPage.vue` — TTS audio playback, dictation practice, word comparison
 - `src/views/ReadingPage.vue` — Reading passages with TFNG/matching/short-answer/multiple-choice
+- `src/views/ReadingAttemptPage.vue` / `src/views/ListeningAttemptPage.vue` — input attempt detail reviews
 - `src/views/WritingPage.vue` — Task 1 & 2 essays, AI grading, model essays
 - `src/views/VocabPage.vue` — Flashcards, SM-2 SRS, quiz mode, AI word generation
 - `src/views/DashboardPage.vue` — Progress dashboard, heatmap, module stats
@@ -183,8 +184,10 @@ sudo git config --global --add safe.directory /var/www/mimio
 | GET | /writing | Yes | Writing history (last 50) |
 | POST | /writing | Yes | Add writing record |
 | GET | /reading | Yes | Reading history (last 50) |
+| GET | /reading/:id | Yes | Reading attempt detail |
 | POST | /reading | Yes | Add reading record |
 | GET | /listening | Yes | Listening history (last 50) |
+| GET | /listening/:id | Yes | Listening attempt detail |
 | POST | /listening | Yes | Add listening record |
 | GET | /vocab | Yes | All SRS data |
 | POST | /vocab | Yes | Upsert SRS data |
@@ -256,10 +259,11 @@ Recent direction:
 - Reading/listening pages now load content API-first and fall back to static JS banks.
 - Admin can publish approved generated reading/listening drafts into the server content DB; public content APIs merge static baseline content with DB-published additions.
 - Admin can disable/restore DB-published content for rollback; static baseline items are not disabled from Admin.
+- Reading/listening attempt history now has detail pages, and Dashboard input follow-up links to specific attempts when possible.
 
 Next recommended work:
-1. Add attempt detail pages for reading/listening history so users can review old mistakes.
-2. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
+1. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
+2. Improve first-session activation flow around goal -> first attempt -> first review action.
 3. Add attempt detail pages for reading/listening history so users can review old mistakes.
 4. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.

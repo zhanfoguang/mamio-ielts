@@ -424,11 +424,11 @@ onUnmounted(() => stopPlayback())
           <span>{{ listeningHistory.slice(0, 5).length }} / {{ listeningHistory.length }}</span>
         </div>
         <div class="history-list">
-          <button v-for="item in listeningHistory.slice(0, 5)" :key="item.id" class="history-item" @click="selectSection(Math.max(0, listeningSections.findIndex(s => s.title === item.section)))">
+          <router-link v-for="item in listeningHistory.slice(0, 5)" :key="item.id" class="history-item" :to="`/listening/history/${item.id}`">
             <strong>{{ item.section }}</strong>
             <span v-if="typeof item.score === 'number'">{{ item.score }}%</span>
             <small>{{ item.mode === 'completion' ? 'Completion' : 'Dictation' }}</small>
-          </button>
+          </router-link>
         </div>
       </div>
 

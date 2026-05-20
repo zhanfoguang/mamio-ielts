@@ -180,6 +180,7 @@ const recentInputAttempts = computed(() => {
     icon: '📖',
     title: item.passage,
     path: '/reading',
+    detailPath: item.id ? `/reading/history/${item.id}` : '/reading',
     scoreLabel: typeof item.score === 'number' ? `${item.score}%` : '-',
     issueZh: item.details?.report?.recommendation || (item.score < 70 ? '正确率偏低，建议重做同类题型。' : '保持输入训练节奏。'),
     issueEn: item.details?.report?.recommendation || (item.score < 70 ? 'Accuracy is low. Redo the same question type.' : 'Keep input practice steady.')
@@ -190,6 +191,7 @@ const recentInputAttempts = computed(() => {
     icon: '🎧',
     title: item.section,
     path: '/listening',
+    detailPath: item.id ? `/listening/history/${item.id}` : '/listening',
     scoreLabel: typeof item.score === 'number' ? `${item.score}%` : (item.mode === 'dictation' ? 'Dictation' : '-'),
     issueZh: item.details?.report?.recommendation || (item.mode === 'dictation' ? '复听这句，检查漏听词。' : '先复盘错词，再做下一套。'),
     issueEn: item.details?.report?.recommendation || (item.mode === 'dictation' ? 'Replay this sentence and check missed words.' : 'Review missed words before the next set.')
@@ -1043,7 +1045,7 @@ onMounted(async () => {
         </div>
         <div class="input-recovery-side">
           <strong>{{ inputRecoveryPlan.scoreLabel }}</strong>
-          <button @click="router.push(inputRecoveryPlan.path)">
+          <button @click="router.push(inputRecoveryPlan.detailPath || inputRecoveryPlan.path)">
             {{ themeStore.lang === 'zh' ? '去复练' : 'Review' }}
           </button>
         </div>

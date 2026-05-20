@@ -28,6 +28,11 @@ export async function getReadingHistory() {
   return data
 }
 
+export async function getReadingRecord(id) {
+  const { data } = await api.get(`/progress/reading/${id}`)
+  return data
+}
+
 export async function addReadingRecord(record) {
   const { data } = await api.post('/progress/reading', record)
   return data
@@ -36,6 +41,11 @@ export async function addReadingRecord(record) {
 // Listening
 export async function getListeningHistory() {
   const { data } = await api.get('/progress/listening')
+  return data
+}
+
+export async function getListeningRecord(id) {
+  const { data } = await api.get(`/progress/listening/${id}`)
   return data
 }
 

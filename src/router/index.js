@@ -38,6 +38,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/listening/history/:id',
+      name: 'listening-attempt',
+      component: () => import('../views/ListeningAttemptPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/writing',
       name: 'writing',
       component: () => import('../views/WritingPage.vue'),
@@ -53,6 +59,12 @@ const router = createRouter({
       path: '/reading',
       name: 'reading',
       component: () => import('../views/ReadingPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/reading/history/:id',
+      name: 'reading-attempt',
+      component: () => import('../views/ReadingAttemptPage.vue'),
       meta: { requiresAuth: true }
     },
     {
