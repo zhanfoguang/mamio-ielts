@@ -85,7 +85,8 @@ $PM2_BIN save >/dev/null 2>&1 || true
 
 if command -v curl >/dev/null 2>&1; then
   log "Health check"
-  curl -fsS http://127.0.0.1:3000/api/health >/dev/null
+  HEALTH_RESPONSE="$(curl -fsS http://127.0.0.1:3000/api/health)"
+  log "Health response: ${HEALTH_RESPONSE}"
 fi
 
 log "Deploy complete: ${REMOTE_COMMIT}"

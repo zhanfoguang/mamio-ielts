@@ -128,6 +128,16 @@ Auto-deploy incident note: old cron entries pointed to `/var/www/mimio/auto-depl
 sudo git config --global --add safe.directory /var/www/mimio
 ```
 
+### VPS 快速诊断命令
+```bash
+cd /var/www/mimio
+git rev-parse --short HEAD
+curl -fsS http://127.0.0.1:3000/api/health
+tail -n 80 /var/www/mimio/deploy.log
+tail -n 20 /var/www/mimio/backup.log
+sudo crontab -l
+```
+
 ## Database Schema (SQLite)
 - `users` — email, password_hash, nickname, role (trial/paid/expired/admin), ai_calls_today, trial_start, expires_at
 - `invite_codes` — code, duration_days, used_by, used_at
@@ -229,6 +239,13 @@ cp .env.example .env          # fill in DEEPSEEK_API_KEY, JWT_SECRET, ADMIN_PASS
 npm install && node index.js  # localhost:3000
 ```
 
+### 本地冒烟验证
+```bash
+npm run smoke
+```
+
+This runs content validation, frontend build, and backend syntax checks.
+
 ## Environment Variables (server/.env)
 - `JWT_SECRET` — Required, no fallback
 - `ADMIN_PASSWORD` — Required, no fallback
@@ -237,6 +254,13 @@ npm install && node index.js  # localhost:3000
 - `ADMIN_EMAIL` — Default: admin@mamio.com
 - `CORS_ORIGIN` — Default: http://localhost:5173
 - `SMTP_HOST/PORT/USER/PASS` — Optional, for password reset emails
+
+## Health Check
+
+`GET /api/health` returns:
+- `commit` — current git short hash when available
+- `db` — SQLite connectivity status
+- `env.jwtSecret/adminPassword/deepseekApiKey` — presence flags only, never secret values
 
 ## Known Issues / Tech Debt
 - No refresh token mechanism (JWT valid for 7 days)

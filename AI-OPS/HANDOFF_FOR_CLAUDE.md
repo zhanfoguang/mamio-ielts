@@ -230,18 +230,18 @@ Goal: reduce hand-operated VPS fixes and catch regressions earlier.
 
 Tasks:
 
-1. Add a deploy health endpoint or enrich existing health check with:
+1. Add a deploy health endpoint or enrich existing health check with: Done.
    - commit hash
    - DB open status
    - env presence flags, without exposing secrets
-2. Update `deploy/auto-deploy.sh` to log commit before/after and health result clearly.
-3. Add a simple smoke script:
+2. Update `deploy/auto-deploy.sh` to log commit before/after and health result clearly: Done.
+3. Add a simple smoke script: Done as `npm run smoke`.
    - frontend build
    - content validation
    - backend syntax checks
    - maybe API health check if server is running
 4. Document one-command VPS diagnosis in `CLAUDE.md` or a small deploy runbook.
-5. Confirm backup cron and test that a `.gz` backup is created.
+5. Confirm backup cron and test that a `.gz` backup is created. Backup script now fails loudly if DB/sqlite3/gzip output is missing.
 
 Acceptance:
 

@@ -203,8 +203,9 @@ This is the active execution list for turning Mamio from a module collection int
 
 ### E. VPS / Ops Hardening
 
-- [ ] Add health response with commit hash, DB status, and env presence flags.
-- [ ] Improve `deploy/auto-deploy.sh` logging around commit before/after and health check.
-- [ ] Add one local smoke command/script covering build, content validation, and backend syntax checks.
+- [x] Add health response with commit hash, DB status, and env presence flags.
+- [x] Improve `deploy/auto-deploy.sh` logging around commit before/after and health check.
+- [x] Add one local smoke command/script covering build, content validation, and backend syntax checks.
+- [x] Add backup script verification for missing DB/sqlite3/empty gzip output.
 - [ ] Verify backup cron creates gzip backups on VPS.
-- [ ] Document one-command VPS diagnosis flow.
+- [x] Document one-command VPS diagnosis flow.

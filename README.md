@@ -82,6 +82,9 @@ cd server
 cp .env.example .env   # add your DEEPSEEK_API_KEY, JWT_SECRET, ADMIN_PASSWORD
 npm install
 node index.js
+
+# Full local smoke check
+npm run smoke
 ```
 
 ## Deployment

@@ -11,7 +11,8 @@
     "content:generate": "node tools/content-refresh.mjs --generate",
     "content:merge-approved": "node tools/content-merge-approved.mjs",
     "content:merge-approved:dry": "node tools/content-merge-approved.mjs --dry-run",
-    "content:validate": "node tools/validate-content.mjs"
+    "content:validate": "node tools/validate-content.mjs",
+    "smoke": "node tools/smoke-check.mjs"
   },
   "dependencies": {
     "@iconify/iconify": "^3.1.1",
