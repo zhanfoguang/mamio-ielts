@@ -38,6 +38,44 @@ const levelCounts = computed(() => {
   }, { all: readingPassages.value.length })
 })
 
+const completedPassageTitles = computed(() => new Set(readingHistory.value.map(item => item.passage).filter(Boolean)))
+
+const levelCoverage = computed(() => {
+  return levelOptions.filter(level => level !== 'all').map(level => {
+    const passages = readingPassages.value.filter(passage => passage.level === level)
+    const done = passages.filter(passage => completedPassageTitles.value.has(passage.title)).length
+    return { level, total: passages.length, done }
+  })
+})
+
+const questionTypeCoverage = computed(() => {
+  return Object.keys(questionTypeLabels).map(type => {
+    const passages = readingPassages.value.filter(passage => passage.questions.some(q => q.type === type))
+    const done = passages.filter(passage => completedPassageTitles.value.has(passage.title)).length
+    return { type, total: passages.length, done }
+  })
+})
+
+const recommendedPassage = computed(() => {
+  const unfinished = readingPassages.value.filter(passage => !completedPassageTitles.value.has(passage.title))
+  const pool = unfinished.length ? unfinished : readingPassages.value
+  const weakestLevel = levelCoverage.value
+    .filter(item => item.total > 0)
+    .slice()
+    .sort((a, b) => (a.done / a.total) - (b.done / b.total) || b.total - a.total)[0]
+  return pool.find(passage => passage.level === weakestLevel?.level) || pool[0] || null
+})
+
+const recommendationCopy = computed(() => {
+  if (!recommendedPassage.value) return ''
+  const level = levelCoverage.value.find(item => item.level === recommendedPassage.value.level)
+  const levelText = getLevelLabel(recommendedPassage.value.level)
+  if (themeStore.lang === 'zh') {
+    return `${levelText} 难度完成 ${level?.done || 0}/${level?.total || 0}，建议下一篇：${recommendedPassage.value.title}。`
+  }
+  return `${levelText} coverage is ${level?.done || 0}/${level?.total || 0}. Next: ${recommendedPassage.value.title}.`
+})
+
 const filteredPassages = computed(() => {
   return readingPassages.value.filter(passage => {
     const levelOk = selectedLevel.value === 'all' || passage.level === selectedLevel.value
@@ -79,6 +117,13 @@ function selectPassage(passage) {
   practiceReport.value = null
   stopTimer()
   startTimer()
+}
+
+function selectRecommendedPassage() {
+  if (!recommendedPassage.value) return
+  selectedLevel.value = 'all'
+  selectedQuestionType.value = 'all'
+  selectPassage(recommendedPassage.value)
 }
 
 const currentQuestion = computed(() => {
@@ -438,9 +483,46 @@ function getQuestionTypeLabel(type) {
             <h2>{{ themeStore.lang === 'zh' ? '阅读题库' : 'Reading Bank' }}</h2>
             <p>{{ themeStore.lang === 'zh' ? `${readingPassages.length} 篇 · ${readingPassages.reduce((sum, p) => sum + countPassageQuestions(p), 0)} 道题` : `${readingPassages.length} passages · ${readingPassages.reduce((sum, p) => sum + countPassageQuestions(p), 0)} questions` }}</p>
           </div>
-          <button class="random-btn" @click="selectPassage(filteredPassages[Math.floor(Math.random() * filteredPassages.length)] || readingPassages[0])">
-            {{ themeStore.lang === 'zh' ? '随机练一篇' : 'Random Practice' }}
-          </button>
+          <div class="bank-actions">
+            <button class="random-btn secondary" @click="selectPassage(filteredPassages[Math.floor(Math.random() * filteredPassages.length)] || readingPassages[0])">
+              {{ themeStore.lang === 'zh' ? '随机练一篇' : 'Random Practice' }}
+            </button>
+            <button class="random-btn" @click="selectRecommendedPassage" :disabled="!recommendedPassage">
+              {{ themeStore.lang === 'zh' ? '练推荐篇' : 'Practise pick' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="reading-map-card">
+          <div class="reading-map-head">
+            <div>
+              <span class="map-kicker">{{ themeStore.lang === 'zh' ? '训练覆盖' : 'Practice coverage' }}</span>
+              <h2>{{ themeStore.lang === 'zh' ? '先补最薄弱难度' : 'Cover the thinnest level first' }}</h2>
+            </div>
+          </div>
+          <p v-if="recommendedPassage" class="map-copy">{{ recommendationCopy }}</p>
+          <div class="map-grid">
+            <button
+              v-for="item in levelCoverage"
+              :key="item.level"
+              class="map-chip"
+              :class="{ active: selectedLevel === item.level }"
+              @click="selectedLevel = item.level"
+            >
+              <span>{{ getLevelLabel(item.level) }}</span>
+              <strong>{{ item.done }}/{{ item.total }}</strong>
+            </button>
+            <button
+              v-for="item in questionTypeCoverage"
+              :key="item.type"
+              class="map-chip type"
+              :class="{ active: selectedQuestionType === item.type }"
+              @click="selectedQuestionType = item.type"
+            >
+              <span>{{ getQuestionTypeLabel(item.type) }}</span>
+              <strong>{{ item.done }}/{{ item.total }}</strong>
+            </button>
+          </div>
         </div>
 
         <div class="filter-row">
@@ -473,13 +555,14 @@ function getQuestionTypeLabel(type) {
           </div>
         </div>
 
-        <div v-for="p in filteredPassages" :key="p.id" class="passage-card" @click="selectPassage(p)">
+        <div v-for="p in filteredPassages" :key="p.id" class="passage-card" :class="{ completed: completedPassageTitles.has(p.title) }" @click="selectPassage(p)">
           <div class="passage-info">
             <h3>{{ p.title }}</h3>
             <div class="passage-meta">
               <span class="level-tag" :style="{ color: getLevelColor(p.level), background: getLevelColor(p.level) + '18' }">
                 {{ getLevelLabel(p.level) }}
               </span>
+              <span v-if="completedPassageTitles.has(p.title)" class="done-tag">{{ themeStore.lang === 'zh' ? '已练' : 'Done' }}</span>
               <span class="question-count">{{ countPassageQuestions(p) }} {{ themeStore.lang === 'zh' ? '题' : 'questions' }}</span>
               <span v-for="type in getPassageQuestionTypes(p)" :key="type" class="type-tag">{{ getQuestionTypeLabel(type) }}</span>
             </div>
@@ -804,6 +887,93 @@ function getQuestionTypeLabel(type) {
   color: var(--black);
 }
 
+.bank-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.random-btn.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.random-btn:disabled {
+  opacity: 0.45;
+}
+
+.reading-map-card {
+  padding: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.reading-map-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.map-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.reading-map-head h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.map-copy {
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.map-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.map-chip.type {
+  background: var(--bg-tertiary);
+}
+
+.map-chip strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.map-chip.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--text-primary);
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
@@ -928,6 +1098,10 @@ function getQuestionTypeLabel(type) {
   box-shadow: var(--shadow-md);
 }
 
+.passage-card.completed {
+  border-left: 4px solid var(--blue);
+}
+
 .passage-info { flex: 1; }
 .passage-info h3 { font-weight: 700; margin-bottom: 6px; }
 
@@ -942,6 +1116,15 @@ function getQuestionTypeLabel(type) {
   font-weight: 600;
   padding: 2px 10px;
   border-radius: var(--radius-full);
+}
+
+.done-tag {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--blue-soft);
+  color: var(--blue);
 }
 
 .question-count {
@@ -1438,6 +1621,15 @@ function getQuestionTypeLabel(type) {
 
   .random-btn {
     width: 100%;
+  }
+
+  .bank-actions {
+    width: 100%;
+  }
+
+  .map-chip {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: space-between;
   }
 
   .passage-meta {

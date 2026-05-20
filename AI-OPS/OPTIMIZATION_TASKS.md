@@ -218,3 +218,4 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add Speaking part coverage map with high-frequency and completed topic filters.
 - [x] Add Speaking recommended next topic based on high-frequency unfinished topics.
 - [x] Add Vocabulary topic coverage map with mastery progress and high-band gap recommendation.
+- [x] Add Reading level/question-type coverage map and recommended passage entry.
