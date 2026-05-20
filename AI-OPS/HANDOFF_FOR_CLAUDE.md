@@ -137,19 +137,19 @@ Goal: stop relying on static JS files as the long-term content source.
 
 Tasks:
 
-1. Add server tables for approved content:
+1. Add server tables for approved content: Done for reading/listening published content.
    - `reading_passages`
    - `reading_questions`
    - `listening_sections`
    - `listening_sentences`
    - optional `content_versions`
-2. Add read-only public/content APIs:
+2. Add read-only public/content APIs: Done.
    - `GET /api/content/reading`
    - `GET /api/content/listening`
-3. Keep static files as fallback during migration.
-4. Update `ReadingPage.vue` and `ListeningPage.vue` to load API content first, then fallback to `src/data/ielts/*`.
+3. Keep static files as fallback during migration: Done.
+4. Update `ReadingPage.vue` and `ListeningPage.vue` to load API content first, then fallback to `src/data/ielts/*`: Done.
 5. Extend Admin content review so approved drafts can publish to DB instead of only merging into static files.
-6. Add rollback/version metadata so bad generated content can be disabled.
+6. Add rollback/disable metadata controls so bad generated content can be disabled.
 7. Run:
    - `npm run content:validate`
    - `npm run build`
@@ -270,4 +270,3 @@ Acceptance:
 - Run `npm run build` after frontend changes.
 - Run `npm run content:validate` after content-bank changes.
 - Run `node --check` for touched backend files.
-

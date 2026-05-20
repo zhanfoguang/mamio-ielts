@@ -168,6 +168,35 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_content_draft_reviews_status ON content_draft_reviews(status);
+
+  CREATE TABLE IF NOT EXISTS reading_passages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id TEXT UNIQUE,
+    title TEXT NOT NULL,
+    level TEXT DEFAULT 'medium',
+    passage TEXT NOT NULL,
+    questions TEXT NOT NULL,
+    status TEXT DEFAULT 'published',
+    version INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS listening_sections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id TEXT UNIQUE,
+    section_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    sentences TEXT NOT NULL,
+    status TEXT DEFAULT 'published',
+    version INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_reading_passages_status ON reading_passages(status);
+  CREATE INDEX IF NOT EXISTS idx_listening_sections_status ON listening_sections(status, section_number);
 `)
 
 // Auto-create admin account
@@ -287,6 +316,12 @@ export const contentDraftQueries = {
   upsertStatus: db.prepare(`INSERT INTO content_draft_reviews (file_name, status, notes, reviewed_by, reviewed_at)
     VALUES (?, ?, ?, ?, datetime('now'))
     ON CONFLICT(file_name) DO UPDATE SET status=excluded.status, notes=excluded.notes, reviewed_by=excluded.reviewed_by, reviewed_at=datetime('now')`)
+}
+
+// Published content queries
+export const contentQueries = {
+  getReading: db.prepare("SELECT * FROM reading_passages WHERE status = 'published' ORDER BY id"),
+  getListening: db.prepare("SELECT * FROM listening_sections WHERE status = 'published' ORDER BY section_number, id")
 }
 
 // Prune old logs on startup

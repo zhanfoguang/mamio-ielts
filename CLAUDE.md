@@ -139,6 +139,8 @@ sudo git config --global --add safe.directory /var/www/mimio
 - `daily_stats` — user_id, date, speaking, writing, listening, reading, vocab counts
 - `review_items` — user_id, module, type, text, reason, source, reviewed_at, created_at
 - `api_logs` — user_id, endpoint, method, status, latency_ms, created_at (auto-pruned after 30 days)
+- `reading_passages` — published reading content, questions JSON, status/version
+- `listening_sections` — published listening content, sentences JSON, status/version
 
 ## User Roles
 - `trial` — 10 AI calls/day, 3-day window, auto-expires
@@ -196,6 +198,12 @@ sudo git config --global --add safe.directory /var/www/mimio
 | POST | /review-items/migrate | Yes | Migrate localStorage items |
 | GET | /dashboard | Yes | Aggregate dashboard data |
 
+### Content (`/api/content`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /reading | No | Published reading bank from DB (frontend falls back to static bank if empty/unavailable) |
+| GET | /listening | No | Published listening bank from DB (frontend falls back to static bank if empty/unavailable) |
+
 ## Development
 
 ### 本地路径
@@ -245,10 +253,11 @@ Recent direction:
 - Dashboard now surfaces a reading/listening input follow-up card when recent attempts expose weak accuracy or dictation work.
 - Mobile Dashboard density is tighter on small screens after adding the checklist/action queue.
 - Content generation is draft-only, with admin review and dry-run merge safeguards.
+- Reading/listening pages now load content API-first and fall back to static JS banks.
 
 Next recommended work:
-1. Move approved content from static data files into server-side content tables.
-2. Add a small admin publishing flow for approved content instead of local script-only merge.
+1. Add admin publish-to-DB flow for approved reading/listening drafts.
+2. Add content version/disable controls so bad published content can be rolled back.
 3. Add attempt detail pages for reading/listening history so users can review old mistakes.
 4. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.

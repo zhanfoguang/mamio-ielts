@@ -92,7 +92,7 @@ Goal: make content and history durable enough for real users.
 - [x] Add server-side reading/listening attempt history.
 - [x] Migrate old local reading/listening attempts to server.
 - [x] Surface weak reading/listening attempts on Dashboard.
-- [ ] Move approved content from static files into server-side content tables.
+- [x] Add server-side published content tables and API-first reading/listening loading.
 - [ ] Add admin publishing flow for approved content.
 - [ ] Add reading/listening attempt detail pages.
 - [ ] Add admin retention analytics using all practice attempts.

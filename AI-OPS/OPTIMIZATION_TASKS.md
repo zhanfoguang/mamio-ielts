@@ -174,10 +174,10 @@ This is the active execution list for turning Mamio from a module collection int
 
 ### A. Content DB Migration
 
-- [ ] Add server content tables for reading/listening approved content.
-- [ ] Add read APIs for reading/listening banks.
-- [ ] Keep static JS banks as frontend fallback during migration.
-- [ ] Update ReadingPage and ListeningPage to load API content first.
+- [x] Add server content tables for reading/listening approved content.
+- [x] Add read APIs for reading/listening banks.
+- [x] Keep static JS banks as frontend fallback during migration.
+- [x] Update ReadingPage and ListeningPage to load API content first.
 - [ ] Add admin publish-to-DB flow for approved drafts.
 - [ ] Add content version/disable metadata for rollback.
 

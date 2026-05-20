@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
-import { readingPassages } from '../data/ielts/reading'
+import { readingPassages as staticReadingPassages } from '../data/ielts/reading'
+import { getReadingBank } from '../services/content'
 import { addReadingRecord, getReadingHistory, incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 import { toLocalDateKey } from '../utils/date'
 
 const themeStore = useThemeStore()
 
+const readingPassages = ref(staticReadingPassages)
 const selectedPassage = ref(null)
 const currentQuestionIndex = ref(0)
 const userAnswers = ref({})
@@ -30,14 +32,14 @@ const levelOptions = ['all', 'easy', 'medium', 'hard']
 const questionTypeOptions = ['all', ...Object.keys(questionTypeLabels)]
 
 const levelCounts = computed(() => {
-  return readingPassages.reduce((acc, passage) => {
+  return readingPassages.value.reduce((acc, passage) => {
     acc[passage.level] = (acc[passage.level] || 0) + 1
     return acc
-  }, { all: readingPassages.length })
+  }, { all: readingPassages.value.length })
 })
 
 const filteredPassages = computed(() => {
-  return readingPassages.filter(passage => {
+  return readingPassages.value.filter(passage => {
     const levelOk = selectedLevel.value === 'all' || passage.level === selectedLevel.value
     const typeOk = selectedQuestionType.value === 'all' || passage.questions.some(q => q.type === selectedQuestionType.value)
     return levelOk && typeOk
@@ -268,6 +270,15 @@ async function submitAnswers() {
 }
 
 onMounted(async () => {
+  try {
+    const bank = await getReadingBank()
+    if (bank.length) {
+      readingPassages.value = bank
+    }
+  } catch {
+    readingPassages.value = staticReadingPassages
+  }
+
   const localHistory = loadReadingHistory()
   try {
     const serverHistory = await getReadingHistory()

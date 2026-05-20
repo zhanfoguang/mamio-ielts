@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '../stores/theme'
-import { listeningSections } from '../data/ielts/listening'
+import { listeningSections as staticListeningSections } from '../data/ielts/listening'
 import { useSpeechRecognition } from '../composables/useSpeechRecognition'
+import { getListeningBank } from '../services/content'
 import { addListeningRecord, getListeningHistory, incrementDailyStats } from '../services/progress'
 import { addReviewItemsFromFeedback } from '../services/reviewItems'
 import { toLocalDateKey } from '../utils/date'
@@ -10,6 +11,7 @@ import { toLocalDateKey } from '../utils/date'
 const themeStore = useThemeStore()
 const { isListening, transcript, interimTranscript, isSupported, start, stop, reset } = useSpeechRecognition()
 
+const listeningSections = ref(staticListeningSections)
 const activeSection = ref(0)
 const currentSentenceIndex = ref(0)
 const isPlaying = ref(false)
@@ -22,20 +24,20 @@ const showQuestionResults = ref(false)
 const listeningReport = ref(null)
 const listeningHistory = ref(loadListeningHistory())
 
-const section = computed(() => listeningSections[activeSection.value])
-const currentSentence = computed(() => section.value.sentences[currentSentenceIndex.value])
+const section = computed(() => listeningSections.value[activeSection.value] || listeningSections.value[0])
+const currentSentence = computed(() => section.value?.sentences[currentSentenceIndex.value])
 const sectionTypeOptions = ['all', 1, 2, 3, 4]
 
 const sectionCounts = computed(() => {
-  return listeningSections.reduce((acc, item) => {
+  return listeningSections.value.reduce((acc, item) => {
     acc[item.section] = (acc[item.section] || 0) + 1
     return acc
-  }, { all: listeningSections.length })
+  }, { all: listeningSections.value.length })
 })
 
 const filteredListeningSections = computed(() => {
-  if (selectedSectionType.value === 'all') return listeningSections
-  return listeningSections.filter(item => item.section === selectedSectionType.value)
+  if (selectedSectionType.value === 'all') return listeningSections.value
+  return listeningSections.value.filter(item => item.section === selectedSectionType.value)
 })
 
 const currentWordIndex = ref(-1)
@@ -145,9 +147,9 @@ function selectSection(index) {
 }
 
 function pickRandomSection() {
-  const pool = filteredListeningSections.value.length ? filteredListeningSections.value : listeningSections
+  const pool = filteredListeningSections.value.length ? filteredListeningSections.value : listeningSections.value
   const picked = pool[Math.floor(Math.random() * pool.length)]
-  selectSection(listeningSections.findIndex(item => item.id === picked.id))
+  selectSection(listeningSections.value.findIndex(item => item.id === picked.id))
 }
 
 function loadListeningHistory() {
@@ -352,6 +354,17 @@ const wordDiff = computed(() => {
 
 // Load TTS voices
 onMounted(async () => {
+  try {
+    const bank = await getListeningBank()
+    if (bank.length) {
+      listeningSections.value = bank
+      activeSection.value = 0
+      currentSentenceIndex.value = 0
+    }
+  } catch {
+    listeningSections.value = staticListeningSections
+  }
+
   if (ttsSupported) {
     window.speechSynthesis.getVoices()
     window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()

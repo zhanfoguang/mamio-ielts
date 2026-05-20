@@ -11,11 +11,13 @@ import cors from 'cors'
 const [
   { default: authRoutes },
   { default: aiRoutes },
-  { default: progressRoutes }
+  { default: progressRoutes },
+  { default: contentRoutes }
 ] = await Promise.all([
   import('./routes/auth.js'),
   import('./routes/ai.js'),
-  import('./routes/progress.js')
+  import('./routes/progress.js'),
+  import('./routes/content.js')
 ])
 
 const app = express()
@@ -35,6 +37,9 @@ app.use('/api/ai', aiRoutes)
 
 // Progress routes (with auth)
 app.use('/api/progress', progressRoutes)
+
+// Published content routes
+app.use('/api/content', contentRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
