@@ -255,10 +255,11 @@ Recent direction:
 - Content generation is draft-only, with admin review and dry-run merge safeguards.
 - Reading/listening pages now load content API-first and fall back to static JS banks.
 - Admin can publish approved generated reading/listening drafts into the server content DB; public content APIs merge static baseline content with DB-published additions.
+- Admin can disable/restore DB-published content for rollback; static baseline items are not disabled from Admin.
 
 Next recommended work:
-1. Add content version/disable controls so bad published content can be rolled back.
-2. Add attempt detail pages for reading/listening history so users can review old mistakes.
+1. Add attempt detail pages for reading/listening history so users can review old mistakes.
+2. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 3. Add attempt detail pages for reading/listening history so users can review old mistakes.
 4. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.

@@ -695,6 +695,42 @@ router.get('/admin/content-health', authMiddleware, adminMiddleware, (req, res) 
   }
 })
 
+// Admin: DB-published content controls
+router.get('/admin/content-published', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    res.json({
+      reading: contentQueries.getAllReading.all(),
+      listening: contentQueries.getAllListening.all()
+    })
+  } catch (err) {
+    console.error('Published content error:', err.message)
+    res.status(500).json({ error: '获取已发布内容失败' })
+  }
+})
+
+router.patch('/admin/content-published/:type/:id/status', authMiddleware, adminMiddleware, (req, res) => {
+  try {
+    const { type, id } = req.params
+    const { status } = req.body
+    const allowed = new Set(['published', 'disabled'])
+    if (!allowed.has(status)) return res.status(400).json({ error: '状态无效' })
+
+    let result
+    if (type === 'reading') {
+      result = contentQueries.updateReadingStatus.run(status, id)
+    } else if (type === 'listening') {
+      result = contentQueries.updateListeningStatus.run(status, id)
+    } else {
+      return res.status(400).json({ error: '内容类型无效' })
+    }
+
+    res.json({ ok: result.changes > 0, type, id: Number(id), status })
+  } catch (err) {
+    console.error('Update published content status error:', err.message)
+    res.status(500).json({ error: '更新发布内容状态失败' })
+  }
+})
+
 async function writeDraftReviewToFile(fileName, status, notes, userId) {
   const fullPath = path.join(contentDraftDir, fileName)
   const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))

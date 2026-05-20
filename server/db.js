@@ -322,12 +322,16 @@ export const contentDraftQueries = {
 export const contentQueries = {
   getReading: db.prepare("SELECT * FROM reading_passages WHERE status = 'published' ORDER BY id"),
   getListening: db.prepare("SELECT * FROM listening_sections WHERE status = 'published' ORDER BY section_number, id"),
+  getAllReading: db.prepare("SELECT id, source_id, title, level, status, version, created_at, updated_at FROM reading_passages ORDER BY updated_at DESC, id DESC"),
+  getAllListening: db.prepare("SELECT id, source_id, section_number, title, status, version, created_at, updated_at FROM listening_sections ORDER BY updated_at DESC, id DESC"),
   findReadingByTitle: db.prepare("SELECT id FROM reading_passages WHERE lower(title) = lower(?) AND status != 'disabled' LIMIT 1"),
   findListeningByTitle: db.prepare("SELECT id FROM listening_sections WHERE lower(title) = lower(?) AND status != 'disabled' LIMIT 1"),
   addReading: db.prepare(`INSERT OR IGNORE INTO reading_passages (source_id, title, level, passage, questions, status, version)
     VALUES (?, ?, ?, ?, ?, 'published', 1)`),
   addListening: db.prepare(`INSERT OR IGNORE INTO listening_sections (source_id, section_number, title, description, sentences, status, version)
-    VALUES (?, ?, ?, ?, ?, 'published', 1)`)
+    VALUES (?, ?, ?, ?, ?, 'published', 1)`),
+  updateReadingStatus: db.prepare("UPDATE reading_passages SET status = ?, updated_at = datetime('now') WHERE id = ?"),
+  updateListeningStatus: db.prepare("UPDATE listening_sections SET status = ?, updated_at = datetime('now') WHERE id = ?")
 }
 
 // Prune old logs on startup

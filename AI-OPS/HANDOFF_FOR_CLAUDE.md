@@ -149,7 +149,7 @@ Tasks:
 3. Keep static files as fallback during migration: Done.
 4. Update `ReadingPage.vue` and `ListeningPage.vue` to load API content first, then fallback to `src/data/ielts/*`: Done.
 5. Extend Admin content review so approved drafts can publish to DB instead of only merging into static files: Done.
-6. Add rollback/disable metadata controls so bad generated content can be disabled.
+6. Add rollback/disable metadata controls so bad generated content can be disabled: Done for DB-published additions.
 7. Run:
    - `npm run content:validate`
    - `npm run build`

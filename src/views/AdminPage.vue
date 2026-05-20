@@ -17,6 +17,7 @@ const logs = ref([])
 const logStats = ref([])
 const contentDrafts = ref([])
 const contentHealth = ref(null)
+const publishedContent = ref({ reading: [], listening: [] })
 const loading = ref(false)
 const generating = ref(false)
 const newCodes = ref([])
@@ -165,6 +166,18 @@ async function fetchContentHealth() {
   }
 }
 
+async function fetchPublishedContent() {
+  try {
+    const { data } = await api.get('/auth/admin/content-published')
+    publishedContent.value = {
+      reading: data.reading || [],
+      listening: data.listening || []
+    }
+  } catch (e) {
+    console.error('Failed to fetch published content:', e)
+  }
+}
+
 async function updateDraftStatus(draft, status) {
   await api.patch(`/auth/admin/content-drafts/${encodeURIComponent(draft.fileName)}`, {
     status,
@@ -180,11 +193,18 @@ async function publishDraft(draft) {
     await api.post(`/auth/admin/content-drafts/${encodeURIComponent(draft.fileName)}/publish`)
     await fetchContentDrafts()
     await fetchContentHealth()
+    await fetchPublishedContent()
   } catch (e) {
     console.error('Failed to publish content draft:', e)
   } finally {
     publishingDraft.value = ''
   }
+}
+
+async function setPublishedContentStatus(type, item, status) {
+  await api.patch(`/auth/admin/content-published/${type}/${item.id}/status`, { status })
+  await fetchPublishedContent()
+  await fetchContentHealth()
 }
 
 async function copyAllNew() {
@@ -205,6 +225,7 @@ onMounted(() => {
   fetchLogs()
   fetchContentDrafts()
   fetchContentHealth()
+  fetchPublishedContent()
 })
 </script>
 
@@ -230,7 +251,7 @@ onMounted(() => {
         <button class="tab" :class="{ active: tab === 'logs' }" @click="tab = 'logs'; fetchLogs()">
           {{ themeStore.lang === 'zh' ? 'API日志' : 'API Logs' }}
         </button>
-        <button class="tab" :class="{ active: tab === 'content' }" @click="tab = 'content'; fetchContentDrafts(); fetchContentHealth()">
+        <button class="tab" :class="{ active: tab === 'content' }" @click="tab = 'content'; fetchContentDrafts(); fetchContentHealth(); fetchPublishedContent()">
           {{ themeStore.lang === 'zh' ? '内容草稿' : 'Content Drafts' }}
         </button>
       </div>
@@ -578,6 +599,43 @@ onMounted(() => {
           <div v-else class="health-gaps clean">
             {{ themeStore.lang === 'zh' ? '当前结构覆盖达标，下一步应继续扩内容量和真题相似度。' : 'Current structure coverage is healthy; next focus is volume and exam resemblance.' }}
           </div>
+        </div>
+
+        <div class="published-panel">
+          <div class="published-head">
+            <div>
+              <h3>{{ themeStore.lang === 'zh' ? 'DB 已发布内容' : 'DB Published Content' }}</h3>
+              <p>{{ themeStore.lang === 'zh' ? '只管理数据库新增内容；静态基线题库不会被这里禁用。' : 'Controls database additions only; static baseline items are not disabled here.' }}</p>
+            </div>
+            <span>{{ publishedContent.reading.length + publishedContent.listening.length }}</span>
+          </div>
+          <div v-if="publishedContent.reading.length || publishedContent.listening.length" class="published-grid">
+            <div>
+              <h4>{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</h4>
+              <button v-for="item in publishedContent.reading" :key="'r' + item.id" class="published-item" :class="{ disabled: item.status === 'disabled' }">
+                <span>
+                  <strong>{{ item.title }}</strong>
+                  <small>{{ item.level }} · v{{ item.version }} · {{ item.status }}</small>
+                </span>
+                <em @click.stop="setPublishedContentStatus('reading', item, item.status === 'published' ? 'disabled' : 'published')">
+                  {{ item.status === 'published' ? (themeStore.lang === 'zh' ? '禁用' : 'Disable') : (themeStore.lang === 'zh' ? '恢复' : 'Restore') }}
+                </em>
+              </button>
+            </div>
+            <div>
+              <h4>{{ themeStore.lang === 'zh' ? '听力' : 'Listening' }}</h4>
+              <button v-for="item in publishedContent.listening" :key="'l' + item.id" class="published-item" :class="{ disabled: item.status === 'disabled' }">
+                <span>
+                  <strong>{{ item.title }}</strong>
+                  <small>Section {{ item.section_number }} · v{{ item.version }} · {{ item.status }}</small>
+                </span>
+                <em @click.stop="setPublishedContentStatus('listening', item, item.status === 'published' ? 'disabled' : 'published')">
+                  {{ item.status === 'published' ? (themeStore.lang === 'zh' ? '禁用' : 'Disable') : (themeStore.lang === 'zh' ? '恢复' : 'Restore') }}
+                </em>
+              </button>
+            </div>
+          </div>
+          <p v-else class="published-empty">{{ themeStore.lang === 'zh' ? '还没有发布到数据库的新增内容。' : 'No database-published additions yet.' }}</p>
         </div>
 
         <div class="draft-summary">
@@ -1340,6 +1398,103 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.published-panel {
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.published-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.published-head h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+}
+
+.published-head p,
+.published-empty {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.published-head span {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.published-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.published-grid h4 {
+  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.published-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  text-align: left;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.published-item.disabled {
+  opacity: 0.65;
+}
+
+.published-item span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.published-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+
+.published-item small {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.published-item em {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  color: var(--blue);
+  background: var(--blue-soft);
+  font-size: var(--font-size-xs);
+  font-style: normal;
+  font-weight: 800;
+}
+
 .draft-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1671,6 +1826,7 @@ onMounted(() => {
 
   .content-health,
   .health-metrics,
+  .published-grid,
   .draft-summary,
   .draft-layout,
   .draft-columns {

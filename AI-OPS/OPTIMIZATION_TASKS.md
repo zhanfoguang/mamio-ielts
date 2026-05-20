@@ -179,7 +179,7 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Keep static JS banks as frontend fallback during migration.
 - [x] Update ReadingPage and ListeningPage to load API content first.
 - [x] Add admin publish-to-DB flow for approved drafts.
-- [ ] Add content version/disable metadata for rollback.
+- [x] Add content version/disable metadata for rollback.
 
 ### B. Attempt Detail Review
 
