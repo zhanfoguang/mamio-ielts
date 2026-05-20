@@ -321,7 +321,13 @@ export const contentDraftQueries = {
 // Published content queries
 export const contentQueries = {
   getReading: db.prepare("SELECT * FROM reading_passages WHERE status = 'published' ORDER BY id"),
-  getListening: db.prepare("SELECT * FROM listening_sections WHERE status = 'published' ORDER BY section_number, id")
+  getListening: db.prepare("SELECT * FROM listening_sections WHERE status = 'published' ORDER BY section_number, id"),
+  findReadingByTitle: db.prepare("SELECT id FROM reading_passages WHERE lower(title) = lower(?) AND status != 'disabled' LIMIT 1"),
+  findListeningByTitle: db.prepare("SELECT id FROM listening_sections WHERE lower(title) = lower(?) AND status != 'disabled' LIMIT 1"),
+  addReading: db.prepare(`INSERT OR IGNORE INTO reading_passages (source_id, title, level, passage, questions, status, version)
+    VALUES (?, ?, ?, ?, ?, 'published', 1)`),
+  addListening: db.prepare(`INSERT OR IGNORE INTO listening_sections (source_id, section_number, title, description, sentences, status, version)
+    VALUES (?, ?, ?, ?, ?, 'published', 1)`)
 }
 
 // Prune old logs on startup

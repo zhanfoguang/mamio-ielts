@@ -26,6 +26,7 @@ const generateCount = ref(1)
 const copiedCode = ref('')
 const copyMessage = ref('')
 const selectedDraft = ref(null)
+const publishingDraft = ref('')
 
 const presets = [
   { key: 'month', label: '月卡', labelEn: 'Monthly', days: 30, color: 'var(--blue)' },
@@ -170,6 +171,20 @@ async function updateDraftStatus(draft, status) {
     notes: draft.notes || ''
   })
   await fetchContentDrafts()
+}
+
+async function publishDraft(draft) {
+  if (!draft?.fileName) return
+  publishingDraft.value = draft.fileName
+  try {
+    await api.post(`/auth/admin/content-drafts/${encodeURIComponent(draft.fileName)}/publish`)
+    await fetchContentDrafts()
+    await fetchContentHealth()
+  } catch (e) {
+    console.error('Failed to publish content draft:', e)
+  } finally {
+    publishingDraft.value = ''
+  }
 }
 
 async function copyAllNew() {
@@ -539,12 +554,12 @@ onMounted(() => {
             <div>
               <span>{{ themeStore.lang === 'zh' ? '阅读' : 'Reading' }}</span>
               <strong>{{ contentHealth.reading.total }}</strong>
-              <small>{{ contentHealth.reading.avgWords }} avg words</small>
+              <small>{{ contentHealth.reading.avgWords }} avg words · DB +{{ contentHealth.reading.dbPublished || 0 }}</small>
             </div>
             <div>
               <span>{{ themeStore.lang === 'zh' ? '听力' : 'Listening' }}</span>
               <strong>{{ contentHealth.listening.total }}</strong>
-              <small>{{ contentHealth.listening.avgSentences }} avg sentences</small>
+              <small>{{ contentHealth.listening.avgSentences }} avg sentences · DB +{{ contentHealth.listening.dbPublished || 0 }}</small>
             </div>
             <div>
               <span>{{ themeStore.lang === 'zh' ? '阅读等级' : 'Reading Levels' }}</span>
@@ -615,6 +630,7 @@ onMounted(() => {
               </div>
               <div class="draft-detail-badges">
                 <span v-if="selectedDraft.mergedAt" class="draft-status merged">merged</span>
+                <span v-if="selectedDraft.publishedAt" class="draft-status published">published</span>
                 <span class="quality-pill" :class="{ weak: (selectedDraft.quality?.score || 0) < 70, good: selectedDraft.quality?.canMerge }">
                   Quality {{ selectedDraft.quality?.score ?? 0 }}
                 </span>
@@ -660,6 +676,13 @@ onMounted(() => {
             <div class="draft-actions">
               <button class="approve-btn" :disabled="!selectedDraft.quality?.canMerge" @click="updateDraftStatus(selectedDraft, 'approved')">
                 {{ themeStore.lang === 'zh' ? '通过' : 'Approve' }}
+              </button>
+              <button
+                class="publish-btn"
+                :disabled="selectedDraft.status !== 'approved' || !selectedDraft.quality?.canMerge || !!selectedDraft.publishedAt || publishingDraft === selectedDraft.fileName"
+                @click="publishDraft(selectedDraft)"
+              >
+                {{ publishingDraft === selectedDraft.fileName ? '...' : (themeStore.lang === 'zh' ? '发布到题库' : 'Publish to Bank') }}
               </button>
               <button class="reject-btn" @click="updateDraftStatus(selectedDraft, 'rejected')">
                 {{ themeStore.lang === 'zh' ? '驳回' : 'Reject' }}
@@ -1433,6 +1456,11 @@ onMounted(() => {
   background: var(--blue-soft);
 }
 
+.draft-status.published {
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
 .quality-pill {
   padding: 2px 8px;
   border-radius: var(--radius-full);
@@ -1563,6 +1591,7 @@ onMounted(() => {
 }
 
 .approve-btn,
+.publish-btn,
 .reject-btn,
 .reset-btn {
   padding: 9px 16px;
@@ -1577,6 +1606,18 @@ onMounted(() => {
 }
 
 .approve-btn:disabled {
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.publish-btn {
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.publish-btn:disabled {
   color: var(--text-tertiary);
   background: var(--bg-tertiary);
   cursor: not-allowed;

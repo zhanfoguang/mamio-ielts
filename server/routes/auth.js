@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit'
 import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import db, { userQueries, codeQueries, resetCodeQueries, logQueries, contentDraftQueries } from '../db.js'
+import db, { userQueries, codeQueries, resetCodeQueries, logQueries, contentDraftQueries, contentQueries } from '../db.js'
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 import { sendResetCode } from '../mail.js'
 import { localDateKeyDaysAgo, toLocalDateKey } from '../utils/date.js'
@@ -60,6 +60,7 @@ function syncExpiredUserRole(user) {
 }
 
 function normalizeDraftStatus(payload, review) {
+  if (payload?.publishedAt) return 'published'
   if (review?.status) return review.status
   if (payload?.review?.status) return payload.review.status
   if (payload?.status === 'approved' || payload?.status === 'rejected') return payload.status
@@ -77,6 +78,53 @@ function countReadingQuestionItems(question) {
   if (question.type === 'matching') return question.items?.length || 0
   if (question.type === 'matching-headings') return question.answers?.length || 0
   return 0
+}
+
+function normalizeReadingDraft(item, index) {
+  const title = String(item?.title || '').trim()
+  const level = String(item?.level || '').trim()
+  const passage = String(item?.passage || '').trim()
+  const questions = Array.isArray(item?.questions) ? item.questions : []
+  const errors = []
+
+  if (!title) errors.push('missing title')
+  if (!['easy', 'medium', 'hard'].includes(level)) errors.push(`unsupported level: ${level || '(empty)'}`)
+  if (passage.length < 500) errors.push('passage is too short')
+  if (questions.length < 3) errors.push('needs at least 3 question groups')
+
+  const normalizedQuestions = questions.map((question, questionIndex) => {
+    if (!allowedReadingTypes.has(question?.type)) errors.push(`unsupported question type: ${question?.type || '(empty)'}`)
+    if (countReadingQuestionItems(question) === 0) errors.push(`question group ${questionIndex + 1} has no scorable items`)
+    return { ...question, id: question.id || `q${questionIndex + 1}` }
+  })
+
+  if (errors.length) return { ok: false, title: title || `reading draft #${index + 1}`, errors }
+  return { ok: true, item: { title, level, passage, questions: normalizedQuestions } }
+}
+
+function normalizeListeningDraft(item, index) {
+  const title = String(item?.title || '').trim()
+  const description = String(item?.description || '').trim()
+  const section = Number(item?.section)
+  const sentences = Array.isArray(item?.sentences) ? item.sentences : []
+  const errors = []
+
+  if (!title) errors.push('missing title')
+  if (!Number.isInteger(section) || section < 1 || section > 4) errors.push(`unsupported section: ${item?.section || '(empty)'}`)
+  if (!description) errors.push('missing description')
+  if (sentences.length < 5) errors.push('needs at least 5 sentences')
+
+  const normalizedSentences = sentences.map((sentence, sentenceIndex) => {
+    const en = String(sentence?.en || '').trim()
+    const cn = String(sentence?.cn || '').trim()
+    const duration = Number(sentence?.duration)
+    if (!en || !cn) errors.push(`sentence ${sentenceIndex + 1} is missing en/cn text`)
+    if (!Number.isFinite(duration) || duration < 2500) errors.push(`sentence ${sentenceIndex + 1} has invalid duration`)
+    return { en, cn, duration: Math.round(duration) }
+  })
+
+  if (errors.length) return { ok: false, title: title || `listening draft #${index + 1}`, errors }
+  return { ok: true, item: { section, title, description, sentences: normalizedSentences } }
 }
 
 function assessContentDraft(payload) {
@@ -125,27 +173,32 @@ function wordCount(text) {
 }
 
 function buildContentHealth() {
-  const readingByLevel = readingPassages.reduce((acc, passage) => {
+  const readingBank = appendUniqueByTitle(readingPassages, contentQueries.getReading.all().map(mapPublishedReading))
+  const listeningBank = appendUniqueByTitle(listeningSections, contentQueries.getListening.all().map(mapPublishedListening))
+  const dbReadingCount = Math.max(0, readingBank.length - readingPassages.length)
+  const dbListeningCount = Math.max(0, listeningBank.length - listeningSections.length)
+
+  const readingByLevel = readingBank.reduce((acc, passage) => {
     acc[passage.level] = (acc[passage.level] || 0) + 1
     return acc
   }, { easy: 0, medium: 0, hard: 0 })
 
-  const readingTypes = readingPassages.reduce((acc, passage) => {
+  const readingTypes = readingBank.reduce((acc, passage) => {
     for (const question of passage.questions || []) {
       acc[question.type] = (acc[question.type] || 0) + 1
     }
     return acc
   }, {})
 
-  const listeningBySection = listeningSections.reduce((acc, section) => {
+  const listeningBySection = listeningBank.reduce((acc, section) => {
     acc[section.section] = (acc[section.section] || 0) + 1
     return acc
   }, { 1: 0, 2: 0, 3: 0, 4: 0 })
 
-  const readingWordCounts = readingPassages.map(passage => wordCount(passage.passage))
-  const listeningSentenceCounts = listeningSections.map(section => section.sentences?.length || 0)
-  const duplicateReadingTitles = findDuplicateTitles(readingPassages)
-  const duplicateListeningTitles = findDuplicateTitles(listeningSections)
+  const readingWordCounts = readingBank.map(passage => wordCount(passage.passage))
+  const listeningSentenceCounts = listeningBank.map(section => section.sentences?.length || 0)
+  const duplicateReadingTitles = findDuplicateTitles(readingBank)
+  const duplicateListeningTitles = findDuplicateTitles(listeningBank)
   const gaps = []
 
   for (const [level, count] of Object.entries(readingByLevel)) {
@@ -165,7 +218,9 @@ function buildContentHealth() {
     score: Math.max(0, 100 - gaps.length * 10),
     gaps,
     reading: {
-      total: readingPassages.length,
+      total: readingBank.length,
+      staticTotal: readingPassages.length,
+      dbPublished: dbReadingCount,
       byLevel: readingByLevel,
       questionTypes: readingTypes,
       avgWords: readingWordCounts.length ? Math.round(readingWordCounts.reduce((sum, count) => sum + count, 0) / readingWordCounts.length) : 0,
@@ -173,7 +228,9 @@ function buildContentHealth() {
       longest: readingWordCounts.length ? Math.max(...readingWordCounts) : 0
     },
     listening: {
-      total: listeningSections.length,
+      total: listeningBank.length,
+      staticTotal: listeningSections.length,
+      dbPublished: dbListeningCount,
       bySection: listeningBySection,
       avgSentences: listeningSentenceCounts.length ? Math.round(listeningSentenceCounts.reduce((sum, count) => sum + count, 0) / listeningSentenceCounts.length) : 0,
       shortest: listeningSentenceCounts.length ? Math.min(...listeningSentenceCounts) : 0,
@@ -192,6 +249,42 @@ function findDuplicateTitles(items) {
     seen.add(title)
   }
   return [...duplicates]
+}
+
+function mapPublishedReading(row) {
+  return {
+    id: `db-reading-${row.id}`,
+    title: row.title,
+    level: row.level,
+    passage: row.passage,
+    questions: (() => {
+      try { return JSON.parse(row.questions) } catch { return [] }
+    })()
+  }
+}
+
+function mapPublishedListening(row) {
+  return {
+    id: `db-listening-${row.id}`,
+    section: row.section_number,
+    title: row.title,
+    description: row.description,
+    sentences: (() => {
+      try { return JSON.parse(row.sentences) } catch { return [] }
+    })()
+  }
+}
+
+function appendUniqueByTitle(baseItems, extraItems) {
+  const seen = new Set(baseItems.map(item => normalizeTitle(item.title)))
+  const merged = [...baseItems]
+  for (const item of extraItems) {
+    const key = normalizeTitle(item.title)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    merged.push(item)
+  }
+  return merged
 }
 
 async function readContentDraftFiles() {
@@ -216,6 +309,8 @@ async function readContentDraftFiles() {
         notes: review?.notes || payload.review?.notes || '',
         reviewedAt: review?.reviewed_at || payload.review?.reviewedAt || null,
         mergedAt: payload.mergedAt || null,
+        publishedAt: payload.publishedAt || null,
+        publishedSummary: payload.publishedSummary || null,
         quality,
         generatedAt: payload.generatedAt || null,
         sourceSeedFile: payload.sourceSeedFile || null,
@@ -615,6 +710,18 @@ async function writeDraftReviewToFile(fileName, status, notes, userId) {
   }, null, 2)}\n`)
 }
 
+async function writeDraftPublishToFile(fileName, publishedSummary, userId) {
+  const fullPath = path.join(contentDraftDir, fileName)
+  const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))
+  await fs.writeFile(fullPath, `${JSON.stringify({
+    ...payload,
+    status: 'published',
+    publishedAt: new Date().toISOString(),
+    publishedBy: userId,
+    publishedSummary
+  }, null, 2)}\n`)
+}
+
 // Admin: review generated content draft
 router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -633,6 +740,73 @@ router.patch('/admin/content-drafts/:fileName', authMiddleware, adminMiddleware,
   } catch (err) {
     console.error('Update content draft error:', err.message)
     res.status(500).json({ error: '更新草稿状态失败' })
+  }
+})
+
+// Admin: publish approved generated content draft to DB
+router.post('/admin/content-drafts/:fileName/publish', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const fileName = path.basename(req.params.fileName || '')
+    if (!fileName.endsWith('.json') || !fileName.startsWith('generated-content-')) {
+      return res.status(400).json({ error: '草稿文件名无效' })
+    }
+
+    const fullPath = path.join(contentDraftDir, fileName)
+    const payload = JSON.parse(await fs.readFile(fullPath, 'utf8'))
+    if (payload.publishedAt) return res.status(400).json({ error: '该草稿已发布' })
+
+    const review = contentDraftQueries.getByFile.get(fileName)
+    const status = normalizeDraftStatus(payload, review)
+    const quality = assessContentDraft(payload)
+    if (status !== 'approved' || !quality.canMerge) {
+      return res.status(400).json({ error: '只有质检通过且已批准的草稿可以发布' })
+    }
+
+    const addedReading = []
+    const addedListening = []
+    const skipped = []
+
+    for (const [index, item] of (payload.readingPassages || []).entries()) {
+      const result = normalizeReadingDraft(item, index)
+      if (!result.ok) {
+        skipped.push({ type: 'reading', title: result.title, reason: result.errors.join('; ') })
+        continue
+      }
+      if (contentQueries.findReadingByTitle.get(result.item.title)) {
+        skipped.push({ type: 'reading', title: result.item.title, reason: 'duplicate title' })
+        continue
+      }
+      const sourceId = `${fileName}:reading:${index + 1}`
+      const insert = contentQueries.addReading.run(sourceId, result.item.title, result.item.level, result.item.passage, JSON.stringify(result.item.questions))
+      if (insert.changes > 0) addedReading.push(result.item.title)
+    }
+
+    for (const [index, item] of (payload.listeningSections || []).entries()) {
+      const result = normalizeListeningDraft(item, index)
+      if (!result.ok) {
+        skipped.push({ type: 'listening', title: result.title, reason: result.errors.join('; ') })
+        continue
+      }
+      if (contentQueries.findListeningByTitle.get(result.item.title)) {
+        skipped.push({ type: 'listening', title: result.item.title, reason: 'duplicate title' })
+        continue
+      }
+      const sourceId = `${fileName}:listening:${index + 1}`
+      const insert = contentQueries.addListening.run(sourceId, result.item.section, result.item.title, result.item.description, JSON.stringify(result.item.sentences))
+      if (insert.changes > 0) addedListening.push(result.item.title)
+    }
+
+    if (!addedReading.length && !addedListening.length) {
+      return res.status(400).json({ error: '没有可发布的新内容', skipped })
+    }
+
+    const publishedSummary = { readingTitles: addedReading, listeningTitles: addedListening, skipped }
+    await writeDraftPublishToFile(fileName, publishedSummary, req.user.id)
+    contentDraftQueries.upsertStatus.run(fileName, 'published', 'Published to content DB', req.user.id)
+    res.json({ fileName, publishedSummary })
+  } catch (err) {
+    console.error('Publish content draft error:', err.message)
+    res.status(500).json({ error: '发布内容草稿失败' })
   }
 })
 
