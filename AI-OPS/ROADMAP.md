@@ -96,7 +96,7 @@ Goal: make content and history durable enough for real users.
 - [x] Add admin publishing flow for approved content.
 - [x] Add admin disable/restore controls for DB-published content rollback.
 - [x] Add reading/listening attempt detail pages.
-- [ ] Add admin retention analytics using all practice attempts.
+- [x] Add admin retention analytics using all practice attempts.
 - [ ] Add deploy health diagnostics and backup verification.
 
 Success signal: The app can grow its content bank safely, users can review old mistakes, and the operator can see whether learners are returning.

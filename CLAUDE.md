@@ -260,10 +260,11 @@ Recent direction:
 - Admin can publish approved generated reading/listening drafts into the server content DB; public content APIs merge static baseline content with DB-published additions.
 - Admin can disable/restore DB-published content for rollback; static baseline items are not disabled from Admin.
 - Reading/listening attempt history now has detail pages, and Dashboard input follow-up links to specific attempts when possible.
+- Admin usage stats now include practice-based active users, first-practice drop-off, no-review-loop users, and repeated low reading/listening scorers.
 
 Next recommended work:
-1. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
-2. Improve first-session activation flow around goal -> first attempt -> first review action.
+1. Improve first-session activation flow around goal -> first attempt -> first review action.
+2. Add deploy health diagnostics and backup verification.
 3. Add attempt detail pages for reading/listening history so users can review old mistakes.
 4. Add richer weekly retention analytics in Admin using server-side reading/listening attempts.
 5. Install weekly VPS content-draft cron only after production `DEEPSEEK_API_KEY` is confirmed valid.

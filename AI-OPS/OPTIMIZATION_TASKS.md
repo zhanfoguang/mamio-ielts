@@ -190,10 +190,10 @@ This is the active execution list for turning Mamio from a module collection int
 
 ### C. Admin Retention Analytics
 
-- [ ] Count active users from all practice attempts, not only AI calls.
-- [ ] Add first-practice, second-practice, review-loop completion metrics.
-- [ ] Add Admin cards for activation drop-off and repeated low-score users.
-- [ ] Include reading/listening attempts in retention stats.
+- [x] Count active users from all practice attempts, not only AI calls.
+- [x] Add first-practice, second-practice, review-loop completion metrics.
+- [x] Add Admin cards for activation drop-off and repeated low-score users.
+- [x] Include reading/listening attempts in retention stats.
 
 ### D. First-Session Activation
 

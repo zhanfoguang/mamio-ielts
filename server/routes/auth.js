@@ -612,13 +612,60 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
     `).all()
 
     // Active users (those who have AI calls)
-    const activeUsers7d = db.prepare(`
+    const aiActiveUsers7d = db.prepare(`
       SELECT COUNT(*) as count FROM users WHERE ai_calls_date >= ?
     `).get(sevenDaysAgo)
 
-    const activeUsers30d = db.prepare(`
+    const aiActiveUsers30d = db.prepare(`
       SELECT COUNT(*) as count FROM users WHERE ai_calls_date >= ?
     `).get(thirtyDaysAgo)
+
+    const practiceAttemptsCte = `
+      WITH attempts AS (
+        SELECT user_id, created_at FROM speaking_history
+        UNION ALL SELECT user_id, created_at FROM writing_history
+        UNION ALL SELECT user_id, created_at FROM reading_history
+        UNION ALL SELECT user_id, created_at FROM listening_history
+      )
+    `
+
+    const activePractice7d = db.prepare(`${practiceAttemptsCte}
+      SELECT COUNT(DISTINCT user_id) as count FROM attempts WHERE date(created_at) >= ?
+    `).get(sevenDaysAgo)
+
+    const activePractice30d = db.prepare(`${practiceAttemptsCte}
+      SELECT COUNT(DISTINCT user_id) as count FROM attempts WHERE date(created_at) >= ?
+    `).get(thirtyDaysAgo)
+
+    const firstPracticeOnly = db.prepare(`${practiceAttemptsCte}
+      SELECT COUNT(*) as count FROM (
+        SELECT user_id, COUNT(*) as attempts FROM attempts GROUP BY user_id HAVING attempts = 1
+      )
+    `).get()
+
+    const practiceNoReview = db.prepare(`${practiceAttemptsCte}
+      SELECT COUNT(*) as count FROM (
+        SELECT a.user_id
+        FROM attempts a
+        LEFT JOIN review_items r ON r.user_id = a.user_id AND r.reviewed_at IS NOT NULL
+        GROUP BY a.user_id
+        HAVING COUNT(r.id) = 0
+      )
+    `).get()
+
+    const repeatedLowInputUsers = db.prepare(`
+      WITH low_input AS (
+        SELECT user_id, passage as title, score, created_at, 'reading' as module FROM reading_history WHERE score < 70
+        UNION ALL SELECT user_id, section as title, score, created_at, 'listening' as module FROM listening_history WHERE score < 70
+      )
+      SELECT u.id, u.email, u.nickname, u.role, COUNT(*) as low_attempts, MIN(score) as lowest_score, MAX(created_at) as latest_at
+      FROM low_input li
+      JOIN users u ON u.id = li.user_id
+      GROUP BY u.id
+      HAVING low_attempts >= 2
+      ORDER BY low_attempts DESC, latest_at DESC
+      LIMIT 10
+    `).all()
 
     // Total AI calls today
     const callsToday = db.prepare(`
@@ -645,10 +692,19 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, (req, res) => {
 
     res.json({
       roleCounts: Object.fromEntries(roleCounts.map(r => [r.role, r.count])),
-      activeUsers7d: activeUsers7d.count,
-      activeUsers30d: activeUsers30d.count,
+      activeUsers7d: activePractice7d.count,
+      activeUsers30d: activePractice30d.count,
+      aiActiveUsers7d: aiActiveUsers7d.count,
+      aiActiveUsers30d: aiActiveUsers30d.count,
       callsToday: callsToday.total || 0,
       topUsers,
+      practiceRetention: {
+        active7d: activePractice7d.count,
+        active30d: activePractice30d.count,
+        firstPracticeOnly: firstPracticeOnly.count,
+        practiceNoReview: practiceNoReview.count,
+        repeatedLowInputUsers
+      },
       trialConversion: {
         total: trialTotal.count,
         converted: paidTotal.count,

@@ -271,14 +271,14 @@ onMounted(() => {
             <span class="stat-icon">🔥</span>
             <div class="stat-info">
               <span class="stat-value">{{ stats.activeUsers7d }}</span>
-              <span class="stat-label">{{ themeStore.lang === 'zh' ? '7天活跃' : '7d Active' }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '7天练习活跃' : '7d Practice Active' }}</span>
             </div>
           </div>
           <div class="stat-card">
             <span class="stat-icon">📊</span>
             <div class="stat-info">
               <span class="stat-value">{{ stats.activeUsers30d }}</span>
-              <span class="stat-label">{{ themeStore.lang === 'zh' ? '30天活跃' : '30d Active' }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '30天练习活跃' : '30d Practice Active' }}</span>
             </div>
           </div>
           <div class="stat-card">
@@ -302,6 +302,47 @@ onMounted(() => {
               <span class="stat-label">{{ themeStore.lang === 'zh' ? '即将到期' : 'Expiring Soon' }}</span>
             </div>
           </div>
+          <div class="stat-card">
+            <span class="stat-icon">🧭</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.practiceRetention.firstPracticeOnly }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '只练1次' : 'Only 1 Practice' }}</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🎯</span>
+            <div class="stat-info">
+              <span class="stat-value">{{ stats.practiceRetention.practiceNoReview }}</span>
+              <span class="stat-label">{{ themeStore.lang === 'zh' ? '未完成复习闭环' : 'No Review Loop' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retention funnel -->
+        <div v-if="stats" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '练习留存漏斗' : 'Practice Retention Funnel' }}</h3>
+          <div class="retention-grid">
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? 'AI 7天活跃' : 'AI 7d Active' }}</span>
+              <strong>{{ stats.aiActiveUsers7d }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? '只看 AI 调用' : 'AI calls only' }}</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '练习 7天活跃' : 'Practice 7d Active' }}</span>
+              <strong>{{ stats.practiceRetention.active7d }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? '四科练习记录' : 'All practice attempts' }}</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '首次后流失' : 'After First Drop-off' }}</span>
+              <strong>{{ stats.practiceRetention.firstPracticeOnly }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? '只有一次练习' : 'Exactly one attempt' }}</small>
+            </div>
+            <div>
+              <span>{{ themeStore.lang === 'zh' ? '低分输入用户' : 'Low Input Users' }}</span>
+              <strong>{{ stats.practiceRetention.repeatedLowInputUsers.length }}</strong>
+              <small>{{ themeStore.lang === 'zh' ? '阅读/听力低于70两次+' : '2+ input attempts below 70%' }}</small>
+            </div>
+          </div>
         </div>
 
         <!-- Role breakdown -->
@@ -315,6 +356,30 @@ onMounted(() => {
               </div>
               <span class="role-count">{{ count }}</span>
             </div>
+          </div>
+        </div>
+
+        <div v-if="stats?.practiceRetention?.repeatedLowInputUsers?.length" class="detail-section">
+          <h3 class="section-title">{{ themeStore.lang === 'zh' ? '重复输入低分用户' : 'Repeated Low Input Users' }}</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>{{ themeStore.lang === 'zh' ? '用户' : 'User' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '角色' : 'Role' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '低分次数' : 'Low Attempts' }}</th>
+                  <th>{{ themeStore.lang === 'zh' ? '最低分' : 'Lowest' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="u in stats.practiceRetention.repeatedLowInputUsers" :key="u.id">
+                  <td class="email-cell">{{ u.nickname || u.email }}</td>
+                  <td><span class="role-badge" :class="u.role">{{ u.role }}</span></td>
+                  <td>{{ u.low_attempts }}</td>
+                  <td>{{ u.lowest_score }}%</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1188,6 +1253,34 @@ onMounted(() => {
   margin-bottom: var(--space-2xl);
 }
 
+.retention-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.retention-grid > div {
+  padding: var(--space-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.retention-grid span,
+.retention-grid small {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.retention-grid strong {
+  display: block;
+  margin: 4px 0;
+  font-size: var(--font-size-2xl);
+  font-weight: 900;
+}
+
 .role-bars {
   display: flex;
   flex-direction: column;
@@ -1822,6 +1915,10 @@ onMounted(() => {
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .retention-grid {
+    grid-template-columns: 1fr;
   }
 
   .content-health,

@@ -188,17 +188,17 @@ Goal: owner can see whether users are forming a habit and where they drop.
 
 Tasks:
 
-1. Extend `/auth/admin/stats` with:
+1. Extend `/auth/admin/stats` with: Done.
    - active users by practice attempts, not just AI calls.
    - 1-day, 3-day, 7-day retention proxies.
    - users with first practice but no second practice.
    - users with practice but no review completion.
-2. Include reading/listening history in active-user metrics.
-3. Add Admin UI cards:
+2. Include reading/listening history in active-user metrics: Done.
+3. Add Admin UI cards: Done.
    - New users who did first practice.
    - Users stuck before review loop.
    - Users with repeated low input scores.
-4. Add an export-friendly table for follow-up.
+4. Add an export-friendly table for follow-up: Done for repeated low input users.
 
 Acceptance:
 
