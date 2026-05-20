@@ -170,6 +170,54 @@ function updateVocabStreak() {
 
 const currentTopic = computed(() => vocabDisplayTopics.value[activeTopic.value] || vocabDisplayTopics.value[0])
 
+const topicCoverage = computed(() => vocabDisplayTopics.value.map((topic, index) => {
+  let newCount = 0
+  let learning = 0
+  let mastered = 0
+  let highBandNew = 0
+
+  topic.words.forEach((word) => {
+    const entry = srsData.value[getSrsKey(word.word)]
+    if (!entry) {
+      newCount++
+      if (word.band >= 7) highBandNew++
+    } else if (entry.ease < 2.5 || entry.interval < 21) {
+      learning++
+    } else {
+      mastered++
+    }
+  })
+
+  const total = topic.words.length
+  return {
+    index,
+    topic: topic.topic,
+    icon: topic.icon,
+    total,
+    newCount,
+    learning,
+    mastered,
+    highBandNew,
+    mastery: total ? Math.round((mastered / total) * 100) : 0
+  }
+}))
+
+const recommendedTopic = computed(() => {
+  return topicCoverage.value
+    .slice()
+    .sort((a, b) => b.highBandNew - a.highBandNew || a.mastery - b.mastery || b.newCount - a.newCount)[0] || null
+})
+
+const currentTopicCoverage = computed(() => topicCoverage.value[activeTopic.value] || topicCoverage.value[0])
+
+const topicRecommendationCopy = computed(() => {
+  if (!recommendedTopic.value) return ''
+  if (themeStore.lang === 'zh') {
+    return `${recommendedTopic.value.topic} 还有 ${recommendedTopic.value.highBandNew} 个 Band 7/8 新词，掌握度 ${recommendedTopic.value.mastery}%。`
+  }
+  return `${recommendedTopic.value.topic} has ${recommendedTopic.value.highBandNew} new Band 7/8 words and ${recommendedTopic.value.mastery}% mastery.`
+})
+
 const allCurrentWords = computed(() => {
   const base = currentTopic.value?.words || []
   const ai = aiWords.value.length ? aiWords.value : []
@@ -375,6 +423,12 @@ function getBandColor(band) {
   return 'var(--text-tertiary)'
 }
 
+function jumpToRecommendedTopic() {
+  if (!recommendedTopic.value) return
+  activeTopic.value = recommendedTopic.value.index
+  mode.value = 'browse'
+}
+
 watch(activeTopic, () => {
   aiWords.value = []
   flippedCards.value = new Set()
@@ -387,6 +441,36 @@ watch(activeTopic, () => {
   <div class="vocab-page">
     <div class="container">
       <h1>{{ themeStore.lang === 'zh' ? '雅思词汇' : 'IELTS Vocabulary' }}</h1>
+
+      <div class="vocab-map-card">
+        <div class="vocab-map-head">
+          <div>
+            <span class="map-kicker">{{ themeStore.lang === 'zh' ? '话题覆盖' : 'Topic coverage' }}</span>
+            <h2>{{ themeStore.lang === 'zh' ? '先补高分词缺口' : 'Close high-band gaps first' }}</h2>
+          </div>
+          <button class="map-recommend-btn" @click="jumpToRecommendedTopic" :disabled="!recommendedTopic">
+            {{ themeStore.lang === 'zh' ? '跳到推荐话题' : 'Go to pick' }}
+          </button>
+        </div>
+        <p v-if="recommendedTopic" class="map-copy">{{ topicRecommendationCopy }}</p>
+        <div class="map-strip">
+          <button
+            v-for="topic in topicCoverage"
+            :key="topic.topic"
+            class="map-topic"
+            :class="{ active: activeTopic === topic.index }"
+            @click="activeTopic = topic.index; mode = 'browse'"
+          >
+            <span class="map-topic-title">{{ topic.icon }} {{ topic.topic }}</span>
+            <span class="map-topic-meta">
+              {{ themeStore.lang === 'zh' ? '掌握' : 'Mastered' }} {{ topic.mastered }}/{{ topic.total }}
+            </span>
+            <span class="map-progress">
+              <span class="map-progress-fill" :style="{ width: topic.mastery + '%' }"></span>
+            </span>
+          </button>
+        </div>
+      </div>
 
       <!-- Daily words card -->
       <div class="daily-card">
@@ -452,6 +536,12 @@ watch(activeTopic, () => {
             <h2>{{ currentTopic.icon }} {{ currentTopic.topic }}</h2>
             <p v-if="currentTopic.sourceTopics?.length > 1" class="merged-topic-note">
               {{ themeStore.lang === 'zh' ? '已合并：' : 'Merged: ' }}{{ currentTopic.sourceTopics.join(' / ') }}
+            </p>
+            <p v-if="currentTopicCoverage" class="topic-coverage-note">
+              {{ themeStore.lang === 'zh'
+                ? `新词 ${currentTopicCoverage.newCount} · 学习中 ${currentTopicCoverage.learning} · 已掌握 ${currentTopicCoverage.mastered} · Band 7/8 新词 ${currentTopicCoverage.highBandNew}`
+                : `New ${currentTopicCoverage.newCount} · Learning ${currentTopicCoverage.learning} · Mastered ${currentTopicCoverage.mastered} · New Band 7/8 ${currentTopicCoverage.highBandNew}`
+              }}
             </p>
           </div>
           <div class="topic-actions">
@@ -727,6 +817,116 @@ watch(activeTopic, () => {
   margin-bottom: var(--space-lg);
 }
 
+.vocab-map-card {
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+}
+
+.vocab-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.map-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.vocab-map-head h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.map-recommend-btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .map-recommend-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.map-recommend-btn:disabled {
+  opacity: 0.45;
+}
+
+.map-copy {
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.map-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.map-topic {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.map-topic.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.map-topic-title,
+.map-topic-meta {
+  display: block;
+}
+
+.map-topic-title {
+  margin-bottom: 5px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.map-topic-meta {
+  margin-bottom: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.map-progress {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+}
+
+.map-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--green);
+}
+
 /* Stats */
 .stats-bar {
   display: flex;
@@ -838,6 +1038,13 @@ watch(activeTopic, () => {
   margin-top: 4px;
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
+}
+
+.topic-coverage-note {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
 }
 
 .topic-actions { display: flex; gap: 8px; }
@@ -1416,5 +1623,8 @@ watch(activeTopic, () => {
 @media (max-width: 480px) {
   .word-grid { grid-template-columns: 1fr; }
   .stats-bar { flex-wrap: wrap; gap: 12px; }
+  .vocab-map-head { flex-direction: column; }
+  .map-recommend-btn { width: 100%; }
+  .map-strip { grid-template-columns: 1fr; }
 }
 </style>
