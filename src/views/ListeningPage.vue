@@ -35,6 +35,40 @@ const sectionCounts = computed(() => {
   }, { all: listeningSections.value.length })
 })
 
+const completedSectionTitles = computed(() => new Set(listeningHistory.value.map(item => item.section).filter(Boolean)))
+
+const sectionCoverage = computed(() => {
+  return [1, 2, 3, 4].map(sectionNumber => {
+    const sections = listeningSections.value.filter(item => item.section === sectionNumber)
+    const done = sections.filter(item => completedSectionTitles.value.has(item.title)).length
+    return {
+      section: sectionNumber,
+      total: sections.length,
+      done,
+      sentences: sections.reduce((sum, item) => sum + item.sentences.length, 0)
+    }
+  })
+})
+
+const recommendedSection = computed(() => {
+  const unfinished = listeningSections.value.filter(item => !completedSectionTitles.value.has(item.title))
+  const pool = unfinished.length ? unfinished : listeningSections.value
+  const weakestSection = sectionCoverage.value
+    .filter(item => item.total > 0)
+    .slice()
+    .sort((a, b) => (a.done / a.total) - (b.done / b.total) || a.section - b.section)[0]
+  return pool.find(item => item.section === weakestSection?.section) || pool[0] || null
+})
+
+const recommendationCopy = computed(() => {
+  if (!recommendedSection.value) return ''
+  const stat = sectionCoverage.value.find(item => item.section === recommendedSection.value.section)
+  if (themeStore.lang === 'zh') {
+    return `Section ${recommendedSection.value.section} 完成 ${stat?.done || 0}/${stat?.total || 0}，建议下一套：${recommendedSection.value.title}。`
+  }
+  return `Section ${recommendedSection.value.section} coverage is ${stat?.done || 0}/${stat?.total || 0}. Next: ${recommendedSection.value.title}.`
+})
+
 const filteredListeningSections = computed(() => {
   if (selectedSectionType.value === 'all') return listeningSections.value
   return listeningSections.value.filter(item => item.section === selectedSectionType.value)
@@ -150,6 +184,12 @@ function pickRandomSection() {
   const pool = filteredListeningSections.value.length ? filteredListeningSections.value : listeningSections.value
   const picked = pool[Math.floor(Math.random() * pool.length)]
   selectSection(listeningSections.value.findIndex(item => item.id === picked.id))
+}
+
+function pickRecommendedSection() {
+  if (!recommendedSection.value) return
+  selectedSectionType.value = 'all'
+  selectSection(listeningSections.value.findIndex(item => item.id === recommendedSection.value.id))
 }
 
 function loadListeningHistory() {
@@ -398,9 +438,37 @@ onUnmounted(() => stopPlayback())
           <h2>{{ themeStore.lang === 'zh' ? '听力题库' : 'Listening Bank' }}</h2>
           <p>{{ themeStore.lang === 'zh' ? `${listeningSections.length} 套 · ${listeningSections.reduce((sum, item) => sum + item.sentences.length, 0)} 句精听材料` : `${listeningSections.length} sets · ${listeningSections.reduce((sum, item) => sum + item.sentences.length, 0)} dictation sentences` }}</p>
         </div>
-        <button class="random-btn" @click="pickRandomSection">
-          {{ themeStore.lang === 'zh' ? '随机听一套' : 'Random Set' }}
-        </button>
+        <div class="bank-actions">
+          <button class="random-btn secondary" @click="pickRandomSection">
+            {{ themeStore.lang === 'zh' ? '随机听一套' : 'Random Set' }}
+          </button>
+          <button class="random-btn" @click="pickRecommendedSection" :disabled="!recommendedSection">
+            {{ themeStore.lang === 'zh' ? '听推荐套题' : 'Practise pick' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="listening-map-card">
+        <div class="listening-map-head">
+          <div>
+            <span class="map-kicker">{{ themeStore.lang === 'zh' ? 'Section 覆盖' : 'Section coverage' }}</span>
+            <h2>{{ themeStore.lang === 'zh' ? '按考试 Section 补齐训练' : 'Balance IELTS section practice' }}</h2>
+          </div>
+        </div>
+        <p v-if="recommendedSection" class="map-copy">{{ recommendationCopy }}</p>
+        <div class="map-grid">
+          <button
+            v-for="item in sectionCoverage"
+            :key="item.section"
+            class="map-chip"
+            :class="{ active: selectedSectionType === item.section }"
+            @click="selectedSectionType = item.section"
+          >
+            <span>Section {{ item.section }}</span>
+            <strong>{{ item.done }}/{{ item.total }}</strong>
+            <small>{{ item.sentences }} {{ themeStore.lang === 'zh' ? '句' : 'sentences' }}</small>
+          </button>
+        </div>
       </div>
 
       <div class="section-filters">
@@ -411,10 +479,10 @@ onUnmounted(() => stopPlayback())
       </div>
 
       <div class="section-tabs">
-        <button v-for="s in filteredListeningSections" :key="s.id" class="section-btn" :class="{ active: section.id === s.id }" @click="selectSection(listeningSections.findIndex(item => item.id === s.id))">
+        <button v-for="s in filteredListeningSections" :key="s.id" class="section-btn" :class="{ active: section.id === s.id, completed: completedSectionTitles.has(s.title) }" @click="selectSection(listeningSections.findIndex(item => item.id === s.id))">
           <span class="section-kicker">Section {{ s.section }}</span>
           <strong>{{ s.title }}</strong>
-          <small>{{ s.sentences.length }} {{ themeStore.lang === 'zh' ? '句' : 'sentences' }}</small>
+          <small>{{ s.sentences.length }} {{ themeStore.lang === 'zh' ? '句' : 'sentences' }}<span v-if="completedSectionTitles.has(s.title)"> · {{ themeStore.lang === 'zh' ? '已练' : 'Done' }}</span></small>
         </button>
       </div>
 
@@ -631,6 +699,98 @@ onUnmounted(() => stopPlayback())
   color: var(--black);
 }
 
+.bank-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.random-btn.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.random-btn:disabled {
+  opacity: 0.45;
+}
+
+.listening-map-card {
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.listening-map-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.map-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.listening-map-head h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.map-copy {
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.map-chip {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.map-chip strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.map-chip small {
+  grid-column: 1 / -1;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.map-chip.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--text-primary);
+}
+
 .section-filters {
   display: flex;
   flex-wrap: wrap;
@@ -686,6 +846,10 @@ onUnmounted(() => stopPlayback())
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   text-align: left;
+}
+
+.section-btn.completed:not(.active) {
+  border-left: 4px solid var(--blue);
 }
 
 .section-btn strong {
@@ -1179,6 +1343,10 @@ onUnmounted(() => stopPlayback())
   }
 
   .random-btn {
+    width: 100%;
+  }
+
+  .bank-actions {
     width: 100%;
   }
 
