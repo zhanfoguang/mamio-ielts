@@ -14,6 +14,7 @@ const themeStore = useThemeStore()
 const router = useRouter()
 const activeTask = ref(1)
 const selectedPrompt = ref(null)
+const selectedPromptType = ref('all')
 const essay = ref('')
 const wordCount = computed(() => essay.value.trim().split(/\s+/).filter(w => w).length)
 const aiResult = ref(null)
@@ -49,6 +50,70 @@ onMounted(async () => {
 const draftKey = computed(() => `mamio-writing-draft-${selectedPrompt.value?.id || 'none'}`)
 
 const tasks = computed(() => activeTask.value === 1 ? writingTasks.task1 : writingTasks.task2)
+
+const completedPromptIds = computed(() => new Set(
+  history.value
+    .filter(item => Number(item.taskType) === activeTask.value && item.promptId)
+    .map(item => item.promptId)
+))
+
+const typeStats = computed(() => {
+  const stats = new Map()
+  tasks.value.forEach((prompt) => {
+    if (!stats.has(prompt.type)) {
+      stats.set(prompt.type, { type: prompt.type, total: 0, done: 0 })
+    }
+    const item = stats.get(prompt.type)
+    item.total += 1
+    if (completedPromptIds.value.has(prompt.id)) item.done += 1
+  })
+
+  history.value
+    .filter(item => Number(item.taskType) === activeTask.value && item.promptType)
+    .forEach((item) => {
+      const stat = stats.get(item.promptType)
+      if (stat && !item.promptId) {
+        stat.done = Math.min(stat.total, stat.done + 1)
+      }
+    })
+
+  return Array.from(stats.values())
+})
+
+const typeOptions = computed(() => [
+  {
+    type: 'all',
+    label: themeStore.lang === 'zh' ? '全部题型' : 'All types',
+    total: tasks.value.length,
+    done: completedPromptIds.value.size
+  },
+  ...typeStats.value
+])
+
+const visibleTasks = computed(() => {
+  if (selectedPromptType.value === 'all') return tasks.value
+  return tasks.value.filter(prompt => prompt.type === selectedPromptType.value)
+})
+
+const recommendedPrompt = computed(() => {
+  const unfinished = tasks.value.filter(prompt => !completedPromptIds.value.has(prompt.id))
+  const pool = unfinished.length ? unfinished : tasks.value
+  const weakestType = typeStats.value
+    .slice()
+    .sort((a, b) => (a.done / a.total) - (b.done / b.total) || b.total - a.total)[0]
+  return pool.find(prompt => prompt.type === weakestType?.type) || pool[0] || null
+})
+
+const recommendationCopy = computed(() => {
+  if (!recommendedPrompt.value) return ''
+  const stat = typeStats.value.find(item => item.type === recommendedPrompt.value.type)
+  const done = stat?.done || 0
+  const total = stat?.total || 0
+  if (themeStore.lang === 'zh') {
+    return `${recommendedPrompt.value.type} 目前完成 ${done}/${total}，优先补这个题型。`
+  }
+  return `${recommendedPrompt.value.type} coverage is ${done}/${total}; practise this type next.`
+})
 
 // Essay comparison
 const userWords = computed(() => {
@@ -128,6 +193,12 @@ function selectPrompt(prompt) {
   // Load draft
   const savedDraft = localStorage.getItem(`mamio-writing-draft-${prompt.id}`)
   essay.value = savedDraft || ''
+}
+
+function selectRecommendedPrompt() {
+  if (!recommendedPrompt.value) return
+  selectedPromptType.value = 'all'
+  selectPrompt(recommendedPrompt.value)
 }
 
 // Timer
@@ -282,6 +353,7 @@ function formatDate(iso) {
 
 watch(activeTask, () => {
   selectedPrompt.value = null
+  selectedPromptType.value = 'all'
   resetTimer()
 })
 
@@ -353,12 +425,45 @@ onUnmounted(() => {
           <button class="task-btn" :class="{ active: activeTask === 2 }" @click="activeTask = 2; selectedPrompt = null">Task 2</button>
         </div>
 
+        <div class="writing-cockpit">
+          <div class="coverage-card">
+            <div class="coverage-head">
+              <div>
+                <span class="coverage-kicker">{{ themeStore.lang === 'zh' ? '题库覆盖' : 'Prompt coverage' }}</span>
+                <h2>{{ themeStore.lang === 'zh' ? `Task ${activeTask} 训练地图` : `Task ${activeTask} training map` }}</h2>
+              </div>
+              <button class="recommend-btn" @click="selectRecommendedPrompt" :disabled="!recommendedPrompt">
+                {{ themeStore.lang === 'zh' ? '练推荐题' : 'Practise pick' }}
+              </button>
+            </div>
+            <p v-if="recommendedPrompt" class="recommend-copy">{{ recommendationCopy }}</p>
+            <div class="coverage-grid">
+              <button
+                v-for="option in typeOptions"
+                :key="option.type"
+                class="coverage-chip"
+                :class="{ active: selectedPromptType === option.type }"
+                @click="selectedPromptType = option.type"
+              >
+                <span>{{ option.label || option.type }}</span>
+                <strong>{{ option.done }}/{{ option.total }}</strong>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="writing-layout">
           <!-- Prompt list -->
           <div class="prompt-sidebar">
-            <div v-for="p in tasks" :key="p.id" class="prompt-item" :class="{ active: selectedPrompt?.id === p.id }" @click="selectPrompt(p)">
-              <span class="prompt-type">{{ p.type }}</span>
+            <div v-for="p in visibleTasks" :key="p.id" class="prompt-item" :class="{ active: selectedPrompt?.id === p.id, completed: completedPromptIds.has(p.id) }" @click="selectPrompt(p)">
+              <div class="prompt-meta">
+                <span class="prompt-type">{{ p.type }}</span>
+                <span v-if="completedPromptIds.has(p.id)" class="prompt-done">{{ themeStore.lang === 'zh' ? '已练' : 'Done' }}</span>
+              </div>
               <p class="prompt-preview">{{ p.prompt.substring(0, 60) }}...</p>
+            </div>
+            <div v-if="!visibleTasks.length" class="prompt-empty">
+              {{ themeStore.lang === 'zh' ? '这个筛选下暂无题目' : 'No prompts in this filter' }}
             </div>
           </div>
 
@@ -730,6 +835,96 @@ onUnmounted(() => {
 .task-btn.active { background: var(--black); color: var(--white); }
 [data-theme="dark"] .task-btn.active { background: var(--white); color: var(--black); }
 
+.writing-cockpit {
+  margin-bottom: var(--space-xl);
+}
+
+.coverage-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.coverage-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.coverage-kicker {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--green);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.coverage-head h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.recommend-btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .recommend-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.recommend-btn:disabled {
+  opacity: 0.45;
+}
+
+.recommend-copy {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.coverage-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coverage-chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.coverage-chip strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-chip.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--text-primary);
+}
+
 .writing-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -753,6 +948,14 @@ onUnmounted(() => {
 
 .prompt-item:hover { background: var(--bg-tertiary); }
 .prompt-item.active { border-left-color: var(--green); background: var(--green-soft); }
+.prompt-item.completed:not(.active) { border-left-color: var(--blue); }
+
+.prompt-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 .prompt-type {
   font-size: var(--font-size-xs);
@@ -761,11 +964,28 @@ onUnmounted(() => {
   text-transform: uppercase;
 }
 
+.prompt-done {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .prompt-preview {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.prompt-empty {
+  padding: var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }
 
 .writing-main { display: flex; flex-direction: column; gap: var(--space-lg); }
@@ -1328,5 +1548,11 @@ onUnmounted(() => {
   .score-dimensions { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .timer-bar { flex-direction: column; gap: 12px; }
+  .coverage-head { flex-direction: column; }
+  .recommend-btn { width: 100%; }
+  .coverage-chip {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: space-between;
+  }
 }
 </style>

@@ -209,3 +209,9 @@ This is the active execution list for turning Mamio from a module collection int
 - [x] Add backup script verification for missing DB/sqlite3/empty gzip output.
 - [ ] Verify backup cron creates gzip backups on VPS.
 - [x] Document one-command VPS diagnosis flow.
+
+## Phase 23: Content-To-Practice Productization
+
+- [x] Add Writing prompt coverage map by task type.
+- [x] Add Writing recommended next prompt based on least-practised type.
+- [x] Show completed Writing prompts in the prompt list.
