@@ -27,6 +27,7 @@ const showSample = ref(false)
 
 // Mode: 'practice' or 'conversation'
 const mode = ref('practice')
+const topicFilter = ref('all')
 
 // Conversation state
 const convMessages = ref([])
@@ -59,6 +60,62 @@ const topics = computed(() => {
   return speakingTopics.part3
 })
 
+const highFrequencyTopics = {
+  1: new Set(['Work / Study', 'Hometown', 'Daily Routine', 'Travel', 'Social Media', 'Friends']),
+  2: new Set([
+    'Describe a person who has influenced you',
+    'Describe a place you would like to visit',
+    'Describe a skill you would like to learn',
+    'Describe something you bought that you were unhappy with'
+  ]),
+  3: new Set(['Education', 'Technology', 'Environment', 'Work & Career', 'Health & Lifestyle'])
+}
+
+const practisedTopicKeys = computed(() => new Set(
+  history.value
+    .filter(item => Number(item.part) === activePart.value && item.topic)
+    .map(item => item.topic)
+))
+
+const topicStats = computed(() => {
+  const total = topics.value.length
+  const done = topics.value.filter(topic => practisedTopicKeys.value.has(topic.topic)).length
+  const highFrequency = topics.value.filter(topic => highFrequencyTopics[activePart.value]?.has(topic.topic)).length
+  const highFrequencyDone = topics.value.filter(topic => (
+    highFrequencyTopics[activePart.value]?.has(topic.topic) && practisedTopicKeys.value.has(topic.topic)
+  )).length
+  return { total, done, highFrequency, highFrequencyDone }
+})
+
+const visibleTopics = computed(() => {
+  if (topicFilter.value === 'done') {
+    return topics.value.filter(topic => practisedTopicKeys.value.has(topic.topic))
+  }
+  if (topicFilter.value === 'new') {
+    return topics.value.filter(topic => !practisedTopicKeys.value.has(topic.topic))
+  }
+  if (topicFilter.value === 'high') {
+    return topics.value.filter(topic => highFrequencyTopics[activePart.value]?.has(topic.topic))
+  }
+  return topics.value
+})
+
+const recommendedTopic = computed(() => {
+  const highNew = topics.value.find(topic => (
+    highFrequencyTopics[activePart.value]?.has(topic.topic) && !practisedTopicKeys.value.has(topic.topic)
+  ))
+  if (highNew) return highNew
+  return topics.value.find(topic => !practisedTopicKeys.value.has(topic.topic)) || topics.value[0] || null
+})
+
+const recommendationText = computed(() => {
+  if (!recommendedTopic.value) return ''
+  if (themeStore.lang === 'zh') {
+    return `本 Part 已练 ${topicStats.value.done}/${topicStats.value.total} 个话题，高频话题 ${topicStats.value.highFrequencyDone}/${topicStats.value.highFrequency}。建议下一题：${recommendedTopic.value.topic}。`
+  }
+  return `Part coverage ${topicStats.value.done}/${topicStats.value.total}; high-frequency coverage ${topicStats.value.highFrequencyDone}/${topicStats.value.highFrequency}. Next: ${recommendedTopic.value.topic}.`
+})
+
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
@@ -82,6 +139,12 @@ function selectTopic(topic) {
   convEnded.value = false
   reset()
   clearTimer()
+}
+
+function selectRecommendedTopic() {
+  if (!recommendedTopic.value) return
+  topicFilter.value = 'all'
+  selectTopic(recommendedTopic.value)
 }
 
 function selectQuestion(q) {
@@ -323,6 +386,7 @@ function formatDate(iso) {
 
 watch(activePart, () => {
   selectedTopic.value = null
+  topicFilter.value = 'all'
   clearTimer()
   convMessages.value = []
   convEnded.value = false
@@ -388,11 +452,57 @@ watch(mode, () => {
           </div>
         </div>
 
+        <div class="speaking-cockpit">
+          <div class="topic-map-card">
+            <div class="topic-map-head">
+              <div>
+                <span class="topic-map-kicker">{{ themeStore.lang === 'zh' ? '口语题库' : 'Speaking bank' }}</span>
+                <h2>{{ themeStore.lang === 'zh' ? `Part ${activePart} 练习地图` : `Part ${activePart} practice map` }}</h2>
+              </div>
+              <button class="topic-recommend-btn" @click="selectRecommendedTopic" :disabled="!recommendedTopic">
+                {{ themeStore.lang === 'zh' ? '练推荐话题' : 'Practise pick' }}
+              </button>
+            </div>
+            <p v-if="recommendedTopic" class="topic-map-copy">{{ recommendationText }}</p>
+            <div class="topic-filter-row">
+              <button class="topic-filter" :class="{ active: topicFilter === 'all' }" @click="topicFilter = 'all'">
+                <span>{{ themeStore.lang === 'zh' ? '全部' : 'All' }}</span>
+                <strong>{{ topicStats.done }}/{{ topicStats.total }}</strong>
+              </button>
+              <button class="topic-filter" :class="{ active: topicFilter === 'high' }" @click="topicFilter = 'high'">
+                <span>{{ themeStore.lang === 'zh' ? '高频' : 'High freq' }}</span>
+                <strong>{{ topicStats.highFrequencyDone }}/{{ topicStats.highFrequency }}</strong>
+              </button>
+              <button class="topic-filter" :class="{ active: topicFilter === 'new' }" @click="topicFilter = 'new'">
+                <span>{{ themeStore.lang === 'zh' ? '未练' : 'New' }}</span>
+                <strong>{{ topicStats.total - topicStats.done }}</strong>
+              </button>
+              <button class="topic-filter" :class="{ active: topicFilter === 'done' }" @click="topicFilter = 'done'">
+                <span>{{ themeStore.lang === 'zh' ? '已练' : 'Done' }}</span>
+                <strong>{{ topicStats.done }}</strong>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="speaking-layout">
           <!-- Topic list -->
           <div class="topic-sidebar">
-            <div v-for="(topic, i) in topics" :key="i" class="topic-item" :class="{ active: selectedTopic === topic }" @click="selectTopic(topic)">
+            <div
+              v-for="(topic, i) in visibleTopics"
+              :key="`${activePart}-${topic.topic}-${i}`"
+              class="topic-item"
+              :class="{ active: selectedTopic === topic, completed: practisedTopicKeys.has(topic.topic) }"
+              @click="selectTopic(topic)"
+            >
               <span class="topic-label">{{ activePart === 2 ? topic.topic : (topic.topic || (themeStore.lang === 'zh' ? '话题' : 'Topic')) }}</span>
+              <div class="topic-badges">
+                <span v-if="highFrequencyTopics[activePart]?.has(topic.topic)" class="topic-badge high">{{ themeStore.lang === 'zh' ? '高频' : 'High' }}</span>
+                <span v-if="practisedTopicKeys.has(topic.topic)" class="topic-badge done">{{ themeStore.lang === 'zh' ? '已练' : 'Done' }}</span>
+              </div>
+            </div>
+            <div v-if="!visibleTopics.length" class="topic-empty">
+              {{ themeStore.lang === 'zh' ? '这个筛选下暂无话题' : 'No topics in this filter' }}
             </div>
           </div>
 
@@ -886,6 +996,97 @@ watch(mode, () => {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+.speaking-cockpit {
+  margin-bottom: var(--space-xl);
+}
+
+.topic-map-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.topic-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.topic-map-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.topic-map-head h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.topic-recommend-btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  background: var(--black);
+  color: var(--white);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .topic-recommend-btn {
+  background: var(--white);
+  color: var(--black);
+}
+
+.topic-recommend-btn:disabled {
+  opacity: 0.45;
+}
+
+.topic-map-copy {
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.topic-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-filter {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.topic-filter strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.topic-filter.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--text-primary);
+}
+
 .speaking-layout {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -910,6 +1111,43 @@ watch(mode, () => {
 
 .topic-item:hover { background: var(--bg-tertiary); }
 .topic-item.active { border-left-color: var(--green); background: var(--green-soft); }
+.topic-item.completed:not(.active) { border-left-color: var(--blue); }
+
+.topic-label {
+  display: block;
+  line-height: 1.35;
+}
+
+.topic-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.topic-badge {
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.topic-badge.high {
+  background: var(--yellow-soft);
+  color: var(--yellow);
+}
+
+.topic-badge.done {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.topic-empty {
+  padding: var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
 
 .speaking-main {
   display: flex;
@@ -1583,5 +1821,11 @@ watch(mode, () => {
   .conv-msg { max-width: 95%; }
   .conv-dims { grid-template-columns: 1fr; }
   .controls-row { flex-direction: column; align-items: flex-start; }
+  .topic-map-head { flex-direction: column; }
+  .topic-recommend-btn { width: 100%; }
+  .topic-filter {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: space-between;
+  }
 }
 </style>
