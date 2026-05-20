@@ -197,9 +197,9 @@ This is the active execution list for turning Mamio from a module collection int
 
 ### D. First-Session Activation
 
-- [ ] Replace feature-list onboarding with action-oriented first-session flow.
-- [ ] Track first-session completion: goal set, first attempt, first weakness, first review action.
-- [ ] Show activation messaging after the first meaningful feedback loop.
+- [x] Replace feature-list onboarding with action-oriented first-session flow.
+- [x] Track first-session completion: goal set, first attempt, first weakness/review material.
+- [x] Show activation messaging after the first meaningful feedback loop.
 
 ### E. VPS / Ops Hardening
 

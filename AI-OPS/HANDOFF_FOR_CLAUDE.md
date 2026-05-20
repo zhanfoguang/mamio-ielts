@@ -210,15 +210,15 @@ Goal: first 10 minutes should produce one meaningful loop.
 
 Tasks:
 
-1. Add a guided first-session path:
+1. Add a guided first-session path: Done in Dashboard onboarding/start checklist.
    - set goal
    - choose first module
    - finish one attempt
    - see weakness
    - add/clear one review item
-2. Make onboarding modal less feature-list-like and more action-oriented.
-3. Add first-session completion signal on Dashboard.
-4. Add trial activation messaging after the first successful AI feedback or first review loop, not only on pricing/login.
+2. Make onboarding modal less feature-list-like and more action-oriented: Done.
+3. Add first-session completion signal on Dashboard: Done via start checklist progress.
+4. Add trial activation messaging after the first successful AI feedback or first review loop, not only on pricing/login: Done through trial banner copy.
 
 Acceptance:
 

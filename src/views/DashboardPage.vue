@@ -95,6 +95,38 @@ const onboardingChecklist = computed(() => [
 ])
 
 const shouldShowStartChecklist = computed(() => onboardingChecklist.value.some(item => !item.done))
+const firstSessionProgress = computed(() => onboardingChecklist.value.filter(item => item.done).length)
+const hasMeaningfulFeedbackLoop = computed(() => (
+  totalPracticeCount.value > 0 &&
+  (reviewItemStats.value.total > 0 || vocabReviewStats.value.total > 0)
+))
+
+const firstSessionMilestones = computed(() => [
+  {
+    icon: '🎯',
+    titleZh: '先定一个目标',
+    titleEn: 'Set one target',
+    detailZh: targetScore.value > 0 ? `目标 Band ${targetScore.value}` : '目标分或考试日期会决定今日任务优先级',
+    detailEn: targetScore.value > 0 ? `Band ${targetScore.value}` : 'Target score or exam date drives task priority',
+    done: onboardingChecklist.value[0].done
+  },
+  {
+    icon: '⏱',
+    titleZh: '完成一次短练习',
+    titleEn: 'Finish one short attempt',
+    detailZh: totalPracticeCount.value > 0 ? `已有 ${totalPracticeCount.value} 次练习` : '从口语 Part 1 或一篇阅读开始，不求完整',
+    detailEn: totalPracticeCount.value > 0 ? `${totalPracticeCount.value} attempt(s)` : 'Start with Speaking Part 1 or one reading passage',
+    done: onboardingChecklist.value[1].done
+  },
+  {
+    icon: '🧩',
+    titleZh: '留下一个弱点',
+    titleEn: 'Capture one weak spot',
+    detailZh: reviewItemStats.value.total > 0 ? `已有 ${reviewItemStats.value.total} 个弱点项` : '错题或 AI 反馈会自动进入复习',
+    detailEn: reviewItemStats.value.total > 0 ? `${reviewItemStats.value.total} weak spot(s)` : 'Mistakes and AI feedback become Review items',
+    done: onboardingChecklist.value[2].done
+  }
+])
 
 // Score trends (last 10 entries per module)
 const speakingScores = computed(() => {
@@ -781,42 +813,14 @@ onMounted(async () => {
     <!-- Onboarding modal -->
     <div v-if="showOnboarding" class="onboarding-overlay" @click.self="closeOnboarding">
       <div class="onboarding-card">
-        <h2>{{ themeStore.lang === 'zh' ? '欢迎使用 Mamio IELTS!' : 'Welcome to Mamio IELTS!' }}</h2>
-        <p class="onboarding-desc">{{ themeStore.lang === 'zh' ? '你的 AI 雅思备考助手，帮你高效提分' : 'Your AI-powered IELTS prep assistant' }}</p>
+        <h2>{{ themeStore.lang === 'zh' ? '先跑通第一轮学习闭环' : 'Build your first study loop' }}</h2>
+        <p class="onboarding-desc">{{ themeStore.lang === 'zh' ? '不用先研究全部功能。先定目标、做一次练习、留下一个弱点，Mamio 明天就知道该推你练什么。' : 'Do not explore every feature first. Set a target, finish one attempt, capture one weak spot, and Mamio can guide tomorrow.' }}</p>
         <div class="onboarding-steps">
-          <div class="ob-step">
-            <span class="ob-icon">🎤</span>
+          <div v-for="step in firstSessionMilestones" :key="step.titleEn" class="ob-step" :class="{ done: step.done }">
+            <span class="ob-icon">{{ step.done ? '✓' : step.icon }}</span>
             <div>
-              <strong>{{ themeStore.lang === 'zh' ? '口语练习' : 'Speaking' }}</strong>
-              <p>{{ themeStore.lang === 'zh' ? 'AI 实时评分 + 对话模拟' : 'AI scoring + conversation simulation' }}</p>
-            </div>
-          </div>
-          <div class="ob-step">
-            <span class="ob-icon">✍️</span>
-            <div>
-              <strong>{{ themeStore.lang === 'zh' ? '写作批改' : 'Writing' }}</strong>
-              <p>{{ themeStore.lang === 'zh' ? 'AI 方向性指导 + 范文对比' : 'AI feedback + essay comparison' }}</p>
-            </div>
-          </div>
-          <div class="ob-step">
-            <span class="ob-icon">🎧</span>
-            <div>
-              <strong>{{ themeStore.lang === 'zh' ? '听力训练' : 'Listening' }}</strong>
-              <p>{{ themeStore.lang === 'zh' ? '跟读练习 + 逐句对比' : 'Dictation practice + word comparison' }}</p>
-            </div>
-          </div>
-          <div class="ob-step">
-            <span class="ob-icon">📖</span>
-            <div>
-              <strong>{{ themeStore.lang === 'zh' ? '阅读理解' : 'Reading' }}</strong>
-              <p>{{ themeStore.lang === 'zh' ? '限时练习 + 详细解析' : 'Timed practice + detailed analysis' }}</p>
-            </div>
-          </div>
-          <div class="ob-step">
-            <span class="ob-icon">📚</span>
-            <div>
-              <strong>{{ themeStore.lang === 'zh' ? '词汇记忆' : 'Vocabulary' }}</strong>
-              <p>{{ themeStore.lang === 'zh' ? '间隔重复 + 每日新词' : 'Spaced repetition + daily words' }}</p>
+              <strong>{{ themeStore.lang === 'zh' ? step.titleZh : step.titleEn }}</strong>
+              <p>{{ themeStore.lang === 'zh' ? step.detailZh : step.detailEn }}</p>
             </div>
           </div>
         </div>
@@ -881,7 +885,10 @@ onMounted(async () => {
           <span class="trial-icon">⏳</span>
           <div>
             <strong>{{ themeStore.lang === 'zh' ? `试用剩余 ${authStore.trialDaysLeft} 天` : `${authStore.trialDaysLeft} days left in trial` }}</strong>
-            <p>{{ themeStore.lang === 'zh' ? '激活码升级可解锁无限使用' : 'Activate with a code to unlock unlimited access' }}</p>
+            <p>{{ hasMeaningfulFeedbackLoop
+              ? (themeStore.lang === 'zh' ? '你已经跑通一次练习闭环，激活后可以继续积累弱点和每日计划。' : 'You have completed a learning loop. Activate to keep building weak spots and daily plans.')
+              : (themeStore.lang === 'zh' ? '先完成一次练习闭环，再决定是否激活也来得及。' : 'Complete one learning loop first, then decide whether to activate.')
+            }}</p>
           </div>
         </div>
         <button class="trial-btn" @click="router.push('/login?mode=activate')">
@@ -918,7 +925,7 @@ onMounted(async () => {
             <span class="plan-kicker">{{ themeStore.lang === 'zh' ? '新手启动' : 'Getting Started' }}</span>
             <h2>{{ themeStore.lang === 'zh' ? '先把学习闭环搭起来' : 'Build the learning loop first' }}</h2>
           </div>
-          <span class="plan-status">{{ onboardingChecklist.filter(item => item.done).length }}/{{ onboardingChecklist.length }}</span>
+          <span class="plan-status">{{ firstSessionProgress }}/{{ onboardingChecklist.length }}</span>
         </div>
         <div class="start-steps">
           <button
@@ -2346,7 +2353,27 @@ button.support-card:hover {
   border-radius: var(--radius-md);
 }
 
-.ob-icon { font-size: 1.5rem; flex-shrink: 0; }
+.ob-step.done {
+  background: var(--green-soft);
+}
+
+.ob-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--card-bg);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.ob-step.done .ob-icon {
+  color: var(--green);
+}
+
 .ob-step strong { font-size: var(--font-size-sm); display: block; margin-bottom: 2px; }
 .ob-step p { font-size: var(--font-size-xs); color: var(--text-secondary); margin: 0; }
 
